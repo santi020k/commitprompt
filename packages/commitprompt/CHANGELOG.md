@@ -1,5 +1,11 @@
 # @santi020k/commitprompt
 
+## 0.1.1
+
+### Patch Changes
+
+- [`a1486d2`](https://github.com/santi020k/commitprompt/commit/a1486d25748bba2043e60c6485b2c35e1c3e6833) Thanks [@santi020k](https://github.com/santi020k)! - Publish Commitprompt under the `@santi020k` npm scope and update installation and programmatic API examples for the scoped package name.
+
 ## 0.1.0
 
 ### Minor Changes
