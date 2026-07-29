@@ -20,7 +20,7 @@ A focused prompt for Conventional Commits.
 
 Usage:
   commitprompt
-  commitprompt instructions [--json]
+  commitprompt instructions [--json] [--cwd <path>]
   commitprompt types [--json] [--cwd <path>]
   commitprompt format [--json] [--input <path>]
   commitprompt validate [--json] [--input <path>] [--cwd <path>]
@@ -164,6 +164,14 @@ const runAutomationCommand = async (
 
     json = options.json
 
+    if (command === 'commit' && !options.confirm) {
+      throw new Error(
+        'Non-interactive commits require --yes to confirm the Git operation.'
+      )
+    }
+
+    const input = await readAutomationInput(command, options)
+
     return await runAutomation({
       command,
       confirm: options.confirm,
@@ -171,7 +179,7 @@ const runAutomationCommand = async (
       error: message => {
         console.error(message)
       },
-      input: await readAutomationInput(command, options),
+      input,
       json,
       log: message => {
         console.log(message)

@@ -1,4 +1,4 @@
-import { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
+import { getCommitMessageInstructions } from './editor.js'
 import { createGitClient } from './git.js'
 import { formatCommitMessage } from './message.js'
 import type {
@@ -95,13 +95,15 @@ type NormalizedAutomationOptions = Omit<
   json: boolean
 }
 
-const runInstructions = ({
+const runInstructions = async ({
+  cwd,
   json,
   log
-}: NormalizedAutomationOptions): number => {
-  log(json
-    ? JSON.stringify({ instructions: COMMIT_MESSAGE_INSTRUCTIONS })
-    : COMMIT_MESSAGE_INSTRUCTIONS)
+}: NormalizedAutomationOptions): Promise<number> => {
+  const types = await createCommitlintValidator(cwd).getTypes()
+  const instructions = getCommitMessageInstructions(types)
+
+  log(json ? JSON.stringify({ instructions }) : instructions)
 
   return 0
 }
@@ -207,7 +209,7 @@ const runAutomationAction = async (
   }
 
   case 'instructions': {
-    return runInstructions(options)
+    return await runInstructions(options)
   }
 
   case 'types': {

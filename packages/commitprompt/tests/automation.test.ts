@@ -67,7 +67,10 @@ describe('runAutomation', () => {
     )
   })
 
-  test('returns model instructions without loading repository rules', async () => {
+  test('returns model instructions with repository-aware types', async () => {
+    validator.getTypes = vi.fn(() => Promise.resolve([
+      { description: 'A release', value: 'release' }
+    ]))
     const options = {
       ...createOptions(),
       command: 'instructions' as const,
@@ -76,9 +79,14 @@ describe('runAutomation', () => {
     }
 
     await expect(runAutomation(options)).resolves.toBe(0)
-    expect(mocks.createValidator).not.toHaveBeenCalled()
-    expect(vi.mocked(options.log).mock.calls[0]?.[0])
-      .toContain('"instructions":')
+    expect(mocks.createValidator).toHaveBeenCalledWith('/project')
+    expect(validator.getTypes).toHaveBeenCalledOnce()
+    expect(options.log).toHaveBeenCalledWith(
+      expect.stringContaining('Use one of these types: release.')
+    )
+    expect(options.log).not.toHaveBeenCalledWith(
+      expect.stringContaining('feat')
+    )
   })
 
   test('returns plain model instructions', async () => {
@@ -89,8 +97,9 @@ describe('runAutomation', () => {
     }
 
     await expect(runAutomation(options)).resolves.toBe(0)
+    expect(validator.getTypes).toHaveBeenCalledOnce()
     expect(options.log).toHaveBeenCalledWith(
-      expect.stringContaining('Use Conventional Commits.')
+      expect.stringContaining('Use one of these types: feat.')
     )
   })
 
