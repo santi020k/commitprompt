@@ -88,7 +88,12 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
     <SkipLink href="#main-content">Skip to content</SkipLink>
     <header class="site-header">
       <div class="shell nav-shell">
-        <Link class="wordmark" href="/" variant="inherit">
+        <Link
+          aria-label="Commitprompt home"
+          class="wordmark"
+          href="/"
+          variant="inherit"
+        >
           <img src="/icon.svg" alt="" width="30" height="30" />
           <span>commit<span>prompt</span></span>
         </Link>

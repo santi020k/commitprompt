@@ -32,6 +32,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: clip;
   background:
     linear-gradient(hsl(var(--line) / 0.12) 1px, transparent 1px),
     linear-gradient(90deg, hsl(var(--line) / 0.12) 1px, transparent 1px),
@@ -55,7 +56,7 @@ code {
 }
 
 .shell {
-  width: min(1120px, calc(100% - 2rem));
+  width: min(1120px, calc(100% - clamp(2rem, 6vw, 4rem)));
   margin-inline: auto;
 }
 
@@ -604,16 +605,29 @@ footer {
   font-size: 0.85rem;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .hero,
-  .workflow-section,
-  .docs-shell,
-  .message-grid {
+  .workflow-section {
     grid-template-columns: 1fr;
   }
 
   .hero {
     min-height: auto;
+  }
+
+  .hero-copy {
+    max-width: 46rem;
+  }
+
+  .workflow-section {
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .docs-shell,
+  .message-grid {
+    grid-template-columns: 1fr;
   }
 
   .feature-grid {
@@ -626,14 +640,48 @@ footer {
 
   .docs-sidebar {
     position: static;
+    min-width: 0;
   }
 
   .docs-sidebar nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    overflow-x: auto;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-bottom: 0.75rem;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: hsl(var(--line)) transparent;
+    scrollbar-width: thin;
+    scroll-snap-type: inline proximity;
   }
 
   .docs-sidebar nav p {
-    grid-column: 1 / -1;
+    display: none;
+  }
+
+  .docs-sidebar nav a {
+    flex: 0 0 auto;
+    border: 1px solid hsl(var(--line));
+    border-radius: 999px;
+    background: hsl(var(--surface));
+    padding: 0.55rem 0.75rem;
+    scroll-snap-align: start;
+  }
+
+  .docs-sidebar nav a:hover,
+  .docs-sidebar nav a:focus-visible {
+    border-color: hsl(var(--brand) / 0.45);
+    background: hsl(var(--brand-soft));
+    color: hsl(var(--brand));
+  }
+
+  .docs-shell {
+    gap: 2.5rem;
+    padding-block: 3rem 6rem;
+  }
+
+  .docs-content header {
+    margin-bottom: 4rem;
   }
 
   .usage-grid,
@@ -671,6 +719,10 @@ footer {
 }
 
 @media (max-width: 520px) {
+  .section {
+    padding-block: 4rem;
+  }
+
   .hero {
     padding-block: 4rem;
   }
@@ -701,6 +753,17 @@ footer {
 
   .footer-content p {
     margin: 0.2rem 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .wordmark > span {
+    display: none;
+  }
+
+  .nav-shell nav,
+  .nav-shell .ui-navigation-menu {
+    gap: 0.6rem;
   }
 }
 
