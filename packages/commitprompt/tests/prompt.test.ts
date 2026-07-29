@@ -1,6 +1,10 @@
-import { describe, expect, test,vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
-import { collectCommitAnswers, confirmCommit } from '../src/prompt.js'
+import {
+  collectCommitAnswers,
+  confirmCommit,
+  confirmRetry
+} from '../src/prompt.js'
 import type { Prompt } from '../src/types.js'
 
 const createPrompt = (answers: string[]): Prompt => ({
@@ -53,10 +57,45 @@ describe('collectCommitAnswers', () => {
     expect(answers.breaking).toBe('remove the old command')
     expect(error).toHaveBeenCalledTimes(4)
   })
+
+  test('collects a multiline body', async () => {
+    const prompt = createPrompt([
+      'feat',
+      '',
+      'add prompt',
+      'First paragraph.',
+      'Second paragraph.',
+      '',
+      'n',
+      ''
+    ])
+
+    const answers = await collectCommitAnswers(
+      prompt,
+      [{ description: 'A feature', value: 'feat' }],
+      vi.fn(),
+      vi.fn()
+    )
+
+    expect(answers.body).toBe('First paragraph.\nSecond paragraph.')
+  })
+
+  test('rejects an empty type list', async () => {
+    await expect(collectCommitAnswers(
+      createPrompt([]),
+      [],
+      vi.fn(),
+      vi.fn()
+    )).rejects.toThrow('At least one commit type is required.')
+  })
 })
 
 describe('confirmCommit', () => {
   test('defaults to no', async () => {
     await expect(confirmCommit(createPrompt(['']), vi.fn())).resolves.toBe(false)
+  })
+
+  test('defaults revision to yes', async () => {
+    await expect(confirmRetry(createPrompt(['']), vi.fn())).resolves.toBe(true)
   })
 })

@@ -2,7 +2,7 @@
   "version": "0.2",
   "language": "en",
   "useGitignore": true,
-  "ignorePaths": ["pnpm-lock.yaml"],
+  "ignorePaths": ["apps/docs/public/**/*.svg", "pnpm-lock.yaml"],
   "words": [
     "amannn",
     "astrojs",

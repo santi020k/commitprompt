@@ -38,6 +38,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@commitlint/config-conventional": "catalog:",
     "@commitlint/lint": "catalog:",
     "@commitlint/load": "catalog:",
     "@commitlint/types": "catalog:"

@@ -1,4 +1,4 @@
-import { describe, expect, test,vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import { runCommitFlow } from '../src/cli.js'
 import type {
@@ -62,7 +62,15 @@ describe('runCommitFlow', () => {
   })
 
   test('does not commit an invalid message', async () => {
-    const options = createOptions(['feat', '', 'Bad subject', '', '', ''], {
+    const options = createOptions([
+      'feat',
+      '',
+      'Bad subject',
+      '',
+      'n',
+      '',
+      'no'
+    ], {
       validator: {
         validate: () => Promise.resolve({
           errors: ['subject-case: must be lower-case'],
@@ -77,6 +85,42 @@ describe('runCommitFlow', () => {
     expect(options.error).toHaveBeenCalledWith(
       'error: subject-case: must be lower-case'
     )
+  })
+
+  test('lets the author revise an invalid message', async () => {
+    const validator = {
+      validate: vi.fn()
+        .mockResolvedValueOnce({
+          errors: ['subject-case: must be lower-case'],
+          valid: false,
+          warnings: []
+        })
+        .mockResolvedValueOnce({
+          errors: [],
+          valid: true,
+          warnings: []
+        })
+    }
+    const options = createOptions([
+      'feat',
+      '',
+      'Bad subject',
+      '',
+      'n',
+      '',
+      '',
+      'feat',
+      '',
+      'repair subject',
+      '',
+      'n',
+      '',
+      'yes'
+    ], { validator })
+
+    await expect(runCommitFlow(options)).resolves.toBe(0)
+    expect(validator.validate).toHaveBeenCalledTimes(2)
+    expect(options.git.commit).toHaveBeenCalledWith('feat: repair subject')
   })
 
   test('returns success when the user cancels', async () => {

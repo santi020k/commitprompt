@@ -22,8 +22,9 @@
     "ok": "pnpm install --frozen-lockfile && pnpm run validate",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
-    "publish-packages": "pnpm run build && pnpm run check:packed-install && changeset publish",
-    "release": "pnpm run validate && changeset publish",
+    "publish-packages": "pnpm run validate && changeset publish && pnpm run verify:published",
+    "release": "pnpm run publish-packages",
+    "verify:published": "node scripts/verify-published-package.mjs",
     "docs:dev": "pnpm --filter commitprompt-docs dev",
     "docs:build": "turbo run build --filter=commitprompt-docs",
     "docs:preview": "pnpm --filter commitprompt-docs preview",
@@ -52,7 +53,8 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:",
+    "yarn": "catalog:"
   },
   "lint-staged": {
     "*": [

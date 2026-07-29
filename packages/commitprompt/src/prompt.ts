@@ -17,16 +17,42 @@ const askRequired = async (
 const askYesNo = async (
   prompt: Prompt,
   error: (message: string) => void,
-  question: string
+  question: string,
+  defaultValue = false
 ): Promise<boolean> => {
   for (;;) {
-    const answer = (await prompt.question(`${question} [y/N] `)).trim().toLowerCase()
+    const hint = defaultValue ? '[Y/n]' : '[y/N]'
 
-    if (!answer || answer === 'n' || answer === 'no') return false
+    const answer = (
+      await prompt.question(`${question} ${hint} `)
+    ).trim().toLowerCase()
+
+    if (!answer) return defaultValue
 
     if (answer === 'y' || answer === 'yes') return true
 
+    if (answer === 'n' || answer === 'no') return false
+
     error('Please answer yes or no.')
+  }
+}
+
+const askMultiline = async (
+  prompt: Prompt,
+  question: string
+): Promise<string> => {
+  const firstLine = (await prompt.question(question)).trim()
+
+  if (!firstLine) return ''
+
+  const lines = [firstLine]
+
+  for (;;) {
+    const line = (await prompt.question('… ')).trim()
+
+    if (!line) return lines.join('\n')
+
+    lines.push(line)
   }
 }
 
@@ -36,6 +62,10 @@ const selectType = async (
   log: (message: string) => void,
   error: (message: string) => void
 ): Promise<string> => {
+  if (types.length === 0) {
+    throw new Error('At least one commit type is required.')
+  }
+
   log('Select the type of change:')
 
   for (const [index, type] of types.entries()) {
@@ -65,7 +95,11 @@ export const collectCommitAnswers = async (
   const type = await selectType(prompt, types, log, error)
   const scope = (await prompt.question('Scope (optional): ')).trim()
   const subject = await askRequired(prompt, error, 'Short imperative description: ')
-  const body = (await prompt.question('Longer description (optional): ')).trim()
+
+  const body = await askMultiline(
+    prompt,
+    'Longer description (optional; finish with an empty line): '
+  )
 
   const isBreaking = await askYesNo(
     prompt,
@@ -88,3 +122,8 @@ export const confirmCommit = (
   prompt: Prompt,
   error: (message: string) => void
 ): Promise<boolean> => askYesNo(prompt, error, 'Create this commit?')
+
+export const confirmRetry = (
+  prompt: Prompt,
+  error: (message: string) => void
+): Promise<boolean> => askYesNo(prompt, error, 'Revise this commit?', true)

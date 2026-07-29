@@ -18,8 +18,8 @@ Usage:
   commitprompt --help
   commitprompt --version
 
-Commitprompt requires staged Git changes and loads Commitlint configuration
-from the current working directory.`
+Commitprompt requires staged Git changes. It uses Conventional Commits rules
+by default and honors Commitlint configuration from the current repository.`
 
 const [argument] = process.argv.slice(2)
 

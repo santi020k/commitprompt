@@ -2,49 +2,116 @@
 import {
   Badge,
   ButtonLink,
+  Callout,
   Card,
+  Code,
   CodeTabs,
-  Separator
+  Eyebrow,
+  Icon,
+  Separator,
+  Stat,
+  Stepper
 } from '@santi020k/lumen-astro'
 
 import Base from '../layouts/Base.astro'
 
 const installItems = [
   {
-    code: 'pnpm add --save-dev commitprompt @commitlint/config-conventional',
+    code: 'pnpm add --save-dev commitprompt',
     label: 'pnpm',
     language: 'shell',
     value: 'pnpm'
   },
   {
-    code: 'npm install --save-dev commitprompt @commitlint/config-conventional',
+    code: 'npm install --save-dev commitprompt',
     label: 'npm',
     language: 'shell',
     value: 'npm'
   },
   {
-    code: 'yarn add --dev commitprompt @commitlint/config-conventional',
+    code: 'yarn add --dev commitprompt',
     label: 'Yarn',
     language: 'shell',
     value: 'yarn'
   }
 ] as const
+
+const workflowSteps = [
+  {
+    description: 'Commitprompt stops early when the index is empty.',
+    title: 'Stage the change'
+  },
+  {
+    description: 'Choose a type, scope, subject, and optional details.',
+    title: 'Answer focused prompts'
+  },
+  {
+    description: 'Commitlint checks the complete message before Git sees it.',
+    title: 'Validate and confirm'
+  }
+] as const
+
+const terminalSession = `$ pnpm commit
+
+Select the type of change:
+  1. feat     A new feature
+  2. fix      A bug fix
+  3. docs     Documentation only
+
+Type: 1
+Scope: cli
+Description: add repository-aware validation
+
+feat(cli): add repository-aware validation
+
+Create this commit? [y/N] y`
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      description: 'A focused, package-manager-neutral prompt for Conventional Commits.',
+      name: 'Commitprompt',
+      url: 'https://commitprompt.santi020k.com/'
+    },
+    {
+      '@type': 'SoftwareApplication',
+      applicationCategory: 'DeveloperApplication',
+      description: 'A focused CLI for writing validated Conventional Commits with your repository’s Commitlint rules.',
+      isAccessibleForFree: true,
+      license: 'https://opensource.org/license/mit',
+      name: 'Commitprompt',
+      offers: {
+        '@type': 'Offer',
+        price: 0,
+        priceCurrency: 'USD'
+      },
+      operatingSystem: 'Linux, macOS, Windows',
+      url: 'https://commitprompt.santi020k.com/'
+    }
+  ]
+}
 ---
 
 <Base
   title="Commitprompt — Commit with intent"
   description="A focused, package-manager-neutral prompt for Conventional Commits."
+  structuredData={structuredData}
 >
   <section class="hero shell">
     <div class="hero-copy">
-      <Badge variant="secondary">Conventional Commits, without the ceremony</Badge>
+      <Badge variant="secondary">
+        <span class="status-dot" aria-hidden="true"></span>
+        Conventional Commits, without the ceremony
+      </Badge>
       <h1>Write the commit.<br /><span>Not the syntax.</span></h1>
       <p class="lede">
-        Commitprompt turns staged work into a clear, validated Conventional
-        Commit—using the rules your repository already trusts.
+        A focused CLI that turns staged work into a clear, validated
+        Conventional Commit—using the rules your repository already trusts.
       </p>
       <div class="actions">
-        <ButtonLink href="/docs" showArrow>Get started</ButtonLink>
+        <ButtonLink href="/docs/" showArrow>Get started</ButtonLink>
         <ButtonLink
           href="https://github.com/santi020k/commitprompt"
           newTab
@@ -60,35 +127,37 @@ const installItems = [
         storageKey="commitprompt-package-manager"
         wrap={false}
       />
+      <p class="install-note">
+        <Icon name="terminal" />
+        Add <Code code={'"commit": "commitprompt"'} />, then run it with npm, pnpm, or Yarn.
+      </p>
     </div>
 
-    <Card as="section" class="terminal" variant="muted" aria-label="Commitprompt example">
-      <div class="terminal-bar">
-        <span>commitprompt</span>
-        <span>~/project</span>
+    <Card as="section" class="terminal-shell" glass="strong" aria-label="Commitprompt example">
+      <Code
+        class="terminal"
+        code={terminalSession}
+        label="commitprompt · ~/project"
+        variant="block"
+      />
+      <div class="terminal-result">
+        <Icon name="circle-check" />
+        <span>Commit created with the repository’s rules.</span>
       </div>
-      <pre><code><span class="muted">$ pnpm commit</span>
-
-Select the type of change:
-  1. feat     A new feature
-  2. fix      A bug fix
-  3. docs     Documentation only
-
-<span class="accent">Type:</span> 1
-<span class="accent">Scope:</span> cli
-<span class="accent">Description:</span> add repository-aware validation
-
-<span class="success">feat(cli): add repository-aware validation</span>
-
-Create this commit? [y/N] y</code></pre>
     </Card>
   </section>
 
-  <Separator />
+  <div class="shell trust-strip" aria-label="Project highlights">
+    <Stat label="Runtime" value="Node 22+" />
+    <Separator orientation="vertical" />
+    <Stat label="Package managers" value="npm · pnpm · Yarn" />
+    <Separator orientation="vertical" />
+    <Stat label="Configuration" value="Your Commitlint rules" />
+  </div>
 
   <section class="section shell">
     <div class="section-heading">
-      <p class="eyebrow">One small command</p>
+      <Eyebrow>One small command</Eyebrow>
       <h2>Built around your repository</h2>
       <p>
         No adapter configuration and no package-manager lock-in. Commitprompt
@@ -96,24 +165,24 @@ Create this commit? [y/N] y</code></pre>
       </p>
     </div>
     <div class="feature-grid">
-      <Card as="article">
-        <p class="feature-number">01</p>
+      <Card as="article" variant="interactive">
+        <div class="feature-icon"><Icon name="shield-check" size="lg" /></div>
         <h3>Your rules</h3>
         <p>
           Loads the repository’s Commitlint configuration and validates before
           Git receives the message.
         </p>
       </Card>
-      <Card as="article">
-        <p class="feature-number">02</p>
+      <Card as="article" variant="interactive">
+        <div class="feature-icon"><Icon name="package" size="lg" /></div>
         <h3>Your package manager</h3>
         <p>
           Runs the same through pnpm, npm, or Yarn because validation happens
           through Commitlint’s API.
         </p>
       </Card>
-      <Card as="article">
-        <p class="feature-number">03</p>
+      <Card as="article" variant="interactive">
+        <div class="feature-icon"><Icon name="eye" size="lg" /></div>
         <h3>Your final say</h3>
         <p>
           Shows the complete message—including body, breaking change, and issue
@@ -125,32 +194,71 @@ Create this commit? [y/N] y</code></pre>
 
   <section class="section shell workflow-section">
     <div class="section-heading">
-      <p class="eyebrow">The whole workflow</p>
+      <Eyebrow>The whole workflow</Eyebrow>
       <h2>Stage. Prompt. Commit.</h2>
+      <p>
+        The happy path stays short, while every guardrail remains visible and
+        testable.
+      </p>
     </div>
-    <ol class="workflow">
-      <li>
-        <span>1</span>
-        <div><strong>Stage deliberately</strong><p>Commitprompt refuses to run with an empty index.</p></div>
-      </li>
-      <li>
-        <span>2</span>
-        <div><strong>Describe the change</strong><p>Answer a short sequence of focused questions.</p></div>
-      </li>
-      <li>
-        <span>3</span>
-        <div><strong>Validate and confirm</strong><p>Review the exact message before Git creates it.</p></div>
-      </li>
-    </ol>
+    <Card class="workflow-card" variant="muted">
+      <Stepper currentStep={3} orientation="vertical" steps={[...workflowSteps]} />
+    </Card>
+  </section>
+
+  <section class="section shell message-section">
+    <div class="section-heading">
+      <Eyebrow>Complete when you need it</Eyebrow>
+      <h2>Small prompt. Full commit.</h2>
+      <p>
+        Keep the common case quick, then add the detail that makes a change
+        useful to humans and release tooling.
+      </p>
+    </div>
+    <div class="message-grid">
+      <Card class="commit-anatomy" glass="subtle">
+        <div class="anatomy-line">
+          <Badge>type</Badge><Code code="feat" />
+          <Badge variant="outline">scope</Badge><Code code="(cli)" />
+          <Badge variant="outline">breaking</Badge><Code code="!" />
+          <span>: add repository-aware validation</span>
+        </div>
+        <Separator />
+        <p>Explain why the new validation belongs in the prompt flow.</p>
+        <p class="breaking">BREAKING CHANGE: require Node.js 22.18 or newer</p>
+        <p class="issue">Closes #123</p>
+      </Card>
+      <div class="message-benefits">
+        <Callout>
+          <strong>Fast by default.</strong>
+          Scope, body, breaking change, and issue references are optional.
+        </Callout>
+        <Callout>
+          <strong>Safe at the boundary.</strong>
+          The exact final text is linted, previewed, and confirmed before commit.
+        </Callout>
+      </div>
+    </div>
   </section>
 
   <section class="section shell">
     <Card class="final-cta" variant="muted">
       <div>
-        <p class="eyebrow">Ready when the index is</p>
+        <Eyebrow>Ready when the index is</Eyebrow>
         <h2>Make the next commit unmistakable.</h2>
+        <p>Install it in minutes. Use the included rules or keep your existing configuration.</p>
       </div>
-      <ButtonLink href="/docs" showArrow>Read the docs</ButtonLink>
+      <div class="actions">
+        <ButtonLink href="/docs/" showArrow>Read the docs</ButtonLink>
+        <ButtonLink
+          href="https://github.com/santi020k/commitprompt"
+          newTab
+          showArrow
+          variant="ghost"
+        >
+          Explore the source
+        </ButtonLink>
+      </div>
     </Card>
   </section>
 </Base>

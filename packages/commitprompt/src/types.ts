@@ -27,6 +27,10 @@ export interface MessageValidator {
   validate: (message: string) => Promise<MessageValidation>
 }
 
+export interface CommitlintClient extends MessageValidator {
+  getTypes: () => Promise<readonly CommitType[]>
+}
+
 export interface Prompt {
   close: () => void
   question: (query: string) => Promise<string>

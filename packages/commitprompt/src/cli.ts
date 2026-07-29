@@ -4,9 +4,35 @@ import { createInterface } from 'node:readline/promises'
 import { DEFAULT_COMMIT_TYPES } from './constants.js'
 import { createGitClient } from './git.js'
 import { formatCommitMessage } from './message.js'
-import { collectCommitAnswers, confirmCommit } from './prompt.js'
-import type { RunCommitFlowOptions } from './types.js'
+import {
+  collectCommitAnswers,
+  confirmCommit,
+  confirmRetry
+} from './prompt.js'
+import type {
+  MessageValidation,
+  Prompt,
+  RunCommitFlowOptions
+} from './types.js'
 import { createCommitlintValidator } from './validator.js'
+
+type ValidationDecision = 'continue' | 'retry' | 'stop'
+
+const getValidationDecision = async (
+  validation: MessageValidation,
+  prompt: Prompt,
+  error: (message: string) => void
+): Promise<ValidationDecision> => {
+  for (const warning of validation.warnings) error(`warning: ${warning}`)
+
+  if (validation.valid) return 'continue'
+
+  for (const validationError of validation.errors) {
+    error(`error: ${validationError}`)
+  }
+
+  return await confirmRetry(prompt, error) ? 'retry' : 'stop'
+}
 
 export const runCommitFlow = async ({
   error,
@@ -23,32 +49,29 @@ export const runCommitFlow = async ({
       return 1
     }
 
-    const answers = await collectCommitAnswers(prompt, types, log, error)
-    const message = formatCommitMessage(answers)
+    for (;;) {
+      const answers = await collectCommitAnswers(prompt, types, log, error)
+      const message = formatCommitMessage(answers)
 
-    log(`\n${message}\n`)
+      log(`\n${message}\n`)
 
-    const validation = await validator.validate(message)
+      const validation = await validator.validate(message)
+      const decision = await getValidationDecision(validation, prompt, error)
 
-    for (const warning of validation.warnings) error(`warning: ${warning}`)
+      if (decision === 'retry') continue
 
-    if (!validation.valid) {
-      for (const validationError of validation.errors) {
-        error(`error: ${validationError}`)
+      if (decision === 'stop') return 1
+
+      if (!await confirmCommit(prompt, error)) {
+        log('Commit cancelled.')
+
+        return 0
       }
 
-      return 1
-    }
-
-    if (!await confirmCommit(prompt, error)) {
-      log('Commit cancelled.')
+      git.commit(message)
 
       return 0
     }
-
-    git.commit(message)
-
-    return 0
   }
   catch (caughtError) {
     const message = caughtError instanceof Error
@@ -70,15 +93,33 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
     output: process.stdout
   })
 
-  return runCommitFlow({
-    error: message => {
-      console.error(message)
-    },
-    git: createGitClient(cwd),
-    log: message => {
-      console.log(message)
-    },
-    prompt,
-    validator: createCommitlintValidator(cwd)
-  })
+  const validator = createCommitlintValidator(cwd)
+
+  try {
+    const types = await validator.getTypes()
+
+    return await runCommitFlow({
+      error: message => {
+        console.error(message)
+      },
+      git: createGitClient(cwd),
+      log: message => {
+        console.log(message)
+      },
+      prompt,
+      types,
+      validator
+    })
+  }
+  catch (caughtError) {
+    const message = caughtError instanceof Error
+      ? caughtError.message
+      : String(caughtError)
+
+    console.error(message)
+
+    prompt.close()
+
+    return 1
+  }
 }

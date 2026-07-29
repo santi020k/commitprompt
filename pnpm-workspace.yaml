@@ -35,3 +35,4 @@ catalog:
   typescript-eslint: ^8.65.0
   vitest: ^4.1.10
   wrangler: ^4.114.0
+  yarn: ^1.22.22

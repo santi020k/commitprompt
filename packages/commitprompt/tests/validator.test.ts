@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, test,vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
+import { DEFAULT_COMMIT_TYPES } from '../src/constants.js'
 import { createCommitlintValidator } from '../src/validator.js'
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +17,8 @@ describe('createCommitlintValidator', () => {
     mocks.load.mockReset()
     mocks.load.mockResolvedValue({
       defaultIgnores: true,
+      extends: ['@commitlint/config-conventional'],
+      formatter: '',
       helpUrl: 'https://commitlint.js.org',
       ignores: [],
       parserPreset: {
@@ -24,6 +27,7 @@ describe('createCommitlintValidator', () => {
         }
       },
       plugins: {},
+      prompt: {},
       rules: {
         'type-empty': [2, 'never']
       }
@@ -44,7 +48,7 @@ describe('createCommitlintValidator', () => {
       valid: true,
       warnings: []
     })
-    expect(mocks.load).toHaveBeenCalledWith({}, { cwd: '/project' })
+    expect(mocks.load).toHaveBeenCalledExactlyOnceWith({}, { cwd: '/project' })
     expect(mocks.lint).toHaveBeenCalledWith(
       'feat: add validation',
       { 'type-empty': [2, 'never'] },
@@ -54,15 +58,19 @@ describe('createCommitlintValidator', () => {
         }
       })
     )
+    await expect(validator.getTypes()).resolves.toHaveLength(11)
   })
 
   test('maps errors and warnings without invalid parser options', async () => {
     mocks.load.mockResolvedValue({
       defaultIgnores: true,
+      extends: [],
+      formatter: '',
       helpUrl: '',
       ignores: [],
       parserPreset: { parserOpts: 'invalid' },
       plugins: {},
+      prompt: {},
       rules: {}
     })
     mocks.lint.mockResolvedValue({
@@ -80,5 +88,78 @@ describe('createCommitlintValidator', () => {
       warnings: ['subject-max-length: subject is long']
     })
     expect(mocks.lint.mock.calls[0]?.[2]).not.toHaveProperty('parserOpts')
+  })
+
+  test('uses built-in conventional rules when the repository has no config', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {}
+    })
+
+    const validator = createCommitlintValidator('/project')
+
+    await validator.validate('feat: use defaults')
+    await expect(validator.getTypes()).resolves.toEqual(DEFAULT_COMMIT_TYPES)
+
+    const ruleNames = Object.keys(
+      mocks.lint.mock.calls[0]?.[1] as Record<string, unknown>
+    )
+
+    expect(ruleNames).toEqual(expect.arrayContaining([
+      'subject-empty',
+      'type-enum'
+    ]))
+  })
+
+  test('derives prompt types from the repository type-enum rule', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'type-enum': [2, 'always', ['fix', 'release']]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getTypes()
+    ).resolves.toEqual([
+      { description: 'A bug fix', value: 'fix' },
+      { description: 'A repository-defined change', value: 'release' }
+    ])
+  })
+
+  test('excludes types forbidden by a never rule', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'type-enum': [2, 'never', ['chore', 'revert']]
+      }
+    })
+
+    const types = await createCommitlintValidator('/project').getTypes()
+
+    expect(types.map(type => type.value)).not.toContain('chore')
+    expect(types.map(type => type.value)).not.toContain('revert')
+    expect(types.map(type => type.value)).toContain('feat')
   })
 })

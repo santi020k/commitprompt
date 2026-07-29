@@ -2,20 +2,32 @@
 import '@santi020k/lumen-astro/styles.css'
 import '../styles/global.css'
 
-import { Link, UIPrimitives } from '@santi020k/lumen-astro'
+import {
+  BackToTop,
+  Icon,
+  Link,
+  NavigationMenu,
+  SkipLink,
+  ThemeToggle,
+  UIPrimitives
+} from '@santi020k/lumen-astro'
 
 import { getSocialImageUrl } from '../lib/social-image'
 
 interface Props {
   description: string
+  noindex?: boolean
   socialImage?: string
   socialImageAlt?: string
+  structuredData?: Record<string, unknown>
   title: string
 }
 
 const {
   description,
+  noindex = false,
   socialImage,
+  structuredData,
   title,
   socialImageAlt = title
 } = Astro.props
@@ -34,7 +46,8 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="canonical" href={canonicalUrl} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -49,23 +62,45 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content={socialImageAlt} />
+    {structuredData && (
+      <script
+        is:inline
+        type="application/ld+json"
+        set:html={JSON.stringify(structuredData)}
+      />
+    )}
     <title>{title}</title>
+    <script is:inline>
+      (() => {
+        try {
+          const stored = localStorage.getItem('commitprompt-theme')
+          const preferred = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+
+          document.documentElement.dataset.theme = stored ?? preferred
+        } catch {
+          document.documentElement.dataset.theme = 'dark'
+        }
+      })()
+    </script>
   </head>
   <body>
     <UIPrimitives />
+    <SkipLink href="#main-content">Skip to content</SkipLink>
     <header class="site-header">
       <div class="shell nav-shell">
         <Link class="wordmark" href="/" variant="inherit">
           <img src="/icon.svg" alt="" width="30" height="30" />
           <span>commit<span>prompt</span></span>
         </Link>
-        <nav aria-label="Primary navigation">
-          <Link href="/docs">Docs</Link>
+        <NavigationMenu aria-label="Primary navigation" variant="unstyled">
+          <Link href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Home</Link>
+          <Link href="/docs/" aria-current={Astro.url.pathname.startsWith('/docs') ? 'page' : undefined}>Docs</Link>
           <Link href="https://github.com/santi020k/commitprompt" newTab>GitHub</Link>
-        </nav>
+          <ThemeToggle storageKey="commitprompt-theme" />
+        </NavigationMenu>
       </div>
     </header>
-    <main>
+    <main id="main-content">
       <slot />
     </main>
     <footer>
@@ -77,5 +112,8 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
         </p>
       </div>
     </footer>
+    <BackToTop aria-label="Back to top">
+      <Icon name="arrow-up" />
+    </BackToTop>
   </body>
 </html>

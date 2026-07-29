@@ -1,29 +1,36 @@
 ---
 import {
   Badge,
+  Breadcrumb,
   ButtonLink,
   Callout,
   Card,
-  CodeTabs
+  Code,
+  CodeTabs,
+  Eyebrow,
+  Icon,
+  Kbd,
+  Prose,
+  Separator
 } from '@santi020k/lumen-astro'
 
 import Base from '../layouts/Base.astro'
 
 const installItems = [
   {
-    code: 'pnpm add --save-dev commitprompt @commitlint/config-conventional',
+    code: 'pnpm add --save-dev commitprompt',
     label: 'pnpm',
     language: 'shell',
     value: 'pnpm'
   },
   {
-    code: 'npm install --save-dev commitprompt @commitlint/config-conventional',
+    code: 'npm install --save-dev commitprompt',
     label: 'npm',
     language: 'shell',
     value: 'npm'
   },
   {
-    code: 'yarn add --dev commitprompt @commitlint/config-conventional',
+    code: 'yarn add --dev commitprompt',
     label: 'Yarn',
     language: 'shell',
     value: 'yarn'
@@ -37,8 +44,37 @@ const packageScript = `{
 }`
 
 const commitlintConfig = `export default {
-  extends: ['@commitlint/config-conventional']
+  rules: {
+    'type-enum': [2, 'always', ['feat', 'fix', 'release']]
+  }
 }`
+
+const commitFormat = `type(scope)!: short description
+
+Optional longer description.
+
+BREAKING CHANGE: optional breaking change
+
+Closes #123`
+
+const usageCommand = 'git add src/\npnpm commit'
+
+const programmaticExample = `import {
+  createCommitlintValidator,
+  createGitClient,
+  runCommitFlow
+} from 'commitprompt'
+
+const validator = createCommitlintValidator(process.cwd())
+
+await runCommitFlow({
+  error: console.error,
+  git: createGitClient(process.cwd()),
+  log: console.log,
+  prompt,
+  types: await validator.getTypes(),
+  validator
+})`
 ---
 
 <Base
@@ -49,116 +85,215 @@ const commitlintConfig = `export default {
     <aside class="docs-sidebar">
       <Badge variant="outline">Documentation</Badge>
       <nav aria-label="Documentation">
+        <p>Start here</p>
         <a href="#installation">Installation</a>
         <a href="#configuration">Configuration</a>
         <a href="#usage">Usage</a>
+        <p>Reference</p>
         <a href="#commit-format">Commit format</a>
+        <a href="#repository-rules">Repository rules</a>
+        <a href="#programmatic-api">Programmatic API</a>
         <a href="#requirements">Requirements</a>
       </nav>
     </aside>
 
     <article class="docs-content">
-      <header>
-        <p class="eyebrow">Documentation</p>
-        <h1>Commit with your repository’s rules.</h1>
-        <p class="lede">
-          Commitprompt is a small interactive CLI. It reads the local Commitlint
-          configuration, validates the finished message, and only commits after
-          you confirm it.
-        </p>
-      </header>
+      <Prose>
+        <header>
+          <Breadcrumb>
+            <a href="/">Commitprompt</a>
+            <Icon name="chevron-right" />
+            <span aria-current="page">Docs</span>
+          </Breadcrumb>
+          <Eyebrow>Documentation</Eyebrow>
+          <h1>Commit with your repository’s rules.</h1>
+          <p class="lede">
+            Commitprompt is a small interactive CLI. It reads the local Commitlint
+            configuration, validates the finished message, and only commits after
+            you confirm it.
+          </p>
+        </header>
 
-      <section id="installation">
-        <h2>Installation</h2>
-        <p>Install Commitprompt and a Commitlint configuration as development dependencies.</p>
-        <CodeTabs
-          ariaLabel="Install Commitprompt"
-          items={installItems}
-          storageKey="commitprompt-package-manager"
-          wrap={false}
-        />
-      </section>
+        <section id="installation">
+          <h2>Installation</h2>
+          <p>
+            Install Commitprompt. Conventional Commitlint rules are included, so
+            no separate validation package or configuration is required.
+          </p>
+          <CodeTabs
+            ariaLabel="Install Commitprompt"
+            items={installItems}
+            storageKey="commitprompt-package-manager"
+            wrap={false}
+          />
+          <Callout>
+            Commitprompt calls the neutral <Code>commitprompt</Code> binary. The
+            package command you use to install or run it is entirely your choice.
+          </Callout>
+        </section>
 
-      <section id="configuration">
-        <h2>Configuration</h2>
-        <p>Add a repository-level Commitlint configuration:</p>
-        <CodeTabs
-          ariaLabel="Commitlint configuration"
-          copy
-          items={[{
-            code: commitlintConfig,
-            label: 'commitlint.config.js',
-            language: 'javascript',
-            value: 'config'
-          }]}
-        />
-        <p>Then expose the neutral binary through your package scripts:</p>
-        <CodeTabs
-          ariaLabel="Package script"
-          copy
-          items={[{
-            code: packageScript,
-            label: 'package.json',
-            language: 'json',
-            value: 'package'
-          }]}
-        />
-        <Callout>
-          Commitprompt loads the configuration from the current working
-          directory. Different repositories can enforce different rules without
-          changing the CLI.
-        </Callout>
-      </section>
+        <Separator />
 
-      <section id="usage">
-        <h2>Usage</h2>
-        <ol>
-          <li>Stage the files that belong in the commit.</li>
-          <li>Run <code>pnpm commit</code>, <code>npm run commit</code>, or <code>yarn commit</code>.</li>
-          <li>Select a type and describe the change.</li>
-          <li>Review the generated message and confirm.</li>
-        </ol>
-        <Card variant="muted">
-          <pre><code>git add src/
-pnpm commit</code></pre>
+        <section id="configuration">
+          <h2>Configuration</h2>
+          <p>
+            Configuration is optional. Commitprompt uses Conventional Commits
+            rules by default. Add a repository configuration to customize them:
+          </p>
+          <CodeTabs
+            ariaLabel="Commitlint configuration"
+            copy
+            items={[{
+              code: commitlintConfig,
+              label: 'commitlint.config.js',
+              language: 'javascript',
+              value: 'config'
+            }]}
+          />
+          <p>Then expose the neutral binary through your package scripts:</p>
+          <CodeTabs
+            ariaLabel="Package script"
+            copy
+            items={[{
+              code: packageScript,
+              label: 'package.json',
+              language: 'json',
+              value: 'package'
+            }]}
+          />
+          <Callout>
+            Commitprompt loads configuration from the current repository. When
+            it finds a <Code>type-enum</Code> rule, the type prompt follows that
+            rule automatically.
+          </Callout>
+        </section>
+
+        <Separator />
+
+        <section id="usage">
+          <h2>Usage</h2>
+          <div class="usage-grid">
+            <ol>
+              <li><strong>Stage</strong> the files that belong in the commit.</li>
+              <li><strong>Run</strong> your repository’s commit script.</li>
+              <li><strong>Describe</strong> the change with the focused prompts.</li>
+              <li><strong>Finish</strong> a multiline body with an empty line.</li>
+              <li><strong>Review</strong> the generated message and confirm.</li>
+            </ol>
+            <Code
+              code={usageCommand}
+              copy
+              label="Terminal"
+              language="shell"
+              variant="block"
+            />
+          </div>
+          <Callout>
+            Press <Kbd>Ctrl</Kbd> + <Kbd>C</Kbd> at any time to leave the prompt.
+            No commit is created until you explicitly confirm.
+          </Callout>
+        </section>
+
+        <Separator />
+
+        <section id="commit-format">
+          <h2>Commit format</h2>
+          <p>The generated message follows the Conventional Commits structure:</p>
+          <Code
+            code={commitFormat}
+            copy
+            label="Generated commit"
+            language="text"
+            variant="block"
+          />
+          <p>
+            The type, subject, body, footer, and any repository-specific constraints
+            are checked by Commitlint before confirmation.
+          </p>
+        </section>
+
+        <Separator />
+
+        <section id="repository-rules">
+          <h2>Repository rules</h2>
+          <p>
+            A repository configuration takes precedence over Commitprompt’s
+            included defaults. Custom types appear in the prompt, and a message
+            that fails validation can be revised without restarting the CLI.
+          </p>
+          <Callout>
+            Repositories without configuration still receive the complete
+            Conventional Commits rule set. Validation never falls back to an
+            empty rule set.
+          </Callout>
+        </section>
+
+        <Separator />
+
+        <section id="programmatic-api">
+          <h2>Programmatic API</h2>
+          <p>
+            The same Git, prompt, formatting, and validation pieces are exported
+            independently, so you can compose a custom flow without shelling out
+            to the CLI.
+          </p>
+          <Code
+            code={programmaticExample}
+            copy
+            label="custom-commit-flow.mjs"
+            language="javascript"
+            variant="block"
+          />
+          <div class="api-grid">
+            <Card as="article" variant="muted">
+              <Code>runCommitFlow</Code>
+              <p>Coordinates staging checks, prompts, validation, confirmation, and commit creation.</p>
+            </Card>
+            <Card as="article" variant="muted">
+              <Code>formatCommitMessage</Code>
+              <p>Formats structured answers into a complete Conventional Commit message.</p>
+            </Card>
+            <Card as="article" variant="muted">
+              <Code>createCommitlintValidator</Code>
+              <p>Loads repository rules or the included defaults and exposes validation and prompt types.</p>
+            </Card>
+            <Card as="article" variant="muted">
+              <Code>DEFAULT_COMMIT_TYPES</Code>
+              <p>Provides the built-in feat, fix, docs, refactor, test, and maintenance choices.</p>
+            </Card>
+          </div>
+        </section>
+
+        <Separator />
+
+        <section id="requirements">
+          <h2>Requirements</h2>
+          <ul>
+            <li>Node.js 22.18 or newer</li>
+            <li>Git</li>
+            <li>At least one staged change</li>
+          </ul>
+          <Callout>
+            An empty index is treated as a safe stop, not an error that can
+            accidentally create an empty commit.
+          </Callout>
+        </section>
+
+        <Card class="docs-cta" variant="muted">
+          <div>
+            <h2>Need the implementation details?</h2>
+            <p>The source is small, typed, and organized by responsibility.</p>
+          </div>
+          <ButtonLink
+            href="https://github.com/santi020k/commitprompt"
+            newTab
+            showArrow
+            variant="secondary"
+          >
+            Browse the source
+          </ButtonLink>
         </Card>
-      </section>
-
-      <section id="commit-format">
-        <h2>Commit format</h2>
-        <p>The generated message follows the Conventional Commits structure:</p>
-        <Card variant="muted">
-          <pre><code>type(scope)!: short description
-
-Optional longer description.
-
-BREAKING CHANGE: optional breaking change
-
-Closes #123</code></pre>
-        </Card>
-        <p>
-          The type, subject, body, footer, and any repository-specific constraints
-          are checked by Commitlint before confirmation.
-        </p>
-      </section>
-
-      <section id="requirements">
-        <h2>Requirements</h2>
-        <ul>
-          <li>Node.js 22.18 or newer</li>
-          <li>Git</li>
-          <li>A Commitlint configuration in the repository</li>
-          <li>At least one staged change</li>
-        </ul>
-      </section>
-
-      <ButtonLink
-        href="https://github.com/santi020k/commitprompt"
-        newTab
-        variant="secondary"
-      >
-        Browse the source
-      </ButtonLink>
+      </Prose>
     </article>
   </div>
 </Base>
