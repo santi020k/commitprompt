@@ -15,12 +15,12 @@
       "outputLogs": "errors-only"
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build", "^build"],
       "outputs": [],
       "outputLogs": "errors-only"
     },
     "test:coverage": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build", "^build"],
       "outputs": ["coverage/**"],
       "outputLogs": "errors-only"
     },
