@@ -186,10 +186,26 @@ import {
 } from '@santi020k/commitprompt'
 ```
 
-The message formatter, default commit types, Git adapter, cached Commitlint
-client, prompt helpers, non-interactive automation flow, and full interactive
-commit flow are exported for integrations and testing. The Commitlint client
-exposes `validate(message)`, `getTypes()`, and `getScopes()`.
+The package is ESM-only. Every value and type exported from the package root is
+part of the stable public API and follows semantic versioning. Files below
+`dist/` and source-file paths are implementation details and are not supported
+entry points.
+
+- `formatCommitMessage(answers)` formats structured fields without touching Git.
+- `createCommitlintValidator(cwd)` returns cached `validate(message)`,
+  `getTypes()`, and `getScopes()` operations.
+- `createGitClient(cwd, options?)` checks the index and creates commits without
+  using a package-manager-specific command.
+- `runAutomation(options)` powers structured discovery, formatting, validation,
+  and explicitly confirmed commit operations.
+- `runCommitFlow(options)` composes prompts, validation, confirmation, and Git
+  operations for custom interactive integrations.
+- The editor setup functions update Zed or VS Code settings while preserving
+  unrelated configuration.
+
+Commitprompt requires Node.js 22.18 or newer. Within a major version, additions
+may extend returned objects, exported unions, or optional options; existing
+documented behavior and required inputs will not change incompatibly.
 
 ## License
 

@@ -108,6 +108,12 @@ import {
 commits through Git. `runAutomation(options)` powers the non-interactive commands.
 `runCommitFlow(options)` powers the interactive workflow.
 
+The package is ESM-only. Every value and type exported from the package root is
+stable and follows semantic versioning. Source and `dist/` file paths are
+implementation details, not supported entry points. Within a major version,
+additions may extend returned objects, exported unions, or optional options;
+existing documented behavior and required inputs will not change incompatibly.
+
 ## Editor setup
 
 ```sh

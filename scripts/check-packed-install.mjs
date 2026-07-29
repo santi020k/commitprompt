@@ -340,7 +340,7 @@ execFileSync(
 )
 
 const configuredScopes = JSON.parse(execFileSync(
-  installedBinaries.get('pnpm'),
+  integrationBinary,
   ['scopes', '--json'],
   {
     cwd: integrationConsumer,

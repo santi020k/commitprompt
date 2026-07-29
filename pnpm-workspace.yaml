@@ -20,7 +20,9 @@ catalog:
   "@commitlint/lint": ^21.2.0
   "@commitlint/load": ^21.2.0
   "@commitlint/types": ^21.2.0
+  "@santi020k/eslint-config-astro": ^3.0.0
   "@santi020k/eslint-config-basic": ^3.0.0
+  "@santi020k/eslint-config-integrations": ^3.0.0
   "@santi020k/lumen-astro": ^0.4.0
   "@types/node": ^26.1.2
   "@vitest/coverage-v8": ^4.1.10
