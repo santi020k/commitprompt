@@ -1,5 +1,11 @@
 # @santi020k/commitprompt
 
+## 0.2.1
+
+### Patch Changes
+
+- [#9](https://github.com/santi020k/commitprompt/pull/9) [`7840f0a`](https://github.com/santi020k/commitprompt/commit/7840f0a536101c2fad9129d2aa8c5e6c9c4aba64) Thanks [@santi020k](https://github.com/santi020k)! - Support trailing commas when configuring Zed JSONC settings.
+
 ## 0.2.0
 
 ### Minor Changes
