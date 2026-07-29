@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join, win32 } from 'node:path'
+import { dirname, posix, win32 } from 'node:path'
 import process from 'node:process'
 
 import {
@@ -51,7 +51,7 @@ export const resolveVSCodeSettingsPath = ({
   }
 
   if (platform === 'darwin') {
-    return join(
+    return posix.join(
       homeDirectory,
       'Library',
       'Application Support',
@@ -61,8 +61,8 @@ export const resolveVSCodeSettingsPath = ({
     )
   }
 
-  return join(
-    env.XDG_CONFIG_HOME ?? join(homeDirectory, '.config'),
+  return posix.join(
+    env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'),
     'Code',
     'User',
     'settings.json'

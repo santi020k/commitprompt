@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join, win32 } from 'node:path'
+import { dirname, posix, win32 } from 'node:path'
 import process from 'node:process'
 
 import {
@@ -37,21 +37,21 @@ export const resolveZedSettingsPath = ({
 }: ResolveZedSettingsPathOptions = {}): string => {
   if (platform === 'win32') {
     return win32.join(
-      env.APPDATA ?? join(homeDirectory, 'AppData', 'Roaming'),
+      env.APPDATA ?? win32.join(homeDirectory, 'AppData', 'Roaming'),
       'Zed',
       'settings.json'
     )
   }
 
   if (platform === 'linux' || platform === 'freebsd') {
-    return join(
-      env.XDG_CONFIG_HOME ?? join(homeDirectory, '.config'),
+    return posix.join(
+      env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'),
       'zed',
       'settings.json'
     )
   }
 
-  return join(homeDirectory, '.config', 'zed', 'settings.json')
+  return posix.join(homeDirectory, '.config', 'zed', 'settings.json')
 }
 
 const readSettings = async (settingsPath: string): Promise<string> => {
