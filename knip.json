@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "duplicates": "off"
+  },
+  "workspaces": {
+    "packages/commitprompt": {
+      "project": ["src/**/*.ts", "bin/**/*.ts", "tests/**/*.ts"]
+    },
+    "apps/docs": {
+      "entry": ["src/pages/**/*.astro"],
+      "project": ["src/**/*.astro", "src/**/*.ts"]
+    }
+  }
+}

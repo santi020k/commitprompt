@@ -1,0 +1,25 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "useGitignore": true,
+  "ignorePaths": ["pnpm-lock.yaml"],
+  "words": [
+    "amannn",
+    "astrojs",
+    "Autobuild",
+    "autorelease",
+    "Commitprompt",
+    "commitlint",
+    "esbuild",
+    "eslintcache",
+    "knip",
+    "lede",
+    "publint",
+    "santi",
+    "Turborepo",
+    "unrs",
+    "vitest",
+    "workerd",
+    "wordmark"
+  ]
+}

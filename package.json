@@ -1,0 +1,72 @@
+{
+  "name": "commitprompt-root",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter commitprompt-docs dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "pnpm run lint:repo && turbo run lint",
+    "lint:repo": "eslint . --cache --no-warn-ignored",
+    "lint:fix": "pnpm run lint:repo:fix && turbo run lint:fix",
+    "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored",
+    "lint:commits": "commitlint --from=origin/main --to=HEAD",
+    "lint:spell": "cspell \"**\" --gitignore --cache --show-suggestions --show-context",
+    "lint:knip": "knip",
+    "check:exports": "turbo run check:exports",
+    "check:packed-install": "node scripts/check-packed-install.mjs",
+    "validate": "pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
+    "ok": "pnpm install --frozen-lockfile && pnpm run validate",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "publish-packages": "pnpm run build && pnpm run check:packed-install && changeset publish",
+    "release": "pnpm run validate && changeset publish",
+    "docs:dev": "pnpm --filter commitprompt-docs dev",
+    "docs:build": "turbo run build --filter=commitprompt-docs",
+    "docs:preview": "pnpm --filter commitprompt-docs preview",
+    "docs:deploy": "pnpm run docs:build && wrangler pages deploy apps/docs/dist --project-name=commitprompt --branch=main",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky",
+    "pre-commit": "lint-staged",
+    "pre-push": "pnpm run validate",
+    "commit": "commitprompt"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "catalog:",
+    "@changesets/cli": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@santi020k/eslint-config-basic": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "commitprompt": "workspace:*",
+    "cspell": "catalog:",
+    "eslint": "catalog:",
+    "husky": "catalog:",
+    "knip": "catalog:",
+    "lint-staged": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "lint-staged": {
+    "*": [
+      "cspell --no-must-find-files"
+    ],
+    "*.{astro,js,mjs,ts}": [
+      "eslint --fix --no-warn-ignored"
+    ],
+    "*.{json,jsonc,md,yml,yaml}": [
+      "eslint --fix --no-warn-ignored"
+    ]
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@10.32.1"
+}

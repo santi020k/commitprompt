@@ -1,0 +1,156 @@
+---
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  CodeTabs,
+  Separator
+} from '@santi020k/lumen-astro'
+
+import Base from '../layouts/Base.astro'
+
+const installItems = [
+  {
+    code: 'pnpm add --save-dev commitprompt @commitlint/config-conventional',
+    label: 'pnpm',
+    language: 'shell',
+    value: 'pnpm'
+  },
+  {
+    code: 'npm install --save-dev commitprompt @commitlint/config-conventional',
+    label: 'npm',
+    language: 'shell',
+    value: 'npm'
+  },
+  {
+    code: 'yarn add --dev commitprompt @commitlint/config-conventional',
+    label: 'Yarn',
+    language: 'shell',
+    value: 'yarn'
+  }
+] as const
+---
+
+<Base
+  title="Commitprompt — Commit with intent"
+  description="A focused, package-manager-neutral prompt for Conventional Commits."
+>
+  <section class="hero shell">
+    <div class="hero-copy">
+      <Badge variant="secondary">Conventional Commits, without the ceremony</Badge>
+      <h1>Write the commit.<br /><span>Not the syntax.</span></h1>
+      <p class="lede">
+        Commitprompt turns staged work into a clear, validated Conventional
+        Commit—using the rules your repository already trusts.
+      </p>
+      <div class="actions">
+        <ButtonLink href="/docs" showArrow>Get started</ButtonLink>
+        <ButtonLink
+          href="https://github.com/santi020k/commitprompt"
+          newTab
+          variant="secondary"
+        >
+          View on GitHub
+        </ButtonLink>
+      </div>
+      <CodeTabs
+        ariaLabel="Install Commitprompt"
+        class="install-tabs"
+        items={installItems}
+        storageKey="commitprompt-package-manager"
+        wrap={false}
+      />
+    </div>
+
+    <Card as="section" class="terminal" variant="muted" aria-label="Commitprompt example">
+      <div class="terminal-bar">
+        <span>commitprompt</span>
+        <span>~/project</span>
+      </div>
+      <pre><code><span class="muted">$ pnpm commit</span>
+
+Select the type of change:
+  1. feat     A new feature
+  2. fix      A bug fix
+  3. docs     Documentation only
+
+<span class="accent">Type:</span> 1
+<span class="accent">Scope:</span> cli
+<span class="accent">Description:</span> add repository-aware validation
+
+<span class="success">feat(cli): add repository-aware validation</span>
+
+Create this commit? [y/N] y</code></pre>
+    </Card>
+  </section>
+
+  <Separator />
+
+  <section class="section shell">
+    <div class="section-heading">
+      <p class="eyebrow">One small command</p>
+      <h2>Built around your repository</h2>
+      <p>
+        No adapter configuration and no package-manager lock-in. Commitprompt
+        stays focused on the moment between staging changes and creating the commit.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <Card as="article">
+        <p class="feature-number">01</p>
+        <h3>Your rules</h3>
+        <p>
+          Loads the repository’s Commitlint configuration and validates before
+          Git receives the message.
+        </p>
+      </Card>
+      <Card as="article">
+        <p class="feature-number">02</p>
+        <h3>Your package manager</h3>
+        <p>
+          Runs the same through pnpm, npm, or Yarn because validation happens
+          through Commitlint’s API.
+        </p>
+      </Card>
+      <Card as="article">
+        <p class="feature-number">03</p>
+        <h3>Your final say</h3>
+        <p>
+          Shows the complete message—including body, breaking change, and issue
+          references—before committing.
+        </p>
+      </Card>
+    </div>
+  </section>
+
+  <section class="section shell workflow-section">
+    <div class="section-heading">
+      <p class="eyebrow">The whole workflow</p>
+      <h2>Stage. Prompt. Commit.</h2>
+    </div>
+    <ol class="workflow">
+      <li>
+        <span>1</span>
+        <div><strong>Stage deliberately</strong><p>Commitprompt refuses to run with an empty index.</p></div>
+      </li>
+      <li>
+        <span>2</span>
+        <div><strong>Describe the change</strong><p>Answer a short sequence of focused questions.</p></div>
+      </li>
+      <li>
+        <span>3</span>
+        <div><strong>Validate and confirm</strong><p>Review the exact message before Git creates it.</p></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="section shell">
+    <Card class="final-cta" variant="muted">
+      <div>
+        <p class="eyebrow">Ready when the index is</p>
+        <h2>Make the next commit unmistakable.</h2>
+      </div>
+      <ButtonLink href="/docs" showArrow>Read the docs</ButtonLink>
+    </Card>
+  </section>
+</Base>

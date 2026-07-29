@@ -1,0 +1,19 @@
+---
+import { ButtonLink, Card } from '@santi020k/lumen-astro'
+
+import Base from '../layouts/Base.astro'
+---
+
+<Base
+  title="Page not found — Commitprompt"
+  description="The requested Commitprompt page could not be found."
+>
+  <section class="not-found shell">
+    <Card>
+      <p class="eyebrow">404</p>
+      <h1>This page was not staged.</h1>
+      <p>Return to the documentation and keep the commit focused.</p>
+      <ButtonLink href="/" showArrow>Go home</ButtonLink>
+    </Card>
+  </section>
+</Base>

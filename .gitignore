@@ -1,0 +1,10 @@
+node_modules
+dist
+.turbo
+coverage
+*.tsbuildinfo
+.eslintcache
+.cspellcache
+.astro
+.env
+.env.local

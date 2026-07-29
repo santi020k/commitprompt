@@ -1,0 +1,33 @@
+{
+  "name": "commitprompt-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation website for Commitprompt.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "lint": "eslint . --no-warn-ignored",
+    "lint:fix": "eslint . --fix --no-warn-ignored",
+    "check:exports": "echo \"No package exports to check\"",
+    "clean": "rm -rf dist .astro coverage"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "catalog:",
+    "@santi020k/lumen-astro": "catalog:",
+    "astro": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/check": "catalog:",
+    "sharp": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

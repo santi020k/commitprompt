@@ -1,0 +1,56 @@
+---
+import '@santi020k/lumen-astro/styles.css'
+import '../styles/global.css'
+
+import { Link, UIPrimitives } from '@santi020k/lumen-astro'
+
+interface Props {
+  description: string
+  title: string
+}
+
+const { description, title } = Astro.props
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0b0b0d" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={new URL('/og.png', Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL('/og.png', Astro.site)} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <UIPrimitives />
+    <header class="site-header">
+      <div class="shell nav-shell">
+        <Link class="wordmark" href="/" variant="inherit">commitprompt</Link>
+        <nav aria-label="Primary navigation">
+          <Link href="/docs">Docs</Link>
+          <Link href="https://github.com/santi020k/commitprompt" newTab>GitHub</Link>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <div class="shell footer-content">
+        <p>Commit with intent.</p>
+        <p>MIT licensed · Built with Lumen.</p>
+      </div>
+    </footer>
+  </body>
+</html>

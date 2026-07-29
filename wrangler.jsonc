@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "commitprompt",
+  "pages_build_output_dir": "apps/docs/dist",
+  "compatibility_date": "2026-07-28",
+  "vars": {
+    "PUBLIC_SITE_URL": "https://commitprompt.santi020k.com"
+  }
+}

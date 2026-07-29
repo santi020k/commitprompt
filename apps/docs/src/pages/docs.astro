@@ -1,0 +1,164 @@
+---
+import {
+  Badge,
+  ButtonLink,
+  Callout,
+  Card,
+  CodeTabs
+} from '@santi020k/lumen-astro'
+
+import Base from '../layouts/Base.astro'
+
+const installItems = [
+  {
+    code: 'pnpm add --save-dev commitprompt @commitlint/config-conventional',
+    label: 'pnpm',
+    language: 'shell',
+    value: 'pnpm'
+  },
+  {
+    code: 'npm install --save-dev commitprompt @commitlint/config-conventional',
+    label: 'npm',
+    language: 'shell',
+    value: 'npm'
+  },
+  {
+    code: 'yarn add --dev commitprompt @commitlint/config-conventional',
+    label: 'Yarn',
+    language: 'shell',
+    value: 'yarn'
+  }
+] as const
+
+const packageScript = `{
+  "scripts": {
+    "commit": "commitprompt"
+  }
+}`
+
+const commitlintConfig = `export default {
+  extends: ['@commitlint/config-conventional']
+}`
+---
+
+<Base
+  title="Documentation — Commitprompt"
+  description="Install, configure, and use Commitprompt in any Git repository."
+>
+  <div class="docs-shell shell">
+    <aside class="docs-sidebar">
+      <Badge variant="outline">Documentation</Badge>
+      <nav aria-label="Documentation">
+        <a href="#installation">Installation</a>
+        <a href="#configuration">Configuration</a>
+        <a href="#usage">Usage</a>
+        <a href="#commit-format">Commit format</a>
+        <a href="#requirements">Requirements</a>
+      </nav>
+    </aside>
+
+    <article class="docs-content">
+      <header>
+        <p class="eyebrow">Documentation</p>
+        <h1>Commit with your repository’s rules.</h1>
+        <p class="lede">
+          Commitprompt is a small interactive CLI. It reads the local Commitlint
+          configuration, validates the finished message, and only commits after
+          you confirm it.
+        </p>
+      </header>
+
+      <section id="installation">
+        <h2>Installation</h2>
+        <p>Install Commitprompt and a Commitlint configuration as development dependencies.</p>
+        <CodeTabs
+          ariaLabel="Install Commitprompt"
+          items={installItems}
+          storageKey="commitprompt-package-manager"
+          wrap={false}
+        />
+      </section>
+
+      <section id="configuration">
+        <h2>Configuration</h2>
+        <p>Add a repository-level Commitlint configuration:</p>
+        <CodeTabs
+          ariaLabel="Commitlint configuration"
+          copy
+          items={[{
+            code: commitlintConfig,
+            label: 'commitlint.config.js',
+            language: 'javascript',
+            value: 'config'
+          }]}
+        />
+        <p>Then expose the neutral binary through your package scripts:</p>
+        <CodeTabs
+          ariaLabel="Package script"
+          copy
+          items={[{
+            code: packageScript,
+            label: 'package.json',
+            language: 'json',
+            value: 'package'
+          }]}
+        />
+        <Callout>
+          Commitprompt loads the configuration from the current working
+          directory. Different repositories can enforce different rules without
+          changing the CLI.
+        </Callout>
+      </section>
+
+      <section id="usage">
+        <h2>Usage</h2>
+        <ol>
+          <li>Stage the files that belong in the commit.</li>
+          <li>Run <code>pnpm commit</code>, <code>npm run commit</code>, or <code>yarn commit</code>.</li>
+          <li>Select a type and describe the change.</li>
+          <li>Review the generated message and confirm.</li>
+        </ol>
+        <Card variant="muted">
+          <pre><code>git add src/
+pnpm commit</code></pre>
+        </Card>
+      </section>
+
+      <section id="commit-format">
+        <h2>Commit format</h2>
+        <p>The generated message follows the Conventional Commits structure:</p>
+        <Card variant="muted">
+          <pre><code>type(scope)!: short description
+
+Optional longer description.
+
+BREAKING CHANGE: optional breaking change
+
+Closes #123</code></pre>
+        </Card>
+        <p>
+          The type, subject, body, footer, and any repository-specific constraints
+          are checked by Commitlint before confirmation.
+        </p>
+      </section>
+
+      <section id="requirements">
+        <h2>Requirements</h2>
+        <ul>
+          <li>Node.js 22.18 or newer</li>
+          <li>Git</li>
+          <li>A Commitlint configuration in the repository</li>
+          <li>At least one staged change</li>
+        </ul>
+      </section>
+
+      <ButtonLink
+        href="https://github.com/santi020k/commitprompt"
+        newTab
+        variant="secondary"
+      >
+        Browse the source
+      </ButtonLink>
+    </article>
+  </div>
+</Base>
