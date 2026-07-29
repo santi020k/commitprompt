@@ -159,6 +159,10 @@ code {
   color: hsl(var(--brand));
 }
 
+.hero .ui-badge {
+  white-space: normal;
+}
+
 .status-dot {
   display: inline-block;
   width: 0.45rem;

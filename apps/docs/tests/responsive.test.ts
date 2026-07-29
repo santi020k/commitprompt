@@ -19,7 +19,9 @@ for (const viewport of screenSizes) {
         scrollWidth: document.documentElement.scrollWidth
       }))
 
-      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
+      expect(dimensions.scrollWidth, `${path} should not overflow the ${
+        viewport.name
+      } viewport`).toBeLessThanOrEqual(dimensions.clientWidth)
     }
   })
 }
