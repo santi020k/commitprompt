@@ -87,6 +87,139 @@ const requireInput = (input: string | undefined): string => {
   return input
 }
 
+type NormalizedAutomationOptions = Omit<
+  RunAutomationOptions,
+  'confirm' | 'json'
+> & {
+  confirm: boolean
+  json: boolean
+}
+
+const runInstructions = ({
+  json,
+  log
+}: NormalizedAutomationOptions): number => {
+  log(json
+    ? JSON.stringify({ instructions: COMMIT_MESSAGE_INSTRUCTIONS })
+    : COMMIT_MESSAGE_INSTRUCTIONS)
+
+  return 0
+}
+
+const runTypes = async ({
+  cwd,
+  json,
+  log
+}: NormalizedAutomationOptions): Promise<number> => {
+  const types = await createCommitlintValidator(cwd).getTypes()
+
+  log(json ? JSON.stringify({ types }) : types
+    .map(type => `${type.value}\t${type.description}`)
+    .join('\n'))
+
+  return 0
+}
+
+const runValidation = async ({
+  cwd,
+  error,
+  input,
+  json,
+  log
+}: NormalizedAutomationOptions): Promise<number> => {
+  const validator = createCommitlintValidator(cwd)
+  const validation = await validator.validate(requireInput(input).trimEnd())
+
+  printValidation(validation, json, log, error)
+
+  return validation.valid ? 0 : 1
+}
+
+const getFormattedMessage = (
+  input: string | undefined
+): string => formatCommitMessage(parseCommitAnswers(requireInput(input)))
+
+const runFormat = ({
+  input,
+  json,
+  log
+}: NormalizedAutomationOptions): number => {
+  const message = getFormattedMessage(input)
+
+  log(json ? JSON.stringify({ message }) : message)
+
+  return 0
+}
+
+const runCommit = async ({
+  confirm,
+  cwd,
+  error,
+  input,
+  json,
+  log
+}: NormalizedAutomationOptions): Promise<number> => {
+  if (!confirm) {
+    throw new Error(
+      'Non-interactive commits require --yes to confirm the Git operation.'
+    )
+  }
+
+  const message = getFormattedMessage(input)
+  const validation = await createCommitlintValidator(cwd).validate(message)
+
+  if (!validation.valid) {
+    if (json) {
+      log(JSON.stringify({ committed: false, message, validation }))
+    }
+    else {
+      printValidation(validation, false, log, error)
+    }
+
+    return 1
+  }
+
+  const git = createGitClient(cwd, { silent: true })
+
+  if (!git.hasStagedChanges()) {
+    throw new Error('No staged changes. Stage the files you want to commit first.')
+  }
+
+  git.commit(message)
+
+  log(json
+    ? JSON.stringify({ committed: true, message, validation })
+    : `Created commit:\n${message}`)
+
+  return 0
+}
+
+const runAutomationAction = async (
+  options: NormalizedAutomationOptions
+): Promise<number> => {
+  switch (options.command) {
+  case 'commit': {
+    return await runCommit(options)
+  }
+
+  case 'format': {
+    return runFormat(options)
+  }
+
+  case 'instructions': {
+    return runInstructions(options)
+  }
+
+  case 'types': {
+    return await runTypes(options)
+  }
+
+  case 'validate': {
+    return await runValidation(options)
+  }
+  }
+}
+
 export const runAutomation = async ({
   command,
   confirm = false,
@@ -97,74 +230,15 @@ export const runAutomation = async ({
   log
 }: RunAutomationOptions): Promise<number> => {
   try {
-    if (command === 'instructions') {
-      log(json
-        ? JSON.stringify({ instructions: COMMIT_MESSAGE_INSTRUCTIONS })
-        : COMMIT_MESSAGE_INSTRUCTIONS)
-
-      return 0
-    }
-
-    const validator = createCommitlintValidator(cwd)
-
-    if (command === 'types') {
-      const types = await validator.getTypes()
-
-      log(json ? JSON.stringify({ types }) : types
-        .map(type => `${type.value}\t${type.description}`)
-        .join('\n'))
-
-      return 0
-    }
-
-    if (command === 'validate') {
-      const validation = await validator.validate(requireInput(input).trimEnd())
-
-      printValidation(validation, json, log, error)
-
-      return validation.valid ? 0 : 1
-    }
-
-    const message = formatCommitMessage(parseCommitAnswers(requireInput(input)))
-
-    if (command === 'format') {
-      log(json ? JSON.stringify({ message }) : message)
-
-      return 0
-    }
-
-    if (!confirm) {
-      throw new Error(
-        'Non-interactive commits require --yes to confirm the Git operation.'
-      )
-    }
-
-    const validation = await validator.validate(message)
-
-    if (!validation.valid) {
-      if (json) {
-        log(JSON.stringify({ committed: false, message, validation }))
-      }
-      else {
-        printValidation(validation, false, log, error)
-      }
-
-      return 1
-    }
-
-    const git = createGitClient(cwd)
-
-    if (!git.hasStagedChanges()) {
-      throw new Error('No staged changes. Stage the files you want to commit first.')
-    }
-
-    git.commit(message)
-
-    log(json
-      ? JSON.stringify({ committed: true, message, validation })
-      : `Created commit:\n${message}`)
-
-    return 0
+    return await runAutomationAction({
+      command,
+      confirm,
+      cwd,
+      error,
+      input,
+      json,
+      log
+    })
   }
   catch (caughtError) {
     const message = caughtError instanceof Error

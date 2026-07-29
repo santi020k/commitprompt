@@ -74,7 +74,9 @@ const readSettings = async (settingsPath: string): Promise<string> => {
 const getExistingInstructions = (source: string): unknown => {
   const parseErrors: ParseError[] = []
 
-  const settings = parse(source, parseErrors) as {
+  const settings = parse(source, parseErrors, {
+    allowTrailingComma: true
+  }) as {
     agent?: {
       commit_message_instructions?: unknown
     }

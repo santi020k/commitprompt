@@ -71,33 +71,42 @@ const parseAutomationArguments = (values: string[]): AutomationArguments => {
     switch (value) {
     case '--json': {
       options.json = true
-    
-    break;
+
+      break
     }
 
     case '--yes': {
       options.confirm = true
-    
-    break;
+
+      break
     }
 
-    case '--cwd':
- 
+    case '--cwd': {
+      const optionValue = values[index + 1]
+
+      if (!optionValue) throw new Error('--cwd requires a value.')
+
+      options.cwd = optionValue
+
+      index += 1
+
+      break
+    }
+
     case '--input': {
       const optionValue = values[index + 1]
 
-      if (!optionValue) throw new Error(`${value} requires a value.`)
+      if (!optionValue) throw new Error('--input requires a value.')
 
-      if (value === '--cwd') options.cwd = optionValue
-      else options.inputPath = optionValue
+      options.inputPath = optionValue
 
       index += 1
-    
-    break;
+
+      break
     }
 
     default: {
-      throw new Error(`Unknown option: ${value}`)
+      throw new Error(`Unknown option: ${String(value)}`)
     }
     }
   }
@@ -106,71 +115,74 @@ const parseAutomationArguments = (values: string[]): AutomationArguments => {
 }
 
 const readStandardInput = async (): Promise<string> => {
-  const chunks: Buffer[] = []
+  let input = ''
 
   for await (const chunk of process.stdin) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    input += String(chunk)
   }
 
-  return Buffer.concat(chunks).toString('utf8')
+  return input
+}
+
+const acceptsInput = (command: AutomationCommand): boolean =>
+  command === 'commit' || command === 'format' || command === 'validate'
+
+const readAutomationInput = async (
+  command: AutomationCommand,
+  { inputPath }: AutomationArguments
+): Promise<string | undefined> => {
+  if (!acceptsInput(command)) {
+    if (inputPath) {
+      throw new Error(`The ${command} command does not accept --input.`)
+    }
+
+    return undefined
+  }
+
+  if (inputPath && inputPath !== '-') return await readFile(inputPath, 'utf8')
+
+  return await readStandardInput()
+}
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
+const printCommandError = (error: unknown, json: boolean): void => {
+  const message = getErrorMessage(error)
+
+  console.error(json ? JSON.stringify({ error: message }) : message)
 }
 
 const runAutomationCommand = async (
   command: AutomationCommand,
   values: string[]
 ): Promise<number> => {
-  let options: AutomationArguments
+  let json = values.includes('--json')
 
   try {
-    options = parseAutomationArguments(values)
+    const options = parseAutomationArguments(values)
+
+    json = options.json
+
+    return await runAutomation({
+      command,
+      confirm: options.confirm,
+      cwd: options.cwd,
+      error: message => {
+        console.error(message)
+      },
+      input: await readAutomationInput(command, options),
+      json,
+      log: message => {
+        console.log(message)
+      }
+    })
   }
   catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
+    printCommandError(error, json)
 
     return 1
   }
-
-  const acceptsInput = command === 'commit'
-    || command === 'format'
-    || command === 'validate'
-
-  let input: string | undefined
-
-  if (acceptsInput) {
-    try {
-      input = options.inputPath && options.inputPath !== '-'
-        ? await readFile(options.inputPath, 'utf8')
-        : await readStandardInput()
-    }
-    catch (error) {
-      console.error(options.json
-        ? JSON.stringify({
-            error: error instanceof Error ? error.message : String(error)
-          })
-        : error instanceof Error ? error.message : String(error))
-
-      return 1
-    }
-  }
-  else if (options.inputPath) {
-    console.error(`The ${command} command does not accept --input.`)
-
-    return 1
-  }
-
-  return await runAutomation({
-    command,
-    confirm: options.confirm,
-    cwd: options.cwd,
-    error: message => {
-      console.error(message)
-    },
-    input,
-    json: options.json,
-    log: message => {
-      console.log(message)
-    }
-  })
 }
 
 if (argument === '--help' || argument === '-h') {

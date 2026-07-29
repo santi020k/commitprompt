@@ -17,6 +17,10 @@ export interface GitClient {
   hasStagedChanges: () => boolean
 }
 
+export interface CreateGitClientOptions {
+  silent?: boolean
+}
+
 export interface MessageValidation {
   errors: string[]
   valid: boolean

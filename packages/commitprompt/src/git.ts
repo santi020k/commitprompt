@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 
-import type { GitClient } from './types.js'
+import type { CreateGitClientOptions, GitClient } from './types.js'
 
 const getFailureMessage = (
   command: string,
@@ -11,13 +11,18 @@ const getFailureMessage = (
   return detail ? `${command} failed: ${detail}` : `${command} failed.`
 }
 
-export const createGitClient = (cwd: string): GitClient => ({
+export const createGitClient = (
+  cwd: string,
+  { silent = false }: CreateGitClientOptions = {}
+): GitClient => ({
   commit: message => {
     const result = spawnSync('git', ['commit', '--file=-'], {
       cwd,
       encoding: 'utf8',
       input: message,
-      stdio: ['pipe', 'inherit', 'inherit']
+      stdio: silent
+        ? ['pipe', 'pipe', 'pipe']
+        : ['pipe', 'inherit', 'inherit']
     })
 
     if (result.error) throw result.error

@@ -14,6 +14,7 @@ export type {
   CommitAnswers,
   CommitlintClient,
   CommitType,
+  CreateGitClientOptions,
   GitClient,
   MessageValidation,
   MessageValidator,
