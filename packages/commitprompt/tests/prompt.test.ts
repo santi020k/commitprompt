@@ -80,6 +80,48 @@ describe('collectCommitAnswers', () => {
     expect(answers.body).toBe('First paragraph.\nSecond paragraph.')
   })
 
+  test('accepts a configured scope by number', async () => {
+    const prompt = createPrompt(['feat', '2', 'update docs', '', 'n', ''])
+    const log = vi.fn()
+
+    const answers = await collectCommitAnswers(
+      prompt,
+      [{ description: 'A feature', value: 'feat' }],
+      log,
+      vi.fn(),
+      ['cli', 'docs']
+    )
+
+    expect(answers.scope).toBe('docs')
+    expect(log).toHaveBeenCalledWith('Select the scope of change:')
+  })
+
+  test('accepts an empty configured scope and retries unknown scopes', async () => {
+    const prompt = createPrompt([
+      'feat',
+      'unknown',
+      '',
+      'update project',
+      '',
+      'n',
+      ''
+    ])
+    const error = vi.fn()
+
+    const answers = await collectCommitAnswers(
+      prompt,
+      [{ description: 'A feature', value: 'feat' }],
+      vi.fn(),
+      error,
+      ['cli', 'docs']
+    )
+
+    expect(answers.scope).toBe('')
+    expect(error).toHaveBeenCalledWith(
+      'Choose 1-2, enter a listed scope, or leave it empty.'
+    )
+  })
+
   test('rejects an empty type list', async () => {
     await expect(collectCommitAnswers(
       createPrompt([]),

@@ -44,6 +44,7 @@ describe('runAutomation', () => {
       hasStagedChanges: vi.fn(() => true)
     }
     validator = {
+      getScopes: vi.fn(() => Promise.resolve([])),
       getTypes: vi.fn(() => Promise.resolve([
         { description: 'A feature', value: 'feat' }
       ])),
@@ -80,6 +81,7 @@ describe('runAutomation', () => {
 
     await expect(runAutomation(options)).resolves.toBe(0)
     expect(mocks.createValidator).toHaveBeenCalledWith('/project')
+    expect(validator.getScopes).toHaveBeenCalledOnce()
     expect(validator.getTypes).toHaveBeenCalledOnce()
     expect(options.log).toHaveBeenCalledWith(
       expect.stringContaining('Use one of these types: release.')
@@ -97,6 +99,7 @@ describe('runAutomation', () => {
     }
 
     await expect(runAutomation(options)).resolves.toBe(0)
+    expect(validator.getScopes).toHaveBeenCalledOnce()
     expect(validator.getTypes).toHaveBeenCalledOnce()
     expect(options.log).toHaveBeenCalledWith(
       expect.stringContaining('Use one of these types: feat.')
@@ -254,6 +257,37 @@ describe('runAutomation', () => {
 
     await expect(runAutomation(options)).resolves.toBe(0)
     expect(options.log).toHaveBeenCalledWith('feat\tA feature')
+  })
+
+  test('lists repository-aware scopes', async () => {
+    validator.getScopes = vi.fn(() => Promise.resolve(['cli', 'docs']))
+    const options = {
+      ...createOptions(),
+      command: 'scopes' as const,
+      input: undefined,
+      json: true
+    }
+
+    await expect(runAutomation(options)).resolves.toBe(0)
+    expect(options.log).toHaveBeenCalledWith(JSON.stringify({
+      scopes: ['cli', 'docs']
+    }))
+  })
+
+  test('adds repository scopes to model instructions', async () => {
+    validator.getScopes = vi.fn(() => Promise.resolve(['cli', 'docs']))
+    const options = {
+      ...createOptions(),
+      command: 'instructions' as const,
+      input: undefined
+    }
+
+    await expect(runAutomation(options)).resolves.toBe(0)
+    expect(options.log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Use one of these scopes when a scope is appropriate: cli, docs.'
+      )
+    )
   })
 
   test('requires explicit confirmation for non-interactive commits', async () => {

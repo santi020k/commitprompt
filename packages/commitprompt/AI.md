@@ -8,10 +8,11 @@ the terminal questionnaire.
 
 1. Inspect the repository instructions, status, staged diff, and unstaged diff.
 2. Do not stage files unless the user asked you to.
-3. Read the allowed commit types:
+3. Read the allowed commit types and configured scopes:
 
    ```sh
    commitprompt types --json
+   commitprompt scopes --json
    ```
 
 4. Read the generation instructions:
@@ -61,15 +62,15 @@ Git normally. Git hooks remain active. Never use `--no-verify` to bypass them.
 required and must be a string. Use an empty string for omitted optional content.
 
 - `type`: allowed change type; consult `types --json`
-- `scope`: optional affected area
+- `scope`: optional affected area; consult `scopes --json` when it is non-empty
 - `subject`: concise imperative description
 - `body`: optional longer explanation
 - `breaking`: optional breaking-change explanation
 - `issues`: optional issue references such as `Closes #123`
 
 Use `--input <path>` instead of stdin when input already exists in a file. Use
-`--cwd <path>` with `types`, `validate`, or `commit` when the target repository
-is not the current working directory.
+`--cwd <path>` with `instructions`, `scopes`, `types`, `validate`, or `commit`
+when the target repository is not the current working directory.
 
 ## Exit and output contract
 
@@ -90,8 +91,8 @@ Projects can add this to `AGENTS.md` or an equivalent agent-instruction file:
 ## Commits
 
 Use the installed `commitprompt` binary for commit messages. Run
-`commitprompt types --json` before generating a message, pass structured JSON to
-`commitprompt format --json`, and validate the result with
+`commitprompt types --json` and `commitprompt scopes --json` before generating a
+message, pass structured JSON to `commitprompt format --json`, and validate it with
 `commitprompt validate --json`. Only run `commitprompt commit --yes --json` when
 the user explicitly asks you to create the commit. Never stage unrelated files
 or bypass Git hooks.

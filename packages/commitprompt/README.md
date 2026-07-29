@@ -25,8 +25,8 @@ that changes are staged, guides the author through a Conventional Commit,
 validates the result, previews it, and creates the commit after confirmation.
 
 Commitprompt includes Conventional Commits validation, so a separate Commitlint
-configuration is optional. When the repository defines `type-enum`,
-Commitprompt uses those values in the type prompt.
+configuration is optional. When the repository defines `type-enum` or
+`scope-enum`, Commitprompt uses those values in the corresponding prompts.
 
 ## Usage
 
@@ -76,14 +76,16 @@ export default {
     'header-max-length': [0],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
-    'type-enum': [2, 'always', ['feat', 'fix', 'release']]
+    'type-enum': [2, 'always', ['feat', 'fix', 'release']],
+    'scope-enum': [2, 'always', ['cli', 'docs']]
   }
 }
 ```
 
 Commitprompt passes repository parser presets, plugins, ignores, default
-ignores, and help URLs to Commitlint. A configured `type-enum` rule also changes
-the choices shown by the prompt. A repository configuration takes precedence
+ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
+rules also change the choices shown by the prompt. Without `scope-enum`, the
+optional scope remains free-form. A repository configuration takes precedence
 over the built-in fallback; rules that it does not declare or receive through
 `extends` are not enforced.
 
@@ -102,6 +104,7 @@ Inspect the repository and staged diff first, then discover its allowed types:
 
 ```sh
 commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 ```
 
@@ -186,7 +189,7 @@ import {
 The message formatter, default commit types, Git adapter, cached Commitlint
 client, prompt helpers, non-interactive automation flow, and full interactive
 commit flow are exported for integrations and testing. The Commitlint client
-exposes `validate(message)` and `getTypes()`.
+exposes `validate(message)`, `getTypes()`, and `getScopes()`.
 
 ## License
 

@@ -86,14 +86,48 @@ const selectType = async (
   }
 }
 
+const selectScope = async (
+  prompt: Prompt,
+  scopes: readonly string[],
+  log: (message: string) => void,
+  error: (message: string) => void
+): Promise<string> => {
+  if (scopes.length === 0) {
+    return (await prompt.question('Scope (optional): ')).trim()
+  }
+
+  log('Select the scope of change:')
+
+  for (const [index, scope] of scopes.entries()) {
+    log(`  ${index + 1}. ${scope}`)
+  }
+
+  for (;;) {
+    const answer = (await prompt.question('Scope (optional): ')).trim()
+
+    if (!answer) return ''
+
+    const numericSelection = Number(answer)
+
+    const selected = Number.isInteger(numericSelection)
+      ? scopes[numericSelection - 1]
+      : scopes.find(scope => scope.toLowerCase() === answer.toLowerCase())
+
+    if (selected) return selected
+
+    error(`Choose 1-${scopes.length}, enter a listed scope, or leave it empty.`)
+  }
+}
+
 export const collectCommitAnswers = async (
   prompt: Prompt,
   types: readonly CommitType[],
   log: (message: string) => void,
-  error: (message: string) => void
+  error: (message: string) => void,
+  scopes: readonly string[] = []
 ): Promise<CommitAnswers> => {
   const type = await selectType(prompt, types, log, error)
-  const scope = (await prompt.question('Scope (optional): ')).trim()
+  const scope = await selectScope(prompt, scopes, log, error)
   const subject = await askRequired(prompt, error, 'Short imperative description: ')
 
   const body = await askMultiline(

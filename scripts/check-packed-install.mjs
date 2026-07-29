@@ -105,7 +105,9 @@ const verifyConsumer = (consumerDirectory, name) => {
         'const report = await validator.validate("not conventional")',
         "if (report.valid) throw new Error('Built-in rules accepted an invalid message')",
         'const types = await validator.getTypes()',
-        "if (types[0]?.value !== 'feat') throw new Error('Built-in prompt types were not loaded')"
+        "if (types[0]?.value !== 'feat') throw new Error('Built-in prompt types were not loaded')",
+        'const scopes = await validator.getScopes()',
+        "if (scopes.length !== 0) throw new Error('Unexpected built-in prompt scopes')"
       ].join(';')
     ],
     {
@@ -307,7 +309,10 @@ writeFileSync(
   join(integrationConsumer, 'commitlint.config.mjs'),
   [
     'export default {',
-    "  rules: { 'type-enum': [2, 'always', ['fix', 'release']] }",
+    '  rules: {',
+    "    'type-enum': [2, 'always', ['fix', 'release']],",
+    "    'scope-enum': [2, 'always', ['cli', 'docs']]",
+    '  }',
     '}'
   ].join('\n')
 )
@@ -322,7 +327,10 @@ execFileSync(
       'const validator = api.createCommitlintValidator(process.cwd())',
       'const types = await validator.getTypes()',
       'const values = types.map(type => type.value).join(",")',
-      "if (values !== 'fix,release') throw new Error(`Unexpected repository types: ${values}`)"
+      "if (values !== 'fix,release') throw new Error(`Unexpected repository types: ${values}`)",
+      'const scopes = await validator.getScopes()',
+      'const scopeValues = scopes.join(",")',
+      "if (scopeValues !== 'cli,docs') throw new Error(`Unexpected repository scopes: ${scopeValues}`)"
     ].join(';')
   ],
   {
@@ -330,5 +338,18 @@ execFileSync(
     stdio: 'inherit'
   }
 )
+
+const configuredScopes = JSON.parse(execFileSync(
+  installedBinaries.get('pnpm'),
+  ['scopes', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (configuredScopes.scopes.join(',') !== 'cli,docs') {
+  throw new Error('Installed CLI returned unexpected repository scopes.')
+}
 
 console.log('Packed package installation passed for npm, pnpm, and Yarn.')

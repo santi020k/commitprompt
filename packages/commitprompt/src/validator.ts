@@ -86,10 +86,36 @@ const getConfiguredTypes = (
   return types.length > 0 ? types : DEFAULT_COMMIT_TYPES
 }
 
+const getConfiguredScopes = (
+  configuration: QualifiedConfig
+): readonly string[] => {
+  const scopeRule = configuration.rules['scope-enum']
+
+  if (
+    !scopeRule
+    || scopeRule[0] === RuleConfigSeverity.Disabled
+    || scopeRule[1] === 'never'
+    || !Array.isArray(scopeRule[2])
+  ) {
+    return []
+  }
+
+  return [...new Set(scopeRule[2].filter(
+    (value): value is string => typeof value === 'string' && value.length > 0
+  ))]
+}
+
 export const createCommitlintValidator = (cwd: string): CommitlintClient => {
   const configuration = loadConfiguration(cwd)
 
   return {
+    getScopes: async () => {
+      const loaded = await configuration
+
+      return loaded.usesDefaults
+        ? []
+        : getConfiguredScopes(loaded.configuration)
+    },
     getTypes: async () => {
       const loaded = await configuration
 

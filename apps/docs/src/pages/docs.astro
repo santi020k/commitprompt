@@ -49,7 +49,8 @@ const commitlintConfig = `export default {
     'header-max-length': [0],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
-    'type-enum': [2, 'always', ['feat', 'fix', 'release']]
+    'type-enum': [2, 'always', ['feat', 'fix', 'release']],
+    'scope-enum': [2, 'always', ['cli', 'docs']]
   }
 }`
 
@@ -64,6 +65,7 @@ Closes #123`
 const usageCommand = 'git add src/\npnpm commit'
 
 const automationExample = `commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 
 commitprompt format --json <<'JSON'
@@ -93,6 +95,7 @@ await runCommitFlow({
   git: createGitClient(process.cwd()),
   log: console.log,
   prompt,
+  scopes: await validator.getScopes(),
   types: await validator.getTypes(),
   validator
 })`
@@ -190,8 +193,8 @@ await runCommitFlow({
           <Callout>
             <p>
               Commitprompt loads configuration from the current repository. When
-              it finds a <Code>type-enum</Code> rule, the type prompt follows that
-              rule automatically.
+              it finds <Code>type-enum</Code> or <Code>scope-enum</Code>, the
+              corresponding prompt follows that rule automatically.
             </p>
           </Callout>
           <p>
@@ -292,8 +295,10 @@ await runCommitFlow({
           <h2>Repository rules</h2>
           <p>
             A repository configuration takes precedence over Commitprompt’s
-            included defaults. Custom types appear in the prompt, and a message
-            that fails validation can be revised without restarting the CLI.
+            included defaults. Custom types and scopes appear in the prompts, and
+            a message that fails validation can be revised without restarting the
+            CLI. Without <Code>scope-enum</Code>, scope remains optional and
+            free-form.
           </p>
           <Callout>
             <p>
@@ -326,9 +331,10 @@ await runCommitFlow({
         <section id="automation-ai">
           <h2>Automation and AI tools</h2>
           <p>
-            AI tools can discover the repository’s allowed types, read generation
-            instructions, format structured answers, and validate the exact result
-            without parsing terminal prompts or bypassing repository rules.
+            AI tools can discover the repository’s allowed types and scopes, read
+            generation instructions, format structured answers, and validate the
+            exact result without parsing terminal prompts or bypassing repository
+            rules.
           </p>
           <Code
             code={automationExample}
@@ -385,7 +391,7 @@ await runCommitFlow({
             </Card>
             <Card as="article" variant="muted">
               <Code>createCommitlintValidator</Code>
-              <p>Loads repository rules or the included defaults and exposes validation and prompt types.</p>
+              <p>Loads repository rules or the included defaults and exposes validation, prompt types, and configured scopes.</p>
             </Card>
             <Card as="article" variant="muted">
               <Code>DEFAULT_COMMIT_TYPES</Code>

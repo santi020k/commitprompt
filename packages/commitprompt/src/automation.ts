@@ -100,10 +100,28 @@ const runInstructions = async ({
   json,
   log
 }: NormalizedAutomationOptions): Promise<number> => {
-  const types = await createCommitlintValidator(cwd).getTypes()
-  const instructions = getCommitMessageInstructions(types)
+  const validator = createCommitlintValidator(cwd)
+
+  const [scopes, types] = await Promise.all([
+    validator.getScopes(),
+    validator.getTypes()
+  ])
+
+  const instructions = getCommitMessageInstructions(types, scopes)
 
   log(json ? JSON.stringify({ instructions }) : instructions)
+
+  return 0
+}
+
+const runScopes = async ({
+  cwd,
+  json,
+  log
+}: NormalizedAutomationOptions): Promise<number> => {
+  const scopes = await createCommitlintValidator(cwd).getScopes()
+
+  log(json ? JSON.stringify({ scopes }) : scopes.join('\n'))
 
   return 0
 }
@@ -210,6 +228,10 @@ const runAutomationAction = async (
 
   case 'instructions': {
     return await runInstructions(options)
+  }
+
+  case 'scopes': {
+    return await runScopes(options)
   }
 
   case 'types': {

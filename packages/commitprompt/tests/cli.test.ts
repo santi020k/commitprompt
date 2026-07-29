@@ -61,6 +61,25 @@ describe('runCommitFlow', () => {
     expect(options.git.commit).toHaveBeenCalledWith('feat: add a prompt')
   })
 
+  test('uses repository-defined scope choices', async () => {
+    const options = createOptions([
+      'feat',
+      '2',
+      'update docs',
+      '',
+      'n',
+      '',
+      'yes'
+    ], {
+      scopes: ['cli', 'docs']
+    })
+
+    await expect(runCommitFlow(options)).resolves.toBe(0)
+    expect(options.validator.validate).toHaveBeenCalledWith(
+      'feat(docs): update docs'
+    )
+  })
+
   test('does not commit an invalid message', async () => {
     const options = createOptions([
       'feat',

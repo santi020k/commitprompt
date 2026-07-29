@@ -39,6 +39,7 @@ export const runCommitFlow = async ({
   git,
   log,
   prompt,
+  scopes = [],
   types = DEFAULT_COMMIT_TYPES,
   validator
 }: RunCommitFlowOptions): Promise<number> => {
@@ -50,7 +51,14 @@ export const runCommitFlow = async ({
     }
 
     for (;;) {
-      const answers = await collectCommitAnswers(prompt, types, log, error)
+      const answers = await collectCommitAnswers(
+        prompt,
+        types,
+        log,
+        error,
+        scopes
+      )
+
       const message = formatCommitMessage(answers)
 
       log(`\n${message}\n`)
@@ -96,7 +104,10 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
   const validator = createCommitlintValidator(cwd)
 
   try {
-    const types = await validator.getTypes()
+    const [scopes, types] = await Promise.all([
+      validator.getScopes(),
+      validator.getTypes()
+    ])
 
     return await runCommitFlow({
       error: message => {
@@ -107,6 +118,7 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
         console.log(message)
       },
       prompt,
+      scopes,
       types,
       validator
     })

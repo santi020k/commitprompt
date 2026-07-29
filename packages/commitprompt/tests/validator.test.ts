@@ -58,6 +58,7 @@ describe('createCommitlintValidator', () => {
         }
       })
     )
+    await expect(validator.getScopes()).resolves.toEqual([])
     await expect(validator.getTypes()).resolves.toHaveLength(11)
   })
 
@@ -161,5 +162,51 @@ describe('createCommitlintValidator', () => {
     expect(types.map(type => type.value)).not.toContain('chore')
     expect(types.map(type => type.value)).not.toContain('revert')
     expect(types.map(type => type.value)).toContain('feat')
+  })
+
+  test('derives prompt scopes from the repository scope-enum rule', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'scope-enum': [2, 'always', ['cli', 'docs', 'cli', '']]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getScopes()
+    ).resolves.toEqual(['cli', 'docs'])
+  })
+
+  test.each([
+    [0, 'always'],
+    [2, 'never']
+  ] as const)('does not suggest scopes for a %s %s rule', async (
+    severity,
+    condition
+  ) => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'scope-enum': [severity, condition, ['internal']]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getScopes()
+    ).resolves.toEqual([])
   })
 })

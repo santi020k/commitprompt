@@ -30,10 +30,12 @@ Do not drive the interactive questionnaire. Inspect repository instructions,
 Git status, the staged diff, and the unstaged diff first. Do not stage files
 unless the user asks.
 
-Discover the current generation instructions and allowed repository types:
+Discover the current generation instructions, allowed repository types, and
+configured scopes:
 
 ```sh
 commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 ```
 
@@ -73,8 +75,8 @@ commitprompt commit --yes --json < commit.json
 This command formats the input, validates the message, requires staged changes,
 and calls Git normally. Git hooks remain active.
 
-Use `--input <path>` instead of stdin. Use `--cwd <path>` with `types`,
-`validate`, or `commit` when targeting a different repository.
+Use `--input <path>` instead of stdin. Use `--cwd <path>` with `instructions`,
+`scopes`, `types`, `validate`, or `commit` when targeting another repository.
 
 ## Machine-readable contract
 
@@ -101,10 +103,10 @@ import {
 ```
 
 `formatCommitMessage(answers)` produces the exact Conventional Commit message.
-`createCommitlintValidator(cwd)` returns cached `getTypes()` and
+`createCommitlintValidator(cwd)` returns cached `getTypes()`, `getScopes()`, and
 `validate(message)` operations. `createGitClient(cwd)` checks staged changes and
-commits through Git. `runAutomation(options)` powers the non-interactive
-commands. `runCommitFlow(options)` powers the interactive workflow.
+commits through Git. `runAutomation(options)` powers the non-interactive commands.
+`runCommitFlow(options)` powers the interactive workflow.
 
 ## Editor setup
 

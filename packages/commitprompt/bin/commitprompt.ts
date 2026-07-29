@@ -21,6 +21,7 @@ A focused prompt for Conventional Commits.
 Usage:
   commitprompt
   commitprompt instructions [--json] [--cwd <path>]
+  commitprompt scopes [--json] [--cwd <path>]
   commitprompt types [--json] [--cwd <path>]
   commitprompt format [--json] [--input <path>]
   commitprompt validate [--json] [--input <path>] [--cwd <path>]
@@ -47,6 +48,7 @@ const automationCommands = new Set<AutomationCommand>([
   'commit',
   'format',
   'instructions',
+  'scopes',
   'types',
   'validate'
 ])

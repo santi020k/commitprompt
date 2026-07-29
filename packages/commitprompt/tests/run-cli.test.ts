@@ -35,6 +35,7 @@ describe('runCli', () => {
       hasStagedChanges: () => false
     } satisfies GitClient)
     mocks.createValidator.mockReturnValue({
+      getScopes: () => Promise.resolve([]),
       getTypes: () => Promise.resolve([
         { description: 'A feature', value: 'feat' }
       ]),
@@ -63,6 +64,7 @@ describe('runCli', () => {
     })
 
     mocks.createValidator.mockReturnValue({
+      getScopes: () => Promise.resolve([]),
       getTypes: () => Promise.reject(new Error('configuration failed')),
       validate: vi.fn()
     } satisfies CommitlintClient)
