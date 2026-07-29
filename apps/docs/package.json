@@ -10,8 +10,9 @@
     "generate:og": "node scripts/generate-og-images.mjs",
     "preview": "astro preview",
     "typecheck": "astro check",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "test": "vitest run --exclude tests/accessibility.test.ts --passWithNoTests && pnpm run test:a11y",
+    "test:a11y": "playwright test",
+    "test:coverage": "vitest run --coverage --exclude tests/accessibility.test.ts --passWithNoTests && pnpm run test:a11y",
     "lint": "eslint . --no-warn-ignored",
     "lint:fix": "eslint . --fix --no-warn-ignored",
     "check:exports": "echo \"No package exports to check\"",
@@ -23,7 +24,9 @@
     "astro": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@astrojs/check": "catalog:",
+    "@playwright/test": "catalog:",
     "sharp": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

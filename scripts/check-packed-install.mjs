@@ -85,7 +85,12 @@ const verifyConsumer = (consumerDirectory, name) => {
       [
         "const api = await import('commitprompt')",
         "if (typeof api.runCommitFlow !== 'function') throw new Error('Missing runCommitFlow export')",
-        "if (typeof api.createCommitlintValidator !== 'function') throw new Error('Missing validator export')"
+        "if (typeof api.createCommitlintValidator !== 'function') throw new Error('Missing validator export')",
+        'const validator = api.createCommitlintValidator(process.cwd())',
+        'const report = await validator.validate("not conventional")',
+        "if (report.valid) throw new Error('Built-in rules accepted an invalid message')",
+        'const types = await validator.getTypes()',
+        "if (types[0]?.value !== 'feat') throw new Error('Built-in prompt types were not loaded')"
       ].join(';')
     ],
     {
@@ -217,5 +222,33 @@ const subject = execFileSync(
 if (subject !== 'feat: verify installed cli') {
   throw new Error(`Installed CLI created an unexpected commit: ${subject}`)
 }
+
+writeFileSync(
+  join(integrationConsumer, 'commitlint.config.mjs'),
+  [
+    'export default {',
+    "  rules: { 'type-enum': [2, 'always', ['fix', 'release']] }",
+    '}'
+  ].join('\n')
+)
+
+execFileSync(
+  process.execPath,
+  [
+    '--input-type=module',
+    '--eval',
+    [
+      "const api = await import('commitprompt')",
+      'const validator = api.createCommitlintValidator(process.cwd())',
+      'const types = await validator.getTypes()',
+      'const values = types.map(type => type.value).join(",")',
+      "if (values !== 'fix,release') throw new Error(`Unexpected repository types: ${values}`)"
+    ].join(';')
+  ],
+  {
+    cwd: integrationConsumer,
+    stdio: 'inherit'
+  }
+)
 
 console.log('Packed package installation passed for npm, pnpm, and Yarn.')

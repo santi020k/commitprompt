@@ -45,6 +45,10 @@ const packageScript = `{
 
 const commitlintConfig = `export default {
   rules: {
+    // 0 disables a rule, 1 warns, and 2 rejects the message.
+    'header-max-length': [0],
+    'body-max-line-length': [0],
+    'footer-max-line-length': [0],
     'type-enum': [2, 'always', ['feat', 'fix', 'release']]
   }
 }`
@@ -58,6 +62,28 @@ BREAKING CHANGE: optional breaking change
 Closes #123`
 
 const usageCommand = 'git add src/\npnpm commit'
+
+const automationExample = `import {
+  createCommitlintValidator,
+  formatCommitMessage
+} from 'commitprompt'
+
+const validator = createCommitlintValidator(process.cwd())
+const message = formatCommitMessage({
+  type: 'feat',
+  scope: 'cli',
+  subject: 'accept structured input',
+  body: '',
+  breaking: '',
+  issues: ''
+})
+const result = await validator.validate(message)
+
+if (!result.valid) {
+  throw new Error(result.errors.join('\\n'))
+}
+
+process.stdout.write(message)`
 
 const programmaticExample = `import {
   createCommitlintValidator,
@@ -89,9 +115,12 @@ await runCommitFlow({
         <a href="#installation">Installation</a>
         <a href="#configuration">Configuration</a>
         <a href="#usage">Usage</a>
+        <a href="#editor-ai">Editor AI</a>
         <p>Reference</p>
         <a href="#commit-format">Commit format</a>
         <a href="#repository-rules">Repository rules</a>
+        <a href="#git-hooks">Git hooks</a>
+        <a href="#automation-ai">Automation and AI</a>
         <a href="#programmatic-api">Programmatic API</a>
         <a href="#requirements">Requirements</a>
       </nav>
@@ -127,8 +156,10 @@ await runCommitFlow({
             wrap={false}
           />
           <Callout>
-            Commitprompt calls the neutral <Code>commitprompt</Code> binary. The
-            package command you use to install or run it is entirely your choice.
+            <p>
+              Commitprompt calls the neutral <Code>commitprompt</Code> binary. The
+              package command you use to install or run it is entirely your choice.
+            </p>
           </Callout>
         </section>
 
@@ -162,9 +193,24 @@ await runCommitFlow({
             }]}
           />
           <Callout>
-            Commitprompt loads configuration from the current repository. When
-            it finds a <Code>type-enum</Code> rule, the type prompt follows that
-            rule automatically.
+            <p>
+              Commitprompt loads configuration from the current repository. When
+              it finds a <Code>type-enum</Code> rule, the type prompt follows that
+              rule automatically.
+            </p>
+          </Callout>
+          <p>
+            Commitlint rule tuples use <Code>0</Code> to disable a rule,
+            <Code>1</Code> for a warning, and <Code>2</Code> for an error.
+            Commitprompt also passes through repository parser presets, plugins,
+            ignores, default ignores, and help URLs when it validates a message.
+          </p>
+          <Callout>
+            <p>
+              A repository configuration takes precedence over the built-in
+              fallback. Rules that are neither declared by that configuration nor
+              supplied through its <Code>extends</Code> entries are not enforced.
+            </p>
           </Callout>
         </section>
 
@@ -189,8 +235,41 @@ await runCommitFlow({
             />
           </div>
           <Callout>
-            Press <Kbd>Ctrl</Kbd> + <Kbd>C</Kbd> at any time to leave the prompt.
-            No commit is created until you explicitly confirm.
+            <p>
+              Press <Kbd>Ctrl</Kbd> + <Kbd>C</Kbd> at any time to leave the prompt.
+              No commit is created until you explicitly confirm.
+            </p>
+          </Callout>
+        </section>
+
+        <Separator />
+
+        <section id="editor-ai">
+          <h2>Editor AI commit generation</h2>
+          <p>
+            Configure an editor’s native commit-message generator to use
+            Commitprompt’s Conventional Commit format in every project:
+          </p>
+          <Code
+            code={'commitprompt setup zed\ncommitprompt setup vscode'}
+            copy
+            label="Terminal"
+            language="shell"
+            variant="block"
+          />
+          <p>
+            Each command updates the editor’s global settings while preserving
+            comments, model selection, and existing commit-message instructions.
+            They are safe to run more than once. The VS Code integration configures
+            GitHub Copilot’s commit-message generation instructions; Copilot must
+            be enabled for its Source Control button to be available.
+          </p>
+          <Callout>
+            <p>
+              The editor still generates the message with its configured model.
+              Commitprompt supplies format instructions to the existing Source
+              Control button; this does not run Commitlint validation by itself.
+            </p>
           </Callout>
         </section>
 
@@ -222,9 +301,55 @@ await runCommitFlow({
             that fails validation can be revised without restarting the CLI.
           </p>
           <Callout>
-            Repositories without configuration still receive the complete
-            Conventional Commits rule set. Validation never falls back to an
-            empty rule set.
+            <p>
+              Repositories without configuration still receive the complete
+              Conventional Commits rule set. Validation never falls back to an
+              empty rule set.
+            </p>
+          </Callout>
+        </section>
+
+        <Separator />
+
+        <section id="git-hooks">
+          <h2>Git hooks</h2>
+          <p>
+            Commitprompt validates every message created through its own commit
+            flow. It does not currently install Git hooks, so a commit created
+            directly by Git or an editor does not pass through Commitprompt.
+          </p>
+          <p>
+            To enforce the same policy for every commit, configure Commitlint in
+            your repository’s <Code>commit-msg</Code> hook. A
+            <Code>pre-commit</Code> hook runs before the commit message exists and
+            is better suited to staged-file checks.
+          </p>
+        </section>
+
+        <Separator />
+
+        <section id="automation-ai">
+          <h2>Automation and AI tools</h2>
+          <p>
+            AI tools can drive the interactive CLI in a terminal, but integrations
+            are more reliable when they use the exported formatter and validator.
+            Structured answers can be formatted and checked without parsing
+            terminal prompts or bypassing repository rules.
+          </p>
+          <Code
+            code={automationExample}
+            copy
+            label="validate-generated-message.mjs"
+            language="javascript"
+            variant="block"
+          />
+          <Callout>
+            <p>
+              Keep generation and enforcement separate: an AI tool proposes the
+              structured content, while Commitprompt formats and validates the
+              exact message. The current CLI does not yet provide flags, JSON
+              output, or a non-interactive stdin mode.
+            </p>
           </Callout>
         </section>
 
@@ -274,8 +399,10 @@ await runCommitFlow({
             <li>At least one staged change</li>
           </ul>
           <Callout>
-            An empty index is treated as a safe stop, not an error that can
-            accidentally create an empty commit.
+            <p>
+              An empty index is treated as a safe stop, not an error that can
+              accidentally create an empty commit.
+            </p>
           </Callout>
         </section>
 

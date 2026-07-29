@@ -48,6 +48,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install accessibility test browser
+        run: pnpm --filter commitprompt-docs exec playwright install --with-deps chromium
+
       - name: Run package checks
         run: pnpm exec turbo run build typecheck lint test:coverage check:exports
 
@@ -77,6 +80,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install accessibility test browser
+        run: pnpm --filter commitprompt-docs exec playwright install chromium
 
       - name: Build and test
         run: pnpm exec turbo run build typecheck test

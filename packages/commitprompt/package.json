@@ -41,7 +41,8 @@
     "@commitlint/config-conventional": "catalog:",
     "@commitlint/lint": "catalog:",
     "@commitlint/load": "catalog:",
-    "@commitlint/types": "catalog:"
+    "@commitlint/types": "catalog:",
+    "jsonc-parser": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

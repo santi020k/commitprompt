@@ -129,7 +129,10 @@ const structuredData = {
       />
       <p class="install-note">
         <Icon name="terminal" />
-        Add <Code code={'"commit": "commitprompt"'} />, then run it with npm, pnpm, or Yarn.
+        <span>
+          Add <Code code={'"commit": "commitprompt"'} />, then run it with npm,
+          pnpm, or Yarn.
+        </span>
       </p>
     </div>
 
@@ -139,6 +142,7 @@ const structuredData = {
         code={terminalSession}
         label="commitprompt · ~/project"
         variant="block"
+        wrap
       />
       <div class="terminal-result">
         <Icon name="circle-check" />
@@ -230,12 +234,16 @@ const structuredData = {
       </Card>
       <div class="message-benefits">
         <Callout>
-          <strong>Fast by default.</strong>
-          Scope, body, breaking change, and issue references are optional.
+          <p>
+            <strong>Fast by default.</strong>{' '}
+            Scope, body, breaking change, and issue references are optional.
+          </p>
         </Callout>
         <Callout>
-          <strong>Safe at the boundary.</strong>
-          The exact final text is linted, previewed, and confirmed before commit.
+          <p>
+            <strong>Safe at the boundary.</strong>{' '}
+            The exact final text is linted, previewed, and confirmed before commit.
+          </p>
         </Callout>
       </div>
     </div>

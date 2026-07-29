@@ -31,6 +31,19 @@ Then stage your intended changes and run `pnpm commit`, `npm run commit`, or
 `yarn commit`. Commitprompt supplies Conventional Commits rules by default and
 honors the repository's Commitlint configuration when one is present.
 
+Commitlint rules—including disabled length limits, custom types, parser
+presets, plugins, and ignores—are covered in the
+[package documentation](packages/commitprompt/README.md#repository-rules).
+The same guide explains the current
+[Git hook boundary](packages/commitprompt/README.md#git-hooks) and
+[AI integration API](packages/commitprompt/README.md#automation-and-ai-tools).
+
+## Editor AI
+
+Run `commitprompt setup zed` or `commitprompt setup vscode` to configure the
+editor's native commit-message generator for Conventional Commits across every
+project.
+
 ## Repository
 
 - `packages/commitprompt` — public CLI and programmatic API

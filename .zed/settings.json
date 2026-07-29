@@ -1,5 +1,0 @@
-{
-  "agent": {
-    "commit_message_instructions": "Generate a Conventional Commit using <type>(<optional scope>): <description>. Use one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore, or revert. Write a concise, imperative, lowercase description without a trailing period. Add a body or footer only when needed."
-  }
-}
