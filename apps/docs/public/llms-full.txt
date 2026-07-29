@@ -1,0 +1,135 @@
+# Commitprompt
+
+> Commitprompt is a dependency-light, package-manager-neutral Conventional Commits CLI and JavaScript API for humans and AI agents.
+
+Package: `@santi020k/commitprompt`
+
+Requirements: Node.js 22.18 or newer, Git, and staged changes when creating a
+commit.
+
+## Install
+
+```sh
+pnpm add --save-dev @santi020k/commitprompt
+npm install --save-dev @santi020k/commitprompt
+yarn add --dev @santi020k/commitprompt
+```
+
+The binary is always named `commitprompt`. Conventional Commitlint rules are
+included. When a repository has Commitlint configuration, that configuration
+takes precedence.
+
+## Interactive workflow
+
+Run `commitprompt` with staged changes. It prompts for structured commit
+content, validates the result, previews it, and commits only after confirmation.
+
+## AI agent workflow
+
+Do not drive the interactive questionnaire. Inspect repository instructions,
+Git status, the staged diff, and the unstaged diff first. Do not stage files
+unless the user asks.
+
+Discover the current generation instructions and allowed repository types:
+
+```sh
+commitprompt instructions --json
+commitprompt types --json
+```
+
+Create a JSON object containing every field:
+
+```json
+{
+  "type": "feat",
+  "scope": "cli",
+  "subject": "accept structured input",
+  "body": "",
+  "breaking": "",
+  "issues": ""
+}
+```
+
+All six fields are required strings. Optional content uses an empty string.
+
+Format without changing the repository:
+
+```sh
+commitprompt format --json < commit.json
+```
+
+Validate a complete message against repository rules:
+
+```sh
+commitprompt validate --json < message.txt
+```
+
+Only after the user authorizes a commit:
+
+```sh
+commitprompt commit --yes --json < commit.json
+```
+
+This command formats the input, validates the message, requires staged changes,
+and calls Git normally. Git hooks remain active.
+
+Use `--input <path>` instead of stdin. Use `--cwd <path>` with `types`,
+`validate`, or `commit` when targeting a different repository.
+
+## Machine-readable contract
+
+- Exit `0`: the requested operation succeeded.
+- Exit `1`: input, validation, configuration, staged-change, or Git failure.
+- Successful `--json` commands write one JSON value to stdout.
+- Operational `--json` failures write `{"error":"..."}` to stderr.
+- Invalid `validate --json` returns `{valid, errors, warnings}` and exits `1`.
+- Invalid `commit --json` returns `{committed:false, message, validation}` and
+  exits `1`.
+- Successful `commit --json` returns
+  `{committed:true, message, validation}`.
+
+## Programmatic API
+
+```js
+import {
+  createCommitlintValidator,
+  createGitClient,
+  formatCommitMessage,
+  runAutomation,
+  runCommitFlow
+} from '@santi020k/commitprompt'
+```
+
+`formatCommitMessage(answers)` produces the exact Conventional Commit message.
+`createCommitlintValidator(cwd)` returns cached `getTypes()` and
+`validate(message)` operations. `createGitClient(cwd)` checks staged changes and
+commits through Git. `runAutomation(options)` powers the non-interactive
+commands. `runCommitFlow(options)` powers the interactive workflow.
+
+## Editor setup
+
+```sh
+commitprompt setup zed
+commitprompt setup vscode
+```
+
+These commands add global Conventional Commit generation instructions while
+preserving existing editor settings and model selection. VS Code uses GitHub
+Copilot. Editor-generated messages do not pass through Commitprompt validation
+unless separately validated.
+
+## Safety boundaries
+
+- Commitprompt never stages files.
+- The interactive flow asks before committing.
+- The non-interactive flow requires `--yes`.
+- Commitprompt does not disable Git hooks.
+- Commitprompt does not install a `commit-msg` hook.
+- Enforce all Git-created messages by configuring Commitlint in a
+  repository `commit-msg` hook.
+
+## Links
+
+- Documentation: https://commitprompt.santi020k.com/docs/
+- Repository: https://github.com/santi020k/commitprompt
+- Package: https://www.npmjs.com/package/@santi020k/commitprompt

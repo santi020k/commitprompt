@@ -63,27 +63,22 @@ Closes #123`
 
 const usageCommand = 'git add src/\npnpm commit'
 
-const automationExample = `import {
-  createCommitlintValidator,
-  formatCommitMessage
-} from '@santi020k/commitprompt'
+const automationExample = `commitprompt instructions --json
+commitprompt types --json
 
-const validator = createCommitlintValidator(process.cwd())
-const message = formatCommitMessage({
-  type: 'feat',
-  scope: 'cli',
-  subject: 'accept structured input',
-  body: '',
-  breaking: '',
-  issues: ''
-})
-const result = await validator.validate(message)
-
-if (!result.valid) {
-  throw new Error(result.errors.join('\\n'))
+commitprompt format --json <<'JSON'
+{
+  "type": "feat",
+  "scope": "cli",
+  "subject": "accept structured input",
+  "body": "",
+  "breaking": "",
+  "issues": ""
 }
+JSON
 
-process.stdout.write(message)`
+printf '%s\\n' 'feat(cli): accept structured input' \\
+  | commitprompt validate --json`
 
 const programmaticExample = `import {
   createCommitlintValidator,
@@ -331,24 +326,30 @@ await runCommitFlow({
         <section id="automation-ai">
           <h2>Automation and AI tools</h2>
           <p>
-            AI tools can drive the interactive CLI in a terminal, but integrations
-            are more reliable when they use the exported formatter and validator.
-            Structured answers can be formatted and checked without parsing
-            terminal prompts or bypassing repository rules.
+            AI tools can discover the repository’s allowed types, read generation
+            instructions, format structured answers, and validate the exact result
+            without parsing terminal prompts or bypassing repository rules.
           </p>
           <Code
             code={automationExample}
             copy
-            label="validate-generated-message.mjs"
-            language="javascript"
+            label="Agent workflow"
+            language="shell"
             variant="block"
           />
+          <p>
+            The <Code>format</Code> and <Code>commit</Code> commands read a JSON
+            object from stdin by default. Every field is a string; optional values
+            use an empty string. Use <Code>--input &lt;path&gt;</Code> to read a
+            file and <Code>--cwd &lt;path&gt;</Code> to target another repository.
+          </p>
           <Callout>
             <p>
-              Keep generation and enforcement separate: an AI tool proposes the
-              structured content, while Commitprompt formats and validates the
-              exact message. The current CLI does not yet provide flags, JSON
-              output, or a non-interactive stdin mode.
+              Creating a non-interactive commit requires
+              <Code>commitprompt commit --yes --json</Code>. Commitprompt still
+              requires staged changes, validates before calling Git, and leaves
+              Git hooks enabled. Agents should only use it when the user has
+              authorized the commit.
             </p>
           </Callout>
         </section>
@@ -370,6 +371,10 @@ await runCommitFlow({
             variant="block"
           />
           <div class="api-grid">
+            <Card as="article" variant="muted">
+              <Code>runAutomation</Code>
+              <p>Powers structured format, validation, discovery, and explicitly confirmed commit operations.</p>
+            </Card>
             <Card as="article" variant="muted">
               <Code>runCommitFlow</Code>
               <p>Coordinates staging checks, prompts, validation, confirmation, and commit creation.</p>

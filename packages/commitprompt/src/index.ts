@@ -1,3 +1,4 @@
+export { runAutomation } from './automation.js'
 export { runCli, runCommitFlow } from './cli.js'
 export { DEFAULT_COMMIT_TYPES } from './constants.js'
 export { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
@@ -9,6 +10,7 @@ export {
   confirmRetry
 } from './prompt.js'
 export type {
+  AutomationCommand,
   CommitAnswers,
   CommitlintClient,
   CommitType,
@@ -16,6 +18,7 @@ export type {
   MessageValidation,
   MessageValidator,
   Prompt,
+  RunAutomationOptions,
   RunCommitFlowOptions
 } from './types.js'
 export { createCommitlintValidator } from './validator.js'

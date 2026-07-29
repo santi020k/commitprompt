@@ -97,8 +97,51 @@ is better suited to staged-file checks.
 
 ## Automation and AI tools
 
-AI tools can drive the terminal prompt, but the exported formatter and
-validator provide a more reliable interface:
+AI tools can use machine-readable commands without driving the terminal prompt.
+Inspect the repository and staged diff first, then discover its allowed types:
+
+```sh
+commitprompt instructions --json
+commitprompt types --json
+```
+
+Pass structured answers to the formatter:
+
+```sh
+commitprompt format --json <<'JSON'
+{
+  "type": "feat",
+  "scope": "cli",
+  "subject": "accept structured input",
+  "body": "",
+  "breaking": "",
+  "issues": ""
+}
+JSON
+```
+
+Validate a complete message with the consuming repository's rules:
+
+```sh
+printf '%s\n' 'feat(cli): accept structured input' \
+  | commitprompt validate --json
+```
+
+When a user has explicitly authorized the commit, an agent can format, validate,
+check for staged changes, and commit in one operation:
+
+```sh
+commitprompt commit --yes --json < commit.json
+```
+
+The explicit `--yes` flag is required for non-interactive commits. Git hooks
+continue to run. Use `--input <path>` to read a file instead of stdin and
+`--cwd <path>` to load another repository's Commitlint configuration.
+
+The package includes a complete [AI agent guide](AI.md) with its input, output,
+exit-code, and safety contracts.
+
+The exported formatter and validator remain available for custom integrations:
 
 ```js
 import {
@@ -126,8 +169,7 @@ process.stdout.write(message)
 
 This keeps generation and enforcement separate: the AI proposes structured
 content, while Commitprompt formats and validates the exact result with the
-repository's rules. The CLI does not currently expose non-interactive flags,
-stdin input, or JSON output.
+repository's rules.
 
 ## Programmatic API
 
@@ -136,13 +178,15 @@ import {
   createCommitlintValidator,
   createGitClient,
   formatCommitMessage,
+  runAutomation,
   runCommitFlow
 } from '@santi020k/commitprompt'
 ```
 
 The message formatter, default commit types, Git adapter, cached Commitlint
-client, prompt helpers, and full commit flow are exported for integrations and
-testing. The Commitlint client exposes `validate(message)` and `getTypes()`.
+client, prompt helpers, non-interactive automation flow, and full interactive
+commit flow are exported for integrations and testing. The Commitlint client
+exposes `validate(message)` and `getTypes()`.
 
 ## License
 

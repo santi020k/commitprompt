@@ -53,13 +53,27 @@ const packageManagers = [
 ]
 
 const verifyConsumer = (consumerDirectory, name) => {
+  const installedPackageDirectory = join(
+    consumerDirectory,
+    'node_modules/@santi020k/commitprompt'
+  )
+
   const installedMetadata = JSON.parse(readFileSync(
-    join(consumerDirectory, 'node_modules/@santi020k/commitprompt/package.json'),
+    join(installedPackageDirectory, 'package.json'),
     'utf8'
   ))
 
   if (installedMetadata.name !== '@santi020k/commitprompt') {
     throw new Error(`${name} installed unexpected package metadata.`)
+  }
+
+  const agentGuide = readFileSync(
+    join(installedPackageDirectory, 'AI.md'),
+    'utf8'
+  )
+
+  if (!agentGuide.includes('commitprompt types --json')) {
+    throw new Error(`${name} did not install the AI agent guide.`)
   }
 
   const binary = join(
@@ -85,6 +99,7 @@ const verifyConsumer = (consumerDirectory, name) => {
       [
         "const api = await import('@santi020k/commitprompt')",
         "if (typeof api.runCommitFlow !== 'function') throw new Error('Missing runCommitFlow export')",
+        "if (typeof api.runAutomation !== 'function') throw new Error('Missing runAutomation export')",
         "if (typeof api.createCommitlintValidator !== 'function') throw new Error('Missing validator export')",
         'const validator = api.createCommitlintValidator(process.cwd())',
         'const report = await validator.validate("not conventional")',
@@ -98,6 +113,27 @@ const verifyConsumer = (consumerDirectory, name) => {
       stdio: 'inherit'
     }
   )
+
+  const structuredInput = JSON.stringify({
+    body: '',
+    breaking: '',
+    issues: '',
+    scope: 'cli',
+    subject: 'verify automation',
+    type: 'feat'
+  })
+
+  const formatOutput = execFileSync(binary, ['format', '--json'], {
+    cwd: consumerDirectory,
+    encoding: 'utf8',
+    input: structuredInput
+  })
+
+  const formatted = JSON.parse(formatOutput)
+
+  if (formatted.message !== 'feat(cli): verify automation') {
+    throw new Error(`${name} returned unexpected structured output.`)
+  }
 
   return binary
 }
@@ -221,6 +257,50 @@ const subject = execFileSync(
 
 if (subject !== 'feat: verify installed cli') {
   throw new Error(`Installed CLI created an unexpected commit: ${subject}`)
+}
+
+writeFileSync(join(integrationConsumer, 'automation.txt'), 'automation\n')
+
+execFileSync('git', ['add', 'automation.txt'], { cwd: integrationConsumer })
+
+const automationInput = JSON.stringify({
+  body: '',
+  breaking: '',
+  issues: '',
+  scope: 'cli',
+  subject: 'verify non-interactive commit',
+  type: 'test'
+})
+
+const automationOutput = execFileSync(
+  integrationBinary,
+  ['commit', '--yes', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8',
+    input: automationInput
+  }
+)
+
+const automationResult = JSON.parse(automationOutput)
+
+if (
+  automationResult.committed !== true
+  || automationResult.message !== 'test(cli): verify non-interactive commit'
+) {
+  throw new Error('Installed CLI returned an unexpected automation result.')
+}
+
+const automationSubject = execFileSync(
+  'git',
+  ['log', '-1', '--pretty=%s'],
+  { cwd: integrationConsumer, encoding: 'utf8' }
+).trim()
+
+if (automationSubject !== 'test(cli): verify non-interactive commit') {
+  throw new Error(
+    `Installed CLI created an unexpected automated commit: ${automationSubject}`
+  )
 }
 
 writeFileSync(

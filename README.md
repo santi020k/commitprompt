@@ -38,6 +38,11 @@ The same guide explains the current
 [Git hook boundary](packages/commitprompt/README.md#git-hooks) and
 [AI integration API](packages/commitprompt/README.md#automation-and-ai-tools).
 
+AI agents can discover repository types, format structured input, validate a
+message, and create an explicitly authorized commit without driving the
+interactive prompt. See the packaged
+[AI agent guide](packages/commitprompt/AI.md).
+
 ## Editor AI
 
 Run `commitprompt setup zed` or `commitprompt setup vscode` to configure the
