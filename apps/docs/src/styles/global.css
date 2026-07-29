@@ -79,11 +79,24 @@ code {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 1rem;
   font-weight: 750;
   letter-spacing: -0.04em;
   text-decoration: none;
+}
+
+.wordmark img {
+  display: block;
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.wordmark > span > span {
+  color: hsl(var(--brand));
 }
 
 .hero {

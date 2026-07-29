@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/docs/public/logo.svg" alt="Commitprompt" width="440" />
+</p>
+
 # Commitprompt
 
 Write the commit. Not the syntax.

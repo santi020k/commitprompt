@@ -4,13 +4,24 @@ import '../styles/global.css'
 
 import { Link, UIPrimitives } from '@santi020k/lumen-astro'
 
+import { getSocialImageUrl } from '../lib/social-image'
+
 interface Props {
   description: string
+  socialImage?: string
+  socialImageAlt?: string
   title: string
 }
 
-const { description, title } = Astro.props
+const {
+  description,
+  socialImage,
+  title,
+  socialImageAlt = title
+} = Astro.props
+
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
+const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialImage)
 ---
 
 <!doctype html>
@@ -20,23 +31,34 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0b0b0d" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonicalUrl} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={new URL('/og.png', Astro.site)} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={socialImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL('/og.png', Astro.site)} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
     <title>{title}</title>
   </head>
   <body>
     <UIPrimitives />
     <header class="site-header">
       <div class="shell nav-shell">
-        <Link class="wordmark" href="/" variant="inherit">commitprompt</Link>
+        <Link class="wordmark" href="/" variant="inherit">
+          <img src="/icon.svg" alt="" width="30" height="30" />
+          <span>commit<span>prompt</span></span>
+        </Link>
         <nav aria-label="Primary navigation">
           <Link href="/docs">Docs</Link>
           <Link href="https://github.com/santi020k/commitprompt" newTab>GitHub</Link>
@@ -49,7 +71,10 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
     <footer>
       <div class="shell footer-content">
         <p>Commit with intent.</p>
-        <p>MIT licensed · Built with Lumen.</p>
+        <p>
+          Made by <Link href="https://santi020k.com" newTab>santi020k</Link> · MIT licensed ·
+          Built with Lumen.
+        </p>
       </div>
     </footer>
   </body>

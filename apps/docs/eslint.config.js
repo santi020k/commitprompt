@@ -31,5 +31,10 @@ export default await defineConfig(
     rules: {
       '@typescript-eslint/triple-slash-reference': 'off'
     }
+  }, {
+    files: ['scripts/**/*.{js,mjs}'],
+    rules: {
+      'no-console': 'off'
+    }
   }
 )
