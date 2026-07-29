@@ -1,5 +1,13 @@
 # @santi020k/commitprompt
 
+## 0.2.0
+
+### Minor Changes
+
+- Add machine-readable `instructions`, `types`, `format`, `validate`, and
+  explicitly confirmed `commit` commands for AI agents, ship an AI integration
+  guide, and publish LLM-readable documentation discovery files.
+
 ## 0.1.1
 
 ### Patch Changes

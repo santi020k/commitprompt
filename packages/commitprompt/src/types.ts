@@ -17,6 +17,10 @@ export interface GitClient {
   hasStagedChanges: () => boolean
 }
 
+export interface CreateGitClientOptions {
+  silent?: boolean
+}
+
 export interface MessageValidation {
   errors: string[]
   valid: boolean
@@ -43,4 +47,21 @@ export interface RunCommitFlowOptions {
   prompt: Prompt
   types?: readonly CommitType[]
   validator: MessageValidator
+}
+
+export type AutomationCommand =
+  | 'commit'
+  | 'format'
+  | 'instructions'
+  | 'types'
+  | 'validate'
+
+export interface RunAutomationOptions {
+  command: AutomationCommand
+  confirm?: boolean
+  cwd: string
+  error: (message: string) => void
+  input?: string
+  json?: boolean
+  log: (message: string) => void
 }

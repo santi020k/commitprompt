@@ -1,0 +1,20 @@
+# Commitprompt
+
+> Commitprompt is a dependency-light, package-manager-neutral Conventional Commits CLI and JavaScript API. It provides an interactive human workflow and machine-readable commands for AI agents, using each repository's Commitlint configuration or included conventional defaults.
+
+Commitprompt is published as `@santi020k/commitprompt`. AI agents should inspect
+the target repository and staged diff, run `commitprompt types --json`, format
+structured input, and validate before committing. A non-interactive commit
+requires the explicit `--yes` flag and leaves Git hooks enabled.
+
+## Documentation
+
+- [Documentation](https://commitprompt.santi020k.com/docs/): Installation, interactive use, repository rules, automation commands, and programmatic API.
+- [Full LLM reference](https://commitprompt.santi020k.com/llms-full.txt): Self-contained AI-oriented command and API reference.
+- [AI agent guide](https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/AI.md): Safe workflow, structured input, output, and exit-code contracts.
+- [Package README](https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/README.md): Complete package documentation.
+
+## Source and package
+
+- [GitHub repository](https://github.com/santi020k/commitprompt): Source, tests, issues, and releases.
+- [npm package](https://www.npmjs.com/package/@santi020k/commitprompt): Published package metadata and installation.

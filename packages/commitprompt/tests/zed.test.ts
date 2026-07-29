@@ -126,6 +126,34 @@ describe('setupZed', () => {
     expect(source).toContain(COMMIT_MESSAGE_INSTRUCTIONS)
   })
 
+  test('accepts Zed settings with trailing commas', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+
+    await writeFile(
+      settingsPath,
+      `{
+  "agent": {
+    "default_model": {
+      "provider": "openai",
+    },
+  },
+}
+`,
+      'utf8'
+    )
+
+    await expect(setupZed({ settingsPath })).resolves.toEqual({
+      changed: true,
+      settingsPath
+    })
+
+    const source = await readFile(settingsPath, 'utf8')
+
+    expect(source).toContain('"provider": "openai",')
+    expect(source).toContain(COMMIT_MESSAGE_INSTRUCTIONS)
+  })
+
   test('does not duplicate an existing Commitprompt instruction', async () => {
     const directory = await createTemporaryDirectory()
     const settingsPath = join(directory, 'settings.json')
