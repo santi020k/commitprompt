@@ -33,28 +33,29 @@ const parseCommitAnswers = (input: string): CommitAnswers => {
 
   const record = value as Record<string, unknown>
 
-  for (const key of answerKeys) {
-    if (typeof record[key] !== 'string') {
+  const getAnswer = (key: keyof CommitAnswers): string => {
+    const answer = record[key]
+
+    if (typeof answer !== 'string') {
       throw new TypeError(`Input field "${key}" must be a string.`)
     }
+
+    return answer
   }
 
-  if (record.type.length === 0) {
+  const answers = Object.fromEntries(
+    answerKeys.map(key => [key, getAnswer(key)])
+  ) as unknown as CommitAnswers
+
+  if (answers.type.length === 0) {
     throw new Error('Input field "type" must not be empty.')
   }
 
-  if (record.subject.length === 0) {
+  if (answers.subject.length === 0) {
     throw new Error('Input field "subject" must not be empty.')
   }
 
-  return {
-    body: record.body,
-    breaking: record.breaking,
-    issues: record.issues,
-    scope: record.scope,
-    subject: record.subject,
-    type: record.type
-  }
+  return answers
 }
 
 const printValidation = (
