@@ -28,12 +28,12 @@
 }
 
 html {
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  overflow-x: clip;
   background:
     linear-gradient(hsl(var(--line) / 0.12) 1px, transparent 1px),
     linear-gradient(90deg, hsl(var(--line) / 0.12) 1px, transparent 1px),

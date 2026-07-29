@@ -11,11 +11,12 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "turbo.json"
+      - "tsconfig.base.json"
+      - "wrangler.jsonc"
   workflow_dispatch: {}
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
   group: deploy-docs-${{ github.ref }}
@@ -23,7 +24,6 @@ concurrency:
 
 env:
   CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'commitprompt' }}
-  CLOUDFLARE_PAGES_PRODUCTION_BRANCH: ${{ vars.CLOUDFLARE_PAGES_PRODUCTION_BRANCH || 'main' }}
   DOCS_DIST_DIR: apps/docs/dist
   NODE_VERSION: 22.x
   PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || 'https://commitprompt.santi020k.com' }}
@@ -59,9 +59,8 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-          DEPLOY_BRANCH="${GITHUB_REF_NAME}"
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            DEPLOY_BRANCH="$CLOUDFLARE_PAGES_PRODUCTION_BRANCH"
-          fi
-
-          pnpm exec wrangler pages deploy "$DOCS_DIST_DIR" --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --branch="$DEPLOY_BRANCH"
+          pnpm exec wrangler pages deploy "$DOCS_DIST_DIR" \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch="$GITHUB_REF_NAME" \
+            --commit-hash="$GITHUB_SHA" \
+            --commit-dirty=true
