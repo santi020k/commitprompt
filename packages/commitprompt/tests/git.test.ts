@@ -11,6 +11,12 @@ const createRepository = (): string => {
   const directory = mkdtempSync(join(tmpdir(), 'commitprompt-'))
 
   execFileSync('git', ['init', '--quiet'], { cwd: directory })
+  execFileSync('git', ['config', 'user.name', 'Commitprompt Tests'], {
+    cwd: directory
+  })
+  execFileSync('git', ['config', 'user.email', 'tests@commitprompt.dev'], {
+    cwd: directory
+  })
 
   return directory
 }
@@ -32,12 +38,6 @@ describe('createGitClient', () => {
     const directory = createRepository()
     const git = createGitClient(directory)
 
-    execFileSync('git', ['config', 'user.name', 'Commitprompt Tests'], {
-      cwd: directory
-    })
-    execFileSync('git', ['config', 'user.email', 'tests@commitprompt.dev'], {
-      cwd: directory
-    })
     writeFileSync(join(directory, 'example.txt'), 'committed')
     execFileSync('git', ['add', 'example.txt'], { cwd: directory })
 
