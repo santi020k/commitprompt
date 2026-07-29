@@ -5,9 +5,9 @@ A focused, package-manager-neutral prompt for Conventional Commits.
 ## Install
 
 ```sh
-pnpm add --save-dev commitprompt
-npm install --save-dev commitprompt
-yarn add --dev commitprompt
+pnpm add --save-dev @santi020k/commitprompt
+npm install --save-dev @santi020k/commitprompt
+yarn add --dev @santi020k/commitprompt
 ```
 
 Add the command to `package.json`:
@@ -104,7 +104,7 @@ validator provide a more reliable interface:
 import {
   createCommitlintValidator,
   formatCommitMessage
-} from 'commitprompt'
+} from '@santi020k/commitprompt'
 
 const validator = createCommitlintValidator(process.cwd())
 const message = formatCommitMessage({
@@ -137,7 +137,7 @@ import {
   createGitClient,
   formatCommitMessage,
   runCommitFlow
-} from 'commitprompt'
+} from '@santi020k/commitprompt'
 ```
 
 The message formatter, default commit types, Git adapter, cached Commitlint

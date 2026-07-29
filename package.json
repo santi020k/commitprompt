@@ -43,7 +43,7 @@
     "@santi020k/eslint-config-basic": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "commitprompt": "workspace:*",
+    "@santi020k/commitprompt": "workspace:*",
     "cspell": "catalog:",
     "eslint": "catalog:",
     "husky": "catalog:",

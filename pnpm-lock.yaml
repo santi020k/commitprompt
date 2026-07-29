@@ -113,6 +113,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: 'catalog:'
         version: 21.2.0
+      '@santi020k/commitprompt':
+        specifier: workspace:*
+        version: link:packages/commitprompt
       '@santi020k/eslint-config-basic':
         specifier: 'catalog:'
         version: 2.1.1(@stylistic/eslint-plugin@5.10.0(eslint@10.8.0(jiti@2.7.0)))(@testing-library/dom@10.4.1)(@types/node@26.1.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/types@8.65.0)(@typescript-eslint/typescript-estree@8.65.0(typescript@6.0.3))(class-validator@0.15.1)(crossws@0.3.5)(eslint-import-resolver-node@0.3.10)(eslint-plugin-import-x@4.17.1(@typescript-eslint/utils@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(eslint@10.8.0(jiti@2.7.0)))(eslint-plugin-react@7.37.5(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(oxlint@1.76.0)(prettier@3.9.6)(react@19.2.8)(turbo@2.10.7)(typescript@6.0.3)(vitest@4.1.10)(vue-eslint-parser@10.4.1(eslint@10.8.0(jiti@2.7.0)))
@@ -122,9 +125,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
-      commitprompt:
-        specifier: workspace:*
-        version: link:packages/commitprompt
       cspell:
         specifier: 'catalog:'
         version: 10.0.1

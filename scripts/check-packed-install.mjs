@@ -54,11 +54,11 @@ const packageManagers = [
 
 const verifyConsumer = (consumerDirectory, name) => {
   const installedMetadata = JSON.parse(readFileSync(
-    join(consumerDirectory, 'node_modules/commitprompt/package.json'),
+    join(consumerDirectory, 'node_modules/@santi020k/commitprompt/package.json'),
     'utf8'
   ))
 
-  if (installedMetadata.name !== 'commitprompt') {
+  if (installedMetadata.name !== '@santi020k/commitprompt') {
     throw new Error(`${name} installed unexpected package metadata.`)
   }
 
@@ -83,7 +83,7 @@ const verifyConsumer = (consumerDirectory, name) => {
       '--input-type=module',
       '--eval',
       [
-        "const api = await import('commitprompt')",
+        "const api = await import('@santi020k/commitprompt')",
         "if (typeof api.runCommitFlow !== 'function') throw new Error('Missing runCommitFlow export')",
         "if (typeof api.createCommitlintValidator !== 'function') throw new Error('Missing validator export')",
         'const validator = api.createCommitlintValidator(process.cwd())',
@@ -238,7 +238,7 @@ execFileSync(
     '--input-type=module',
     '--eval',
     [
-      "const api = await import('commitprompt')",
+      "const api = await import('@santi020k/commitprompt')",
       'const validator = api.createCommitlintValidator(process.cwd())',
       'const types = await validator.getTypes()',
       'const values = types.map(type => type.value).join(",")',

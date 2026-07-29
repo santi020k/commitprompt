@@ -23,7 +23,7 @@ const titleMarkup = lines => lines
 
 const terminalLines = {
   Docs: [
-    ['$', 'pnpm add -D commitprompt'],
+    ['$', 'pnpm add -D @santi020k/commitprompt'],
     ['›', 'repository rules loaded'],
     ['✓', 'ready to commit']
   ],

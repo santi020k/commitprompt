@@ -1,4 +1,4 @@
-# commitprompt
+# @santi020k/commitprompt
 
 ## 0.1.0
 

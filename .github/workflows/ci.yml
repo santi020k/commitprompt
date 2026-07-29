@@ -84,5 +84,8 @@ jobs:
       - name: Install accessibility test browser
         run: pnpm --filter commitprompt-docs exec playwright install chromium
 
-      - name: Build and test
-        run: pnpm exec turbo run build typecheck test
+      - name: Build and typecheck
+        run: pnpm exec turbo run build typecheck
+
+      - name: Test
+        run: pnpm exec turbo run test --concurrency=1

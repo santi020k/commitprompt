@@ -65,9 +65,9 @@ jobs:
 
           if ! jq -e \
             --arg version "$VERSION" \
-            '.[] | select(.name == "commitprompt" and .version == $version)' \
+            '.[] | select(.name == "@santi020k/commitprompt" and .version == $version)' \
             <<<"$PUBLISHED_PACKAGES" >/dev/null; then
-            echo "commitprompt@${VERSION} was not published; skipping repository tag."
+            echo "@santi020k/commitprompt@${VERSION} was not published; skipping repository tag."
             exit 0
           fi
 

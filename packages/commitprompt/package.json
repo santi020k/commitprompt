@@ -1,5 +1,5 @@
 {
-  "name": "commitprompt",
+  "name": "@santi020k/commitprompt",
   "version": "0.1.0",
   "publishConfig": {
     "access": "public",

@@ -14,9 +14,9 @@ previews the result, and commits only after confirmation.
 ## Install
 
 ```sh
-pnpm add --save-dev commitprompt
-npm install --save-dev commitprompt
-yarn add --dev commitprompt
+pnpm add --save-dev @santi020k/commitprompt
+npm install --save-dev @santi020k/commitprompt
+yarn add --dev @santi020k/commitprompt
 ```
 
 ```json
