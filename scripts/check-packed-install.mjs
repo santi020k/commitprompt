@@ -362,4 +362,6 @@ if (configuredScopes.scopes.join(',') !== 'cli,docs') {
   throw new Error('Installed CLI returned unexpected repository scopes.')
 }
 
-console.log('Packed package installation passed for npm, pnpm, and Yarn.')
+process.stdout.write(
+  'Packed package installation passed for npm, pnpm, and Yarn.\n'
+)

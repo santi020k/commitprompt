@@ -18,6 +18,14 @@ import { createCommitlintValidator } from './validator.js'
 
 type ValidationDecision = 'continue' | 'retry' | 'stop'
 
+const writeError = (message: string): void => {
+  process.stderr.write(`${message}\n`)
+}
+
+const writeOutput = (message: string): void => {
+  process.stdout.write(`${message}\n`)
+}
+
 const getValidationDecision = async (
   validation: MessageValidation,
   prompt: Prompt,
@@ -104,13 +112,9 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
     ])
 
     return await runCommitFlow({
-      error: message => {
-        console.error(message)
-      },
+      error: writeError,
       git: createGitClient(cwd),
-      log: message => {
-        console.log(message)
-      },
+      log: writeOutput,
       prompt,
       scopes,
       types,
@@ -121,7 +125,7 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
       caughtError.message :
       String(caughtError)
 
-    console.error(message)
+    writeError(message)
 
     prompt.close()
 

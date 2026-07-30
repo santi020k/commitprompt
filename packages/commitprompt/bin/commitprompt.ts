@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import process from 'node:process'
@@ -145,10 +147,18 @@ const readAutomationInput = async (
 
 const getErrorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error)
 
+const writeError = (message: string): void => {
+  process.stderr.write(`${message}\n`)
+}
+
+const writeOutput = (message: string): void => {
+  process.stdout.write(`${message}\n`)
+}
+
 const printCommandError = (error: unknown, json: boolean): void => {
   const message = getErrorMessage(error)
 
-  console.error(json ? JSON.stringify({ error: message }) : message)
+  writeError(json ? JSON.stringify({ error: message }) : message)
 }
 
 const runAutomationCommand = async (
@@ -174,14 +184,10 @@ const runAutomationCommand = async (
       command,
       confirm: options.confirm,
       cwd: options.cwd,
-      error: message => {
-        console.error(message)
-      },
+      error: writeError,
       input,
       json,
-      log: message => {
-        console.log(message)
-      }
+      log: writeOutput
     })
   } catch (error) {
     printCommandError(error, json)
@@ -191,12 +197,12 @@ const runAutomationCommand = async (
 }
 
 if (argument === '--help' || argument === '-h') {
-  console.log(HELP)
+  writeOutput(HELP)
 } else if (argument === '--version' || argument === '-v') {
   const require = createRequire(import.meta.url)
   const metadata = require('../../package.json') as PackageMetadata
 
-  console.log(metadata.version)
+  writeOutput(metadata.version)
 } else if (automationCommands.has(argument as AutomationCommand)) {
   process.exitCode = await runAutomationCommand(
     argument as AutomationCommand, arguments_.slice(1)
@@ -205,13 +211,13 @@ if (argument === '--help' || argument === '-h') {
   try {
     const result = await setupZed()
 
-    console.log(
+    writeOutput(
       result.changed ?
         `Configured Zed commit generation in ${result.settingsPath}` :
         `Zed commit generation is already configured in ${result.settingsPath}`
     )
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
+    writeError(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
@@ -223,18 +229,18 @@ if (argument === '--help' || argument === '-h') {
   try {
     const result = await setupVSCode()
 
-    console.log(
+    writeOutput(
       result.changed ?
         `Configured VS Code commit generation in ${result.settingsPath}` :
         `VS Code commit generation is already configured in ${result.settingsPath}`
     )
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
+    writeError(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
 } else if (argument) {
-  console.error(`Unknown argument: ${arguments_.join(' ')}\n\n${HELP}`)
+  writeError(`Unknown argument: ${arguments_.join(' ')}\n\n${HELP}`)
 
   process.exitCode = 1
 } else {

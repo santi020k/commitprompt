@@ -12,7 +12,7 @@
     "lint": "pnpm run lint:repo && turbo run lint -- --max-warnings=0",
     "lint:repo": "eslint . --cache --no-warn-ignored --max-warnings=0",
     "lint:fix": "pnpm run lint:repo:fix && turbo run lint:fix",
-    "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored",
+    "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored --max-warnings=0",
     "lint:commits": "commitlint --from=origin/main --to=HEAD",
     "lint:spell": "cspell \"**\" --gitignore --cache --show-suggestions --show-context",
     "lint:knip": "knip",
@@ -66,10 +66,10 @@
       "cspell --no-must-find-files"
     ],
     "*.{astro,js,mjs,ts}": [
-      "eslint --fix --no-warn-ignored"
+      "eslint --fix --no-warn-ignored --max-warnings=0"
     ],
     "*.{json,jsonc,md,yml,yaml}": [
-      "eslint --fix --no-warn-ignored"
+      "eslint --fix --no-warn-ignored --max-warnings=0"
     ]
   },
   "engines": {
