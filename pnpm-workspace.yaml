@@ -9,6 +9,9 @@ allowBuilds:
   workerd: true
   yarn: set this to true or false
 
+allowedDeprecatedVersions:
+  node-domexception: 1.0.0
+
 catalog:
   "@axe-core/playwright": ^4.12.1
   "@playwright/test": ^1.62.0
@@ -49,3 +52,6 @@ catalog:
 minimumReleaseAgeExclude:
   - '@santi020k/eslint-config-basic@3.2.0'
   - '@santi020k/eslint-config-typescript'
+
+overrides:
+  glob@10.5.0: 13.0.6
