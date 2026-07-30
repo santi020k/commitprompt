@@ -140,6 +140,42 @@ describe('createCommitlintValidator', () => {
     ])
   })
 
+  test('keeps the curated order for the conventional type set', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: ['@commitlint/config-conventional'],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'type-enum': [
+          2,
+          'always',
+          [
+            'build',
+            'chore',
+            'ci',
+            'docs',
+            'feat',
+            'fix',
+            'perf',
+            'refactor',
+            'revert',
+            'style',
+            'test'
+          ]
+        ]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getTypes()
+    ).resolves.toEqual(DEFAULT_COMMIT_TYPES)
+  })
+
   test('excludes types forbidden by a never rule', async () => {
     mocks.load.mockResolvedValue({
       defaultIgnores: true,

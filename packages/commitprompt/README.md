@@ -89,6 +89,24 @@ optional scope remains free-form. A repository configuration takes precedence
 over the built-in fallback; rules that it does not declare or receive through
 `extends` are not enforced.
 
+## Migrating an existing prompt
+
+When replacing Commitizen, Czg, or a local prompt script:
+
+1. Install Commitprompt and set `"commit": "commitprompt"` in `package.json`.
+2. Remove the old prompt package and adapter, such as `commitizen`,
+   `cz-conventional-changelog`, or `czg`.
+3. Remove the obsolete `config.commitizen` package metadata or local prompt
+   script.
+4. Keep the repository's Commitlint configuration. Commitprompt loads it
+   directly and includes conventional defaults when it is absent.
+5. Keep any `commit-msg` hook that enforces messages created outside
+   Commitprompt. Keep `pre-commit` and `pre-push` hooks for their existing staged
+   file and repository checks.
+
+No package-manager command belongs inside the `commit` script. The neutral
+binary works through `pnpm commit`, `npm run commit`, and `yarn commit`.
+
 ## Git hooks
 
 Commitprompt validates messages created through the `commitprompt` flow. It

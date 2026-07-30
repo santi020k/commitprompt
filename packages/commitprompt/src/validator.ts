@@ -51,6 +51,14 @@ const describeType = (value: string): CommitType => {
   }
 }
 
+const isDefaultTypeSet = (values: readonly string[]): boolean => {
+  if (values.length !== DEFAULT_COMMIT_TYPES.length) return false
+
+  const configuredValues = new Set(values)
+
+  return DEFAULT_COMMIT_TYPES.every(type => configuredValues.has(type.value))
+}
+
 const getConfiguredTypes = (
   configuration: QualifiedConfig
 ): readonly CommitType[] => {
@@ -77,6 +85,8 @@ const getConfiguredTypes = (
 
     return allowedTypes.length > 0 ? allowedTypes : DEFAULT_COMMIT_TYPES
   }
+
+  if (isDefaultTypeSet(configuredValues)) return DEFAULT_COMMIT_TYPES
 
   const types = configuredValues.map(describeType)
 

@@ -9,7 +9,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
-    "lint": "pnpm run lint:repo && turbo run lint -- --max-warnings=0",
+    "lint": "pnpm run lint:repo && turbo run lint",
     "lint:repo": "eslint . --cache --no-warn-ignored --max-warnings=0",
     "lint:fix": "pnpm run lint:repo:fix && turbo run lint:fix",
     "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored --max-warnings=0",

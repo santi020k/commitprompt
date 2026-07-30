@@ -319,6 +319,35 @@ writeFileSync(
   join(integrationConsumer, 'commitlint.config.mjs'),
   [
     'export default {',
+    "  extends: ['@commitlint/config-conventional'],",
+    '  rules: {',
+    "    'body-max-line-length': [0],",
+    "    'footer-max-line-length': [0],",
+    "    'header-max-length': [0]",
+    '  }',
+    '}'
+  ].join('\n')
+)
+
+const conventionalTypes = JSON.parse(execFileSync(
+  integrationBinary,
+  ['types', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (conventionalTypes.types[0]?.value !== 'feat') {
+  throw new Error(
+    'Installed CLI did not preserve the curated conventional type order.'
+  )
+}
+
+writeFileSync(
+  join(integrationConsumer, 'commitlint.config.mjs'),
+  [
+    'export default {',
     '  rules: {',
     "    'type-enum': [2, 'always', ['fix', 'release']],",
     "    'scope-enum': [2, 'always', ['cli', 'docs']]",
