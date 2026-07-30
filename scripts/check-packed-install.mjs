@@ -9,7 +9,10 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
 
-import { getBinaryInvocation } from './binary-invocation.mjs'
+import {
+  getBinaryInvocation,
+  getPnpmInvocation
+} from './binary-invocation.mjs'
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
@@ -28,8 +31,13 @@ const executeBinarySync = (binary, arguments_, options) => {
   )
 }
 
-const packOutput = executeBinarySync(
-  'pnpm',
+const executePnpmSync = (arguments_, options) => {
+  const invocation = getPnpmInvocation(arguments_)
+
+  return executeBinarySync(invocation.command, invocation.arguments_, options)
+}
+
+const packOutput = executePnpmSync(
   ['pack', '--json', '--pack-destination', temporaryDirectory],
   {
     cwd: packageDirectory,
@@ -178,10 +186,20 @@ for (const packageManager of packageManagers) {
     JSON.stringify({ name: `commitprompt-${packageManager.name.toLowerCase()}-test`, private: true })
   )
 
-  executeBinarySync(packageManager.command, packageManager.args, {
+  const installOptions = {
     cwd: consumerDirectory,
     stdio: 'inherit'
-  })
+  }
+
+  if (packageManager.name === 'pnpm') {
+    executePnpmSync(packageManager.args, installOptions)
+  } else {
+    executeBinarySync(
+      packageManager.command,
+      packageManager.args,
+      installOptions
+    )
+  }
 
   const binary = verifyConsumer(consumerDirectory, packageManager.name)
 

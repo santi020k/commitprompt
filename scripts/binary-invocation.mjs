@@ -28,3 +28,24 @@ export const getBinaryInvocation = (
     windowsVerbatimArguments: true
   }
 }
+
+export const getPnpmInvocation = (
+  arguments_,
+  {
+    executablePath = process.execPath,
+    packageManagerUserAgent = process.env.npm_config_user_agent,
+    pnpmCliPath = process.env.npm_execpath
+  } = {}
+) => {
+  if (
+    !pnpmCliPath
+    || !packageManagerUserAgent?.startsWith('pnpm/')
+  ) {
+    return { arguments_, command: 'pnpm' }
+  }
+
+  return {
+    arguments_: [pnpmCliPath, ...arguments_],
+    command: executablePath
+  }
+}

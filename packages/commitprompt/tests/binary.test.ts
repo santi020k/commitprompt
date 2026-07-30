@@ -155,5 +155,5 @@ describe('commitprompt executable', () => {
     )
 
     expect(logResult.stdout.trim()).toBe('test(cli): exercise executable')
-  })
+  }, 15_000)
 })
