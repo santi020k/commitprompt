@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import {
+  lstat,
   mkdir,
   readFile,
+  realpath,
   rename,
   rm,
   stat,
@@ -59,10 +61,20 @@ export const writeSettings = async (
   settingsPath: string,
   source: string
 ): Promise<void> => {
-  const directory = dirname(settingsPath)
+  let writePath = settingsPath
+
+  try {
+    if ((await lstat(settingsPath)).isSymbolicLink()) {
+      writePath = await realpath(settingsPath)
+    }
+  } catch (error) {
+    if (!isMissingFileError(error)) throw error
+  }
+
+  const directory = dirname(writePath)
 
   const temporaryName =
-    `.${basename(settingsPath)}.${process.pid}.${randomUUID()}.tmp`
+    `.${basename(writePath)}.${process.pid}.${randomUUID()}.tmp`
 
   const temporaryPath = join(directory, temporaryName)
 
@@ -71,7 +83,7 @@ export const writeSettings = async (
   let mode: number | undefined
 
   try {
-    mode = (await stat(settingsPath)).mode
+    mode = (await stat(writePath)).mode
   } catch (error) {
     if (!isMissingFileError(error)) throw error
   }
@@ -82,7 +94,7 @@ export const writeSettings = async (
       ...(mode === undefined ? {} : { mode })
     })
 
-    await rename(temporaryPath, settingsPath)
+    await rename(temporaryPath, writePath)
   } finally {
     await rm(temporaryPath, { force: true })
   }

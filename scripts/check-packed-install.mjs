@@ -33,7 +33,7 @@ const executeBinarySync = (binary, arguments_, options) => {
   return execFileSync(invocation.command, invocation.arguments_, options)
 }
 
-const packOutput = execFileSync(
+const packOutput = executeBinarySync(
   'pnpm',
   ['pack', '--json', '--pack-destination', temporaryDirectory],
   {
@@ -183,7 +183,7 @@ for (const packageManager of packageManagers) {
     JSON.stringify({ name: `commitprompt-${packageManager.name.toLowerCase()}-test`, private: true })
   )
 
-  execFileSync(packageManager.command, packageManager.args, {
+  executeBinarySync(packageManager.command, packageManager.args, {
     cwd: consumerDirectory,
     stdio: 'inherit'
   })
@@ -306,7 +306,7 @@ const automationInput = JSON.stringify({
   type: 'test'
 })
 
-const automationOutput = execFileSync(
+const automationOutput = executeBinarySync(
   integrationBinary,
   ['commit', '--yes', '--json'],
   {
@@ -351,7 +351,7 @@ writeFileSync(
   ].join('\n')
 )
 
-const conventionalTypes = JSON.parse(execFileSync(
+const conventionalTypes = JSON.parse(executeBinarySync(
   integrationBinary,
   ['types', '--json'],
   {
@@ -400,7 +400,7 @@ execFileSync(
   }
 )
 
-const configuredScopes = JSON.parse(execFileSync(
+const configuredScopes = JSON.parse(executeBinarySync(
   integrationBinary,
   ['scopes', '--json'],
   {

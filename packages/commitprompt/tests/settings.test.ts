@@ -1,10 +1,12 @@
 import {
   chmod,
+  lstat,
   mkdtemp,
   readdir,
   readFile,
   rm,
   stat,
+  symlink,
   writeFile
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -85,6 +87,22 @@ describe('settings utilities', () => {
       await writeSettings(settingsPath, 'second\n')
 
       expect((await stat(settingsPath)).mode & 0o777).toBe(0o640)
+    }
+  )
+
+  test.runIf(process.platform !== 'win32')(
+    'preserves symlinked settings files', async () => {
+      const directory = await createTemporaryDirectory()
+      const targetPath = join(directory, 'shared-settings.json')
+      const settingsPath = join(directory, 'settings.json')
+
+      await writeFile(targetPath, 'first\n', 'utf8')
+      await symlink(targetPath, settingsPath)
+      await writeSettings(settingsPath, 'second\n')
+
+      expect((await lstat(settingsPath)).isSymbolicLink()).toBe(true)
+      await expect(readFile(targetPath, 'utf8')).resolves.toBe('second\n')
+      await expect(readFile(settingsPath, 'utf8')).resolves.toBe('second\n')
     }
   )
 

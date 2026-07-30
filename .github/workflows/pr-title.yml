@@ -1,8 +1,9 @@
+# Managed by the santi020k PR title standard.
 name: PR Title
 
 on:
   pull_request_target:
-    types: [opened, edited, synchronize]
+    types: [opened, reopened, edited, synchronize, labeled, unlabeled]
 
 permissions:
   pull-requests: read
@@ -22,6 +23,7 @@ jobs:
             feat
             fix
             docs
+            style
             chore
             refactor
             perf
@@ -29,15 +31,10 @@ jobs:
             ci
             build
             revert
-          scopes: |
-            commitprompt
-            cli
-            docs
-            ci
-            deps
-            release
           requireScope: false
           subjectPattern: ^(?![A-Z]).+$
-          subjectPatternError: The subject must start with a lowercase letter.
+          subjectPatternError: >
+            The subject must start with a lowercase letter.
+            Example: "feat: add repository-aware prompts"
           ignoreLabels: |
             autorelease: pending
