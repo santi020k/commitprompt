@@ -17,7 +17,7 @@
     "lint:spell": "cspell \"**\" --gitignore --cache --show-suggestions --show-context",
     "lint:knip": "knip",
     "check:exports": "turbo run check:exports",
-    "check:packed-install": "node scripts/check-packed-install.mjs",
+    "check:packed-install": "node --test scripts/binary-invocation.test.mjs && node scripts/check-packed-install.mjs",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
     "ok": "pnpm install --frozen-lockfile && pnpm run validate",
     "changeset": "changeset",
