@@ -205,9 +205,11 @@ await runCommitFlow({
           </p>
           <Callout>
             <p>
-              A repository configuration takes precedence over the built-in
-              fallback. Rules that are neither declared by that configuration nor
-              supplied through its <Code>extends</Code> entries are not enforced.
+              Repository rules and <Code>extends</Code> entries take precedence
+              over the built-in fallback. Undeclared rules are not enforced. When
+              a resolved configuration has no <Code>extends</Code>, parser preset,
+              or declared rules, Commitprompt retains its other settings and uses
+              the included Conventional Commits rules.
             </p>
           </Callout>
         </section>
@@ -294,11 +296,11 @@ await runCommitFlow({
         <section id="repository-rules">
           <h2>Repository rules</h2>
           <p>
-            A repository configuration takes precedence over Commitprompt’s
-            included defaults. Custom types and scopes appear in the prompts, and
-            a message that fails validation can be revised without restarting the
-            CLI. Without <Code>scope-enum</Code>, scope remains optional and
-            free-form.
+            Repository rules and extended configurations take precedence over
+            Commitprompt’s included defaults. Custom types and scopes appear in
+            the prompts, and a message that fails validation can be revised
+            without restarting the CLI. Without <Code>scope-enum</Code>, scope
+            remains optional and free-form.
           </p>
           <Callout>
             <p>

@@ -85,9 +85,12 @@ export default {
 Commitprompt passes repository parser presets, plugins, ignores, default
 ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
 rules also change the choices shown by the prompt. Without `scope-enum`, the
-optional scope remains free-form. A repository configuration takes precedence
-over the built-in fallback; rules that it does not declare or receive through
-`extends` are not enforced.
+optional scope remains free-form. Repository rules and `extends` entries take
+precedence over the built-in fallback, and undeclared rules are not enforced.
+When a resolved configuration has no `extends`, parser preset, or declared
+rules, Commitprompt retains its other settings and supplies the included
+Conventional Commits rules so validation never uses an empty rule set by
+accident.
 
 ## Migrating an existing prompt
 

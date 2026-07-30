@@ -1,17 +1,19 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, posix, win32 } from 'node:path'
+import { posix, win32 } from 'node:path'
 import process from 'node:process'
 
 import {
   applyEdits,
-  modify,
-  parse,
-  type ParseError,
-  printParseErrorCode
+  modify
 } from 'jsonc-parser'
 
 import { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
+import {
+  isSettingsRecord,
+  parseSettings,
+  readSettings,
+  writeSettings
+} from './settings.js'
 
 export const ZED_COMMIT_MESSAGE_INSTRUCTIONS = COMMIT_MESSAGE_INSTRUCTIONS
 
@@ -50,42 +52,18 @@ export const resolveZedSettingsPath = ({
   return posix.join(homeDirectory, '.config', 'zed', 'settings.json')
 }
 
-const readSettings = async (settingsPath: string): Promise<string> => {
-  try {
-    return await readFile(settingsPath, 'utf8')
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      'code' in error &&
-      error.code === 'ENOENT'
-    ) {
-      return '{}\n'
-    }
-
-    throw error
-  }
-}
-
 const getExistingInstructions = (source: string): unknown => {
-  const parseErrors: ParseError[] = []
-
-  const settings = parse(source, parseErrors, {
+  const settings = parseSettings(source, 'Zed', {
     allowTrailingComma: true
-  }) as {
-    agent?: {
-      commit_message_instructions?: unknown
-    }
-  } | undefined
+  })
 
-  if (parseErrors.length > 0) {
-    const details = parseErrors
-      .map(error => printParseErrorCode(error.error))
-      .join(', ')
+  if (!isSettingsRecord(settings)) return undefined
 
-    throw new Error(`Cannot update invalid Zed settings (${details}).`)
-  }
+  const agent = settings.agent
 
-  return settings?.agent?.commit_message_instructions
+  if (!isSettingsRecord(agent)) return undefined
+
+  return agent.commit_message_instructions
 }
 
 const combineInstructions = (existingInstructions: unknown): string => typeof existingInstructions === 'string' && existingInstructions.trim() ?
@@ -118,9 +96,7 @@ export const setupZed = async (
     }
   )
 
-  await mkdir(dirname(settingsPath), { recursive: true })
-
-  await writeFile(settingsPath, applyEdits(source, edits), 'utf8')
+  await writeSettings(settingsPath, applyEdits(source, edits))
 
   return { changed: true, settingsPath }
 }

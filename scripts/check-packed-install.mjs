@@ -12,6 +12,26 @@ import process from 'node:process'
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'commitprompt-pack-'))
+const usesCommandShim = process.platform === 'win32'
+
+const getBinaryInvocation = (binary, arguments_) => {
+  if (!usesCommandShim) return { arguments_, command: binary }
+
+  const commandLine = [binary, ...arguments_]
+    .map(value => `"${value.replaceAll('"', '""')}"`)
+    .join(' ')
+
+  return {
+    arguments_: ['/d', '/s', '/c', commandLine],
+    command: process.env.ComSpec ?? 'cmd.exe'
+  }
+}
+
+const executeBinarySync = (binary, arguments_, options) => {
+  const invocation = getBinaryInvocation(binary, arguments_)
+
+  return execFileSync(invocation.command, invocation.arguments_, options)
+}
 
 const packOutput = execFileSync(
   'pnpm',
@@ -92,7 +112,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     process.platform === 'win32' ? 'commitprompt.cmd' : 'commitprompt'
   )
 
-  const output = execFileSync(binary, ['--help'], {
+  const output = executeBinarySync(binary, ['--help'], {
     cwd: consumerDirectory,
     encoding: 'utf8'
   })
@@ -135,7 +155,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     type: 'feat'
   })
 
-  const formatOutput = execFileSync(binary, ['format', '--json'], {
+  const formatOutput = executeBinarySync(binary, ['format', '--json'], {
     cwd: consumerDirectory,
     encoding: 'utf8',
     input: structuredInput
@@ -212,7 +232,9 @@ const interactions = [
 ]
 
 await new Promise((resolve, reject) => {
-  const child = spawn(integrationBinary, {
+  const invocation = getBinaryInvocation(integrationBinary, [])
+
+  const child = spawn(invocation.command, invocation.arguments_, {
     cwd: integrationConsumer,
     stdio: ['pipe', 'pipe', 'pipe']
   })

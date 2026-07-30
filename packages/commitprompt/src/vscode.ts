@@ -1,17 +1,19 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, posix, win32 } from 'node:path'
+import { posix, win32 } from 'node:path'
 import process from 'node:process'
 
 import {
   applyEdits,
-  modify,
-  parse,
-  type ParseError,
-  printParseErrorCode
+  modify
 } from 'jsonc-parser'
 
 import { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
+import {
+  isSettingsRecord,
+  parseSettings,
+  readSettings,
+  writeSettings
+} from './settings.js'
 
 const COMMIT_INSTRUCTIONS_SETTING =
   'github.copilot.chat.commitMessageGeneration.instructions'
@@ -58,38 +60,12 @@ export const resolveVSCodeSettingsPath = ({
   )
 }
 
-const readSettings = async (settingsPath: string): Promise<string> => {
-  try {
-    return await readFile(settingsPath, 'utf8')
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      'code' in error &&
-      error.code === 'ENOENT'
-    ) {
-      return '{}\n'
-    }
-
-    throw error
-  }
-}
-
 const getExistingInstructions = (source: string): VSCodeInstruction[] => {
-  const parseErrors: ParseError[] = []
+  const settings = parseSettings(source, 'VS Code')
 
-  const settings = parse(source, parseErrors) as
-    | Record<string, unknown> |
+  const existingInstructions = isSettingsRecord(settings) ?
+    settings[COMMIT_INSTRUCTIONS_SETTING] :
     undefined
-
-  if (parseErrors.length > 0) {
-    const details = parseErrors
-      .map(error => printParseErrorCode(error.error))
-      .join(', ')
-
-    throw new Error(`Cannot update invalid VS Code settings (${details}).`)
-  }
-
-  const existingInstructions = settings?.[COMMIT_INSTRUCTIONS_SETTING]
 
   if (existingInstructions === undefined) return []
 
@@ -130,9 +106,7 @@ export const setupVSCode = async (
     }
   )
 
-  await mkdir(dirname(settingsPath), { recursive: true })
-
-  await writeFile(settingsPath, applyEdits(source, edits), 'utf8')
+  await writeSettings(settingsPath, applyEdits(source, edits))
 
   return { changed: true, settingsPath }
 }

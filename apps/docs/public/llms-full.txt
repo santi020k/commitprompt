@@ -16,8 +16,9 @@ yarn add --dev @santi020k/commitprompt
 ```
 
 The binary is always named `commitprompt`. Conventional Commitlint rules are
-included. When a repository has Commitlint configuration, that configuration
-takes precedence.
+included. Repository rules and extended configurations take precedence. When a
+resolved configuration has no extends, parser preset, or declared rules,
+Commitprompt retains its other settings and uses the included rules.
 
 ## Interactive workflow
 

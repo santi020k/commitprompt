@@ -1,3 +1,4 @@
+import conventionalConfig from '@commitlint/config-conventional'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { DEFAULT_COMMIT_TYPES } from '../src/constants.js'
@@ -115,6 +116,30 @@ describe('createCommitlintValidator', () => {
       'subject-empty',
       'type-enum'
     ]))
+  })
+
+  test('retains non-rule settings when supplying built-in rules', async () => {
+    const ignore = (message: string) => message.startsWith('release:')
+
+    mocks.load.mockResolvedValue({
+      defaultIgnores: false,
+      extends: [],
+      formatter: '',
+      helpUrl: 'https://example.com/commit-help',
+      ignores: [ignore],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {}
+    })
+
+    await createCommitlintValidator('/project').validate('feat: use defaults')
+
+    expect(mocks.lint).toHaveBeenCalledWith('feat: use defaults', conventionalConfig.rules, expect.objectContaining({
+      defaultIgnores: false,
+      helpUrl: 'https://example.com/commit-help',
+      ignores: [ignore]
+    }))
   })
 
   test('derives prompt types from the repository type-enum rule', async () => {

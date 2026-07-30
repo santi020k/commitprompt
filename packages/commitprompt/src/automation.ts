@@ -8,15 +8,6 @@ import type {
 } from './types.js'
 import { createCommitlintValidator } from './validator.js'
 
-const answerKeys = [
-  'body',
-  'breaking',
-  'issues',
-  'scope',
-  'subject',
-  'type'
-] as const satisfies readonly (keyof CommitAnswers)[]
-
 const parseCommitAnswers = (input: string): CommitAnswers => {
   let value: unknown
 
@@ -42,9 +33,14 @@ const parseCommitAnswers = (input: string): CommitAnswers => {
     return answer
   }
 
-  const answers = Object.fromEntries(
-    answerKeys.map(key => [key, getAnswer(key)])
-  ) as unknown as CommitAnswers
+  const answers: CommitAnswers = {
+    body: getAnswer('body'),
+    breaking: getAnswer('breaking'),
+    issues: getAnswer('issues'),
+    scope: getAnswer('scope'),
+    subject: getAnswer('subject'),
+    type: getAnswer('type')
+  }
 
   if (answers.type.length === 0) {
     throw new Error('Input field "type" must not be empty.')
