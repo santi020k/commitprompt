@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreBinaries": ["commitprompt"],
-  "ignoreDependencies": ["@santi020k/commitprompt", "yarn"],
+  "ignoreDependencies": ["yarn"],
   "ignoreExportsUsedInFile": true,
   "rules": {
     "duplicates": "off"

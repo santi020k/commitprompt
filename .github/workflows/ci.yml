@@ -89,3 +89,6 @@ jobs:
 
       - name: Test
         run: pnpm exec turbo run test --concurrency=1
+
+      - name: Check packed installation
+        run: pnpm run check:packed-install

@@ -1,4 +1,4 @@
-import { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
+import { getCommitMessageInstructions } from './editor.js'
 import { createGitClient } from './git.js'
 import { formatCommitMessage } from './message.js'
 import type {
@@ -8,22 +8,12 @@ import type {
 } from './types.js'
 import { createCommitlintValidator } from './validator.js'
 
-const answerKeys = [
-  'body',
-  'breaking',
-  'issues',
-  'scope',
-  'subject',
-  'type'
-] as const satisfies readonly (keyof CommitAnswers)[]
-
 const parseCommitAnswers = (input: string): CommitAnswers => {
   let value: unknown
 
   try {
     value = JSON.parse(input)
-  }
-  catch {
+  } catch {
     throw new Error('Input must be a valid JSON object.')
   }
 
@@ -43,9 +33,14 @@ const parseCommitAnswers = (input: string): CommitAnswers => {
     return answer
   }
 
-  const answers = Object.fromEntries(
-    answerKeys.map(key => [key, getAnswer(key)])
-  ) as unknown as CommitAnswers
+  const answers: CommitAnswers = {
+    body: getAnswer('body'),
+    breaking: getAnswer('breaking'),
+    issues: getAnswer('issues'),
+    scope: getAnswer('scope'),
+    subject: getAnswer('subject'),
+    type: getAnswer('type')
+  }
 
   if (answers.type.length === 0) {
     throw new Error('Input field "type" must not be empty.')
@@ -95,13 +90,33 @@ type NormalizedAutomationOptions = Omit<
   json: boolean
 }
 
-const runInstructions = ({
+const runInstructions = async ({
+  cwd,
   json,
   log
-}: NormalizedAutomationOptions): number => {
-  log(json
-    ? JSON.stringify({ instructions: COMMIT_MESSAGE_INSTRUCTIONS })
-    : COMMIT_MESSAGE_INSTRUCTIONS)
+}: NormalizedAutomationOptions): Promise<number> => {
+  const validator = createCommitlintValidator(cwd)
+
+  const [scopes, types] = await Promise.all([
+    validator.getScopes(),
+    validator.getTypes()
+  ])
+
+  const instructions = getCommitMessageInstructions(types, scopes)
+
+  log(json ? JSON.stringify({ instructions }) : instructions)
+
+  return 0
+}
+
+const runScopes = async ({
+  cwd,
+  json,
+  log
+}: NormalizedAutomationOptions): Promise<number> => {
+  const scopes = await createCommitlintValidator(cwd).getScopes()
+
+  log(json ? JSON.stringify({ scopes }) : scopes.join('\n'))
 
   return 0
 }
@@ -113,9 +128,11 @@ const runTypes = async ({
 }: NormalizedAutomationOptions): Promise<number> => {
   const types = await createCommitlintValidator(cwd).getTypes()
 
-  log(json ? JSON.stringify({ types }) : types
-    .map(type => `${type.value}\t${type.description}`)
-    .join('\n'))
+  log(json ?
+    JSON.stringify({ types }) :
+    types
+      .map(type => `${type.value}\t${type.description}`)
+      .join('\n'))
 
   return 0
 }
@@ -171,8 +188,7 @@ const runCommit = async ({
   if (!validation.valid) {
     if (json) {
       log(JSON.stringify({ committed: false, message, validation }))
-    }
-    else {
+    } else {
       printValidation(validation, false, log, error)
     }
 
@@ -187,9 +203,9 @@ const runCommit = async ({
 
   git.commit(message)
 
-  log(json
-    ? JSON.stringify({ committed: true, message, validation })
-    : `Created commit:\n${message}`)
+  log(json ?
+    JSON.stringify({ committed: true, message, validation }) :
+    `Created commit:\n${message}`)
 
   return 0
 }
@@ -198,25 +214,29 @@ const runAutomationAction = async (
   options: NormalizedAutomationOptions
 ): Promise<number> => {
   switch (options.command) {
-  case 'commit': {
-    return await runCommit(options)
-  }
+    case 'commit': {
+      return await runCommit(options)
+    }
 
-  case 'format': {
-    return runFormat(options)
-  }
+    case 'format': {
+      return runFormat(options)
+    }
 
-  case 'instructions': {
-    return runInstructions(options)
-  }
+    case 'instructions': {
+      return await runInstructions(options)
+    }
 
-  case 'types': {
-    return await runTypes(options)
-  }
+    case 'scopes': {
+      return await runScopes(options)
+    }
 
-  case 'validate': {
-    return await runValidation(options)
-  }
+    case 'types': {
+      return await runTypes(options)
+    }
+
+    case 'validate': {
+      return await runValidation(options)
+    }
   }
 }
 
@@ -239,11 +259,10 @@ export const runAutomation = async ({
       json,
       log
     })
-  }
-  catch (caughtError) {
-    const message = caughtError instanceof Error
-      ? caughtError.message
-      : String(caughtError)
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ?
+      caughtError.message :
+      String(caughtError)
 
     error(json ? JSON.stringify({ error: message }) : message)
 

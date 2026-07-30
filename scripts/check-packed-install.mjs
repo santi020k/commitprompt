@@ -9,11 +9,26 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
 
+import { getBinaryInvocation } from './binary-invocation.mjs'
+
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'commitprompt-pack-'))
 
-const packOutput = execFileSync(
+const executeBinarySync = (binary, arguments_, options) => {
+  const invocation = getBinaryInvocation(binary, arguments_)
+
+  return execFileSync(
+    invocation.command,
+    invocation.arguments_,
+    {
+      ...options,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments
+    }
+  )
+}
+
+const packOutput = executeBinarySync(
   'pnpm',
   ['pack', '--json', '--pack-destination', temporaryDirectory],
   {
@@ -67,6 +82,16 @@ const verifyConsumer = (consumerDirectory, name) => {
     throw new Error(`${name} installed unexpected package metadata.`)
   }
 
+  readFileSync(
+    join(installedPackageDirectory, 'dist/src/index.js.map'),
+    'utf8'
+  )
+
+  readFileSync(
+    join(installedPackageDirectory, 'dist/src/index.d.ts.map'),
+    'utf8'
+  )
+
   const agentGuide = readFileSync(
     join(installedPackageDirectory, 'AI.md'),
     'utf8'
@@ -82,7 +107,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     process.platform === 'win32' ? 'commitprompt.cmd' : 'commitprompt'
   )
 
-  const output = execFileSync(binary, ['--help'], {
+  const output = executeBinarySync(binary, ['--help'], {
     cwd: consumerDirectory,
     encoding: 'utf8'
   })
@@ -105,7 +130,9 @@ const verifyConsumer = (consumerDirectory, name) => {
         'const report = await validator.validate("not conventional")',
         "if (report.valid) throw new Error('Built-in rules accepted an invalid message')",
         'const types = await validator.getTypes()',
-        "if (types[0]?.value !== 'feat') throw new Error('Built-in prompt types were not loaded')"
+        "if (types[0]?.value !== 'feat') throw new Error('Built-in prompt types were not loaded')",
+        'const scopes = await validator.getScopes()',
+        "if (scopes.length !== 0) throw new Error('Unexpected built-in prompt scopes')"
       ].join(';')
     ],
     {
@@ -123,7 +150,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     type: 'feat'
   })
 
-  const formatOutput = execFileSync(binary, ['format', '--json'], {
+  const formatOutput = executeBinarySync(binary, ['format', '--json'], {
     cwd: consumerDirectory,
     encoding: 'utf8',
     input: structuredInput
@@ -151,7 +178,7 @@ for (const packageManager of packageManagers) {
     JSON.stringify({ name: `commitprompt-${packageManager.name.toLowerCase()}-test`, private: true })
   )
 
-  execFileSync(packageManager.command, packageManager.args, {
+  executeBinarySync(packageManager.command, packageManager.args, {
     cwd: consumerDirectory,
     stdio: 'inherit'
   })
@@ -200,9 +227,12 @@ const interactions = [
 ]
 
 await new Promise((resolve, reject) => {
-  const child = spawn(integrationBinary, {
+  const invocation = getBinaryInvocation(integrationBinary, [])
+
+  const child = spawn(invocation.command, invocation.arguments_, {
     cwd: integrationConsumer,
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments
   })
 
   let output = ''
@@ -272,7 +302,7 @@ const automationInput = JSON.stringify({
   type: 'test'
 })
 
-const automationOutput = execFileSync(
+const automationOutput = executeBinarySync(
   integrationBinary,
   ['commit', '--yes', '--json'],
   {
@@ -307,7 +337,39 @@ writeFileSync(
   join(integrationConsumer, 'commitlint.config.mjs'),
   [
     'export default {',
-    "  rules: { 'type-enum': [2, 'always', ['fix', 'release']] }",
+    "  extends: ['@commitlint/config-conventional'],",
+    '  rules: {',
+    "    'body-max-line-length': [0],",
+    "    'footer-max-line-length': [0],",
+    "    'header-max-length': [0]",
+    '  }',
+    '}'
+  ].join('\n')
+)
+
+const conventionalTypes = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['types', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (conventionalTypes.types[0]?.value !== 'feat') {
+  throw new Error(
+    'Installed CLI did not preserve the curated conventional type order.'
+  )
+}
+
+writeFileSync(
+  join(integrationConsumer, 'commitlint.config.mjs'),
+  [
+    'export default {',
+    '  rules: {',
+    "    'type-enum': [2, 'always', ['fix', 'release']],",
+    "    'scope-enum': [2, 'always', ['cli', 'docs']]",
+    '  }',
     '}'
   ].join('\n')
 )
@@ -322,7 +384,10 @@ execFileSync(
       'const validator = api.createCommitlintValidator(process.cwd())',
       'const types = await validator.getTypes()',
       'const values = types.map(type => type.value).join(",")',
-      "if (values !== 'fix,release') throw new Error(`Unexpected repository types: ${values}`)"
+      "if (values !== 'fix,release') throw new Error(`Unexpected repository types: ${values}`)",
+      'const scopes = await validator.getScopes()',
+      'const scopeValues = scopes.join(",")',
+      "if (scopeValues !== 'cli,docs') throw new Error(`Unexpected repository scopes: ${scopeValues}`)"
     ].join(';')
   ],
   {
@@ -331,4 +396,19 @@ execFileSync(
   }
 )
 
-console.log('Packed package installation passed for npm, pnpm, and Yarn.')
+const configuredScopes = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['scopes', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (configuredScopes.scopes.join(',') !== 'cli,docs') {
+  throw new Error('Installed CLI returned unexpected repository scopes.')
+}
+
+process.stdout.write(
+  'Packed package installation passed for npm, pnpm, and Yarn.\n'
+)

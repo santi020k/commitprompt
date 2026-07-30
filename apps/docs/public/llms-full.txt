@@ -16,8 +16,9 @@ yarn add --dev @santi020k/commitprompt
 ```
 
 The binary is always named `commitprompt`. Conventional Commitlint rules are
-included. When a repository has Commitlint configuration, that configuration
-takes precedence.
+included. Repository rules and extended configurations take precedence. When a
+resolved configuration has no extends, parser preset, or declared rules,
+Commitprompt retains its other settings and uses the included rules.
 
 ## Interactive workflow
 
@@ -30,10 +31,12 @@ Do not drive the interactive questionnaire. Inspect repository instructions,
 Git status, the staged diff, and the unstaged diff first. Do not stage files
 unless the user asks.
 
-Discover the current generation instructions and allowed repository types:
+Discover the current generation instructions, allowed repository types, and
+configured scopes:
 
 ```sh
 commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 ```
 
@@ -73,8 +76,8 @@ commitprompt commit --yes --json < commit.json
 This command formats the input, validates the message, requires staged changes,
 and calls Git normally. Git hooks remain active.
 
-Use `--input <path>` instead of stdin. Use `--cwd <path>` with `types`,
-`validate`, or `commit` when targeting a different repository.
+Use `--input <path>` instead of stdin. Use `--cwd <path>` with `instructions`,
+`scopes`, `types`, `validate`, or `commit` when targeting another repository.
 
 ## Machine-readable contract
 
@@ -101,10 +104,16 @@ import {
 ```
 
 `formatCommitMessage(answers)` produces the exact Conventional Commit message.
-`createCommitlintValidator(cwd)` returns cached `getTypes()` and
+`createCommitlintValidator(cwd)` returns cached `getTypes()`, `getScopes()`, and
 `validate(message)` operations. `createGitClient(cwd)` checks staged changes and
-commits through Git. `runAutomation(options)` powers the non-interactive
-commands. `runCommitFlow(options)` powers the interactive workflow.
+commits through Git. `runAutomation(options)` powers the non-interactive commands.
+`runCommitFlow(options)` powers the interactive workflow.
+
+The package is ESM-only. Every value and type exported from the package root is
+stable and follows semantic versioning. Source and `dist/` file paths are
+implementation details, not supported entry points. Within a major version,
+additions may extend returned objects, exported unions, or optional options;
+existing documented behavior and required inputs will not change incompatibly.
 
 ## Editor setup
 

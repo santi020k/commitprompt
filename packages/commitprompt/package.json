@@ -19,6 +19,7 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "dist/**/*.map",
     "README.md",
     "AI.md",
     "LICENSE"
@@ -29,12 +30,12 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "dev": "tsc --project tsconfig.json --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --project tests/tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "eslint src tests bin --cache --no-warn-ignored",
-    "lint:fix": "eslint src tests bin --cache --fix --no-warn-ignored",
+    "lint": "eslint src tests bin --cache --no-warn-ignored --max-warnings=0",
+    "lint:fix": "eslint src tests bin --cache --fix --no-warn-ignored --max-warnings=0",
     "check:exports": "publint",
     "clean": "rm -rf dist coverage"
   },

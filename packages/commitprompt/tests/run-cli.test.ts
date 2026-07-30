@@ -35,6 +35,7 @@ describe('runCli', () => {
       hasStagedChanges: () => false
     } satisfies GitClient)
     mocks.createValidator.mockReturnValue({
+      getScopes: () => Promise.resolve([]),
       getTypes: () => Promise.resolve([
         { description: 'A feature', value: 'feat' }
       ]),
@@ -43,33 +44,32 @@ describe('runCli', () => {
   })
 
   test('loads repository types before starting the flow', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {
-      // Suppress expected CLI output in the test.
-    })
+    const error = vi.spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
 
     await expect(runCli('/project')).resolves.toBe(1)
 
     expect(mocks.createGitClient).toHaveBeenCalledWith('/project')
     expect(mocks.createValidator).toHaveBeenCalledWith('/project')
     expect(error).toHaveBeenCalledWith(
-      'No staged changes. Stage the files you want to commit first.'
+      'No staged changes. Stage the files you want to commit first.\n'
     )
     expect(prompt.close).toHaveBeenCalledOnce()
   })
 
   test('reports configuration loading failures', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {
-      // Suppress expected CLI output in the test.
-    })
+    const error = vi.spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
 
     mocks.createValidator.mockReturnValue({
+      getScopes: () => Promise.resolve([]),
       getTypes: () => Promise.reject(new Error('configuration failed')),
       validate: vi.fn()
     } satisfies CommitlintClient)
 
     await expect(runCli('/project')).resolves.toBe(1)
 
-    expect(error).toHaveBeenCalledWith('configuration failed')
+    expect(error).toHaveBeenCalledWith('configuration failed\n')
     expect(prompt.close).toHaveBeenCalledOnce()
   })
 })

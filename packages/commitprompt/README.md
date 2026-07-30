@@ -25,8 +25,8 @@ that changes are staged, guides the author through a Conventional Commit,
 validates the result, previews it, and creates the commit after confirmation.
 
 Commitprompt includes Conventional Commits validation, so a separate Commitlint
-configuration is optional. When the repository defines `type-enum`,
-Commitprompt uses those values in the type prompt.
+configuration is optional. When the repository defines `type-enum` or
+`scope-enum`, Commitprompt uses those values in the corresponding prompts.
 
 ## Usage
 
@@ -76,16 +76,39 @@ export default {
     'header-max-length': [0],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
-    'type-enum': [2, 'always', ['feat', 'fix', 'release']]
+    'type-enum': [2, 'always', ['feat', 'fix', 'release']],
+    'scope-enum': [2, 'always', ['cli', 'docs']]
   }
 }
 ```
 
 Commitprompt passes repository parser presets, plugins, ignores, default
-ignores, and help URLs to Commitlint. A configured `type-enum` rule also changes
-the choices shown by the prompt. A repository configuration takes precedence
-over the built-in fallback; rules that it does not declare or receive through
-`extends` are not enforced.
+ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
+rules also change the choices shown by the prompt. Without `scope-enum`, the
+optional scope remains free-form. Repository rules and `extends` entries take
+precedence over the built-in fallback, and undeclared rules are not enforced.
+When a resolved configuration has no `extends`, parser preset, or declared
+rules, Commitprompt retains its other settings and supplies the included
+Conventional Commits rules so validation never uses an empty rule set by
+accident.
+
+## Migrating an existing prompt
+
+When replacing Commitizen, Czg, or a local prompt script:
+
+1. Install Commitprompt and set `"commit": "commitprompt"` in `package.json`.
+2. Remove the old prompt package and adapter, such as `commitizen`,
+   `cz-conventional-changelog`, or `czg`.
+3. Remove the obsolete `config.commitizen` package metadata or local prompt
+   script.
+4. Keep the repository's Commitlint configuration. Commitprompt loads it
+   directly and includes conventional defaults when it is absent.
+5. Keep any `commit-msg` hook that enforces messages created outside
+   Commitprompt. Keep `pre-commit` and `pre-push` hooks for their existing staged
+   file and repository checks.
+
+No package-manager command belongs inside the `commit` script. The neutral
+binary works through `pnpm commit`, `npm run commit`, and `yarn commit`.
 
 ## Git hooks
 
@@ -102,6 +125,7 @@ Inspect the repository and staged diff first, then discover its allowed types:
 
 ```sh
 commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 ```
 
@@ -183,10 +207,26 @@ import {
 } from '@santi020k/commitprompt'
 ```
 
-The message formatter, default commit types, Git adapter, cached Commitlint
-client, prompt helpers, non-interactive automation flow, and full interactive
-commit flow are exported for integrations and testing. The Commitlint client
-exposes `validate(message)` and `getTypes()`.
+The package is ESM-only. Every value and type exported from the package root is
+part of the stable public API and follows semantic versioning. Files below
+`dist/` and source-file paths are implementation details and are not supported
+entry points.
+
+- `formatCommitMessage(answers)` formats structured fields without touching Git.
+- `createCommitlintValidator(cwd)` returns cached `validate(message)`,
+  `getTypes()`, and `getScopes()` operations.
+- `createGitClient(cwd, options?)` checks the index and creates commits without
+  using a package-manager-specific command.
+- `runAutomation(options)` powers structured discovery, formatting, validation,
+  and explicitly confirmed commit operations.
+- `runCommitFlow(options)` composes prompts, validation, confirmation, and Git
+  operations for custom interactive integrations.
+- The editor setup functions update Zed or VS Code settings while preserving
+  unrelated configuration.
+
+Commitprompt requires Node.js 22.18 or newer. Within a major version, additions
+may extend returned objects, exported unions, or optional options; existing
+documented behavior and required inputs will not change incompatibly.
 
 ## License
 

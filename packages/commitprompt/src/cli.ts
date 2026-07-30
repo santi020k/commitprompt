@@ -18,6 +18,14 @@ import { createCommitlintValidator } from './validator.js'
 
 type ValidationDecision = 'continue' | 'retry' | 'stop'
 
+const writeError = (message: string): void => {
+  process.stderr.write(`${message}\n`)
+}
+
+const writeOutput = (message: string): void => {
+  process.stdout.write(`${message}\n`)
+}
+
 const getValidationDecision = async (
   validation: MessageValidation,
   prompt: Prompt,
@@ -39,6 +47,7 @@ export const runCommitFlow = async ({
   git,
   log,
   prompt,
+  scopes = [],
   types = DEFAULT_COMMIT_TYPES,
   validator
 }: RunCommitFlowOptions): Promise<number> => {
@@ -50,7 +59,10 @@ export const runCommitFlow = async ({
     }
 
     for (;;) {
-      const answers = await collectCommitAnswers(prompt, types, log, error)
+      const answers = await collectCommitAnswers(
+        prompt, types, log, error, scopes
+      )
+
       const message = formatCommitMessage(answers)
 
       log(`\n${message}\n`)
@@ -72,17 +84,15 @@ export const runCommitFlow = async ({
 
       return 0
     }
-  }
-  catch (caughtError) {
-    const message = caughtError instanceof Error
-      ? caughtError.message
-      : String(caughtError)
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ?
+      caughtError.message :
+      String(caughtError)
 
     error(message)
 
     return 1
-  }
-  finally {
+  } finally {
     prompt.close()
   }
 }
@@ -96,27 +106,26 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
   const validator = createCommitlintValidator(cwd)
 
   try {
-    const types = await validator.getTypes()
+    const [scopes, types] = await Promise.all([
+      validator.getScopes(),
+      validator.getTypes()
+    ])
 
     return await runCommitFlow({
-      error: message => {
-        console.error(message)
-      },
+      error: writeError,
       git: createGitClient(cwd),
-      log: message => {
-        console.log(message)
-      },
+      log: writeOutput,
       prompt,
+      scopes,
       types,
       validator
     })
-  }
-  catch (caughtError) {
-    const message = caughtError instanceof Error
-      ? caughtError.message
-      : String(caughtError)
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ?
+      caughtError.message :
+      String(caughtError)
 
-    console.error(message)
+    writeError(message)
 
     prompt.close()
 

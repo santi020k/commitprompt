@@ -15,8 +15,8 @@ import {
   setupVSCode
 } from '../src/vscode.js'
 
-const instructionSetting
-  = 'github.copilot.chat.commitMessageGeneration.instructions'
+const instructionSetting =
+  'github.copilot.chat.commitMessageGeneration.instructions'
 const temporaryDirectories: string[] = []
 
 const createTemporaryDirectory = async (): Promise<string> => {
@@ -29,9 +29,7 @@ const createTemporaryDirectory = async (): Promise<string> => {
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map(directory =>
-      rm(directory, { force: true, recursive: true })
-    )
+    temporaryDirectories.splice(0).map(directory => rm(directory, { force: true, recursive: true }))
   )
 })
 
@@ -105,8 +103,7 @@ describe('setupVSCode', () => {
     const settingsPath = join(directory, 'settings.json')
 
     await writeFile(
-      settingsPath,
-      `{
+      settingsPath, `{
   // Keep this editor preference.
   "editor.fontSize": 16,
   "${instructionSetting}": [
@@ -114,8 +111,7 @@ describe('setupVSCode', () => {
     { "file": "./commit-guidance.md" }
   ]
 }
-`,
-      'utf8'
+`, 'utf8'
     )
 
     await setupVSCode({ settingsPath })
@@ -133,13 +129,11 @@ describe('setupVSCode', () => {
     const settingsPath = join(directory, 'settings.json')
 
     await writeFile(
-      settingsPath,
-      JSON.stringify({
+      settingsPath, JSON.stringify({
         [instructionSetting]: [
           { text: COMMIT_MESSAGE_INSTRUCTIONS }
         ]
-      }),
-      'utf8'
+      }), 'utf8'
     )
 
     await expect(setupVSCode({ settingsPath })).resolves.toEqual({
@@ -153,9 +147,7 @@ describe('setupVSCode', () => {
     const settingsPath = join(directory, 'settings.json')
 
     await writeFile(
-      settingsPath,
-      JSON.stringify({ [instructionSetting]: 'invalid' }),
-      'utf8'
+      settingsPath, JSON.stringify({ [instructionSetting]: 'invalid' }), 'utf8'
     )
 
     await expect(setupVSCode({ settingsPath }))

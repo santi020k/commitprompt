@@ -13,16 +13,13 @@ import type { CommitlintClient, CommitType } from './types.js'
 
 const isParserOptions = (
   value: unknown
-): value is NonNullable<LintOptions['parserOpts']> =>
-  typeof value === 'object' && value !== null
+): value is NonNullable<LintOptions['parserOpts']> => typeof value === 'object' && value !== null
 
-const hasRepositoryConfiguration = (configuration: QualifiedConfig): boolean =>
-  configuration.extends.length > 0 ||
+const hasRepositoryConfiguration = (configuration: QualifiedConfig): boolean => configuration.extends.length > 0 ||
   Object.keys(configuration.rules).length > 0 ||
   configuration.parserPreset !== undefined
 
-const getDefaultRules = (): QualifiedRules =>
-  conventionalConfig.rules
+const getDefaultRules = (): QualifiedRules => conventionalConfig.rules
 
 interface LoadedConfiguration {
   configuration: QualifiedConfig
@@ -54,6 +51,14 @@ const describeType = (value: string): CommitType => {
   }
 }
 
+const isDefaultTypeSet = (values: readonly string[]): boolean => {
+  if (values.length !== DEFAULT_COMMIT_TYPES.length) return false
+
+  const configuredValues = new Set(values)
+
+  return DEFAULT_COMMIT_TYPES.every(type => configuredValues.has(type.value))
+}
+
 const getConfiguredTypes = (
   configuration: QualifiedConfig
 ): readonly CommitType[] => {
@@ -81,21 +86,49 @@ const getConfiguredTypes = (
     return allowedTypes.length > 0 ? allowedTypes : DEFAULT_COMMIT_TYPES
   }
 
+  if (isDefaultTypeSet(configuredValues)) return DEFAULT_COMMIT_TYPES
+
   const types = configuredValues.map(describeType)
 
   return types.length > 0 ? types : DEFAULT_COMMIT_TYPES
+}
+
+const getConfiguredScopes = (
+  configuration: QualifiedConfig
+): readonly string[] => {
+  const scopeRule = configuration.rules['scope-enum']
+
+  if (
+    !scopeRule ||
+    scopeRule[0] === RuleConfigSeverity.Disabled ||
+    scopeRule[1] === 'never' ||
+    !Array.isArray(scopeRule[2])
+  ) {
+    return []
+  }
+
+  return [...new Set(scopeRule[2].filter(
+    (value): value is string => typeof value === 'string' && value.length > 0
+  ))]
 }
 
 export const createCommitlintValidator = (cwd: string): CommitlintClient => {
   const configuration = loadConfiguration(cwd)
 
   return {
+    getScopes: async () => {
+      const loaded = await configuration
+
+      return loaded.usesDefaults ?
+        [] :
+        getConfiguredScopes(loaded.configuration)
+    },
     getTypes: async () => {
       const loaded = await configuration
 
-      return loaded.usesDefaults
-        ? DEFAULT_COMMIT_TYPES
-        : getConfiguredTypes(loaded.configuration)
+      return loaded.usesDefaults ?
+        DEFAULT_COMMIT_TYPES :
+        getConfiguredTypes(loaded.configuration)
     },
     validate: async message => {
       const { configuration: resolvedConfiguration } = await configuration

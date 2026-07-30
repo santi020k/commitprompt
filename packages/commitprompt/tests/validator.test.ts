@@ -1,3 +1,4 @@
+import conventionalConfig from '@commitlint/config-conventional'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { DEFAULT_COMMIT_TYPES } from '../src/constants.js'
@@ -50,14 +51,13 @@ describe('createCommitlintValidator', () => {
     })
     expect(mocks.load).toHaveBeenCalledExactlyOnceWith({}, { cwd: '/project' })
     expect(mocks.lint).toHaveBeenCalledWith(
-      'feat: add validation',
-      { 'type-empty': [2, 'never'] },
-      expect.objectContaining({
+      'feat: add validation', { 'type-empty': [2, 'never'] }, expect.objectContaining({
         parserOpts: {
           headerPattern: /^(.*)$/
         }
       })
     )
+    await expect(validator.getScopes()).resolves.toEqual([])
     await expect(validator.getTypes()).resolves.toHaveLength(11)
   })
 
@@ -118,6 +118,30 @@ describe('createCommitlintValidator', () => {
     ]))
   })
 
+  test('retains non-rule settings when supplying built-in rules', async () => {
+    const ignore = (message: string) => message.startsWith('release:')
+
+    mocks.load.mockResolvedValue({
+      defaultIgnores: false,
+      extends: [],
+      formatter: '',
+      helpUrl: 'https://example.com/commit-help',
+      ignores: [ignore],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {}
+    })
+
+    await createCommitlintValidator('/project').validate('feat: use defaults')
+
+    expect(mocks.lint).toHaveBeenCalledWith('feat: use defaults', conventionalConfig.rules, expect.objectContaining({
+      defaultIgnores: false,
+      helpUrl: 'https://example.com/commit-help',
+      ignores: [ignore]
+    }))
+  })
+
   test('derives prompt types from the repository type-enum rule', async () => {
     mocks.load.mockResolvedValue({
       defaultIgnores: true,
@@ -141,6 +165,42 @@ describe('createCommitlintValidator', () => {
     ])
   })
 
+  test('keeps the curated order for the conventional type set', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: ['@commitlint/config-conventional'],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'type-enum': [
+          2,
+          'always',
+          [
+            'build',
+            'chore',
+            'ci',
+            'docs',
+            'feat',
+            'fix',
+            'perf',
+            'refactor',
+            'revert',
+            'style',
+            'test'
+          ]
+        ]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getTypes()
+    ).resolves.toEqual(DEFAULT_COMMIT_TYPES)
+  })
+
   test('excludes types forbidden by a never rule', async () => {
     mocks.load.mockResolvedValue({
       defaultIgnores: true,
@@ -161,5 +221,51 @@ describe('createCommitlintValidator', () => {
     expect(types.map(type => type.value)).not.toContain('chore')
     expect(types.map(type => type.value)).not.toContain('revert')
     expect(types.map(type => type.value)).toContain('feat')
+  })
+
+  test('derives prompt scopes from the repository scope-enum rule', async () => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'scope-enum': [2, 'always', ['cli', 'docs', 'cli', '']]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getScopes()
+    ).resolves.toEqual(['cli', 'docs'])
+  })
+
+  test.each([
+    [0, 'always'],
+    [2, 'never']
+  ] as const)('does not suggest scopes for a %s %s rule', async (
+    severity,
+    condition
+  ) => {
+    mocks.load.mockResolvedValue({
+      defaultIgnores: true,
+      extends: [],
+      formatter: '',
+      helpUrl: '',
+      ignores: [],
+      parserPreset: undefined,
+      plugins: {},
+      prompt: {},
+      rules: {
+        'scope-enum': [severity, condition, ['internal']]
+      }
+    })
+
+    await expect(
+      createCommitlintValidator('/project').getScopes()
+    ).resolves.toEqual([])
   })
 })

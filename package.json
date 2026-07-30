@@ -9,15 +9,15 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
-    "lint": "pnpm run lint:repo && turbo run lint -- --max-warnings=0",
+    "lint": "pnpm run lint:repo && turbo run lint",
     "lint:repo": "eslint . --cache --no-warn-ignored --max-warnings=0",
     "lint:fix": "pnpm run lint:repo:fix && turbo run lint:fix",
-    "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored",
+    "lint:repo:fix": "eslint . --cache --fix --no-warn-ignored --max-warnings=0",
     "lint:commits": "commitlint --from=origin/main --to=HEAD",
     "lint:spell": "cspell \"**\" --gitignore --cache --show-suggestions --show-context",
     "lint:knip": "knip",
     "check:exports": "turbo run check:exports",
-    "check:packed-install": "node scripts/check-packed-install.mjs",
+    "check:packed-install": "node --test scripts/binary-invocation.test.mjs && node scripts/check-packed-install.mjs",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
     "ok": "pnpm install --frozen-lockfile && pnpm run validate",
     "changeset": "changeset",
@@ -40,7 +40,13 @@
     "@changesets/cli": "catalog:",
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",
+    "@santi020k/eslint-config-astro": "catalog:",
     "@santi020k/eslint-config-basic": "catalog:",
+    "@santi020k/eslint-config-extensions": "catalog:",
+    "@santi020k/eslint-config-formats": "catalog:",
+    "@santi020k/eslint-config-libraries": "catalog:",
+    "@santi020k/eslint-config-testing": "catalog:",
+    "@santi020k/eslint-config-tools": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "@santi020k/commitprompt": "workspace:*",
@@ -51,7 +57,6 @@
     "lint-staged": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:",
     "yarn": "catalog:"
@@ -61,10 +66,10 @@
       "cspell --no-must-find-files"
     ],
     "*.{astro,js,mjs,ts}": [
-      "eslint --fix --no-warn-ignored"
+      "eslint --fix --no-warn-ignored --max-warnings=0"
     ],
     "*.{json,jsonc,md,yml,yaml}": [
-      "eslint --fix --no-warn-ignored"
+      "eslint --fix --no-warn-ignored --max-warnings=0"
     ]
   },
   "engines": {

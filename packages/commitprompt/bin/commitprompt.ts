@@ -20,7 +20,8 @@ A focused prompt for Conventional Commits.
 
 Usage:
   commitprompt
-  commitprompt instructions [--json]
+  commitprompt instructions [--json] [--cwd <path>]
+  commitprompt scopes [--json] [--cwd <path>]
   commitprompt types [--json] [--cwd <path>]
   commitprompt format [--json] [--input <path>]
   commitprompt validate [--json] [--input <path>] [--cwd <path>]
@@ -47,6 +48,7 @@ const automationCommands = new Set<AutomationCommand>([
   'commit',
   'format',
   'instructions',
+  'scopes',
   'types',
   'validate'
 ])
@@ -69,45 +71,45 @@ const parseAutomationArguments = (values: string[]): AutomationArguments => {
     const value = values[index]
 
     switch (value) {
-    case '--json': {
-      options.json = true
+      case '--json': {
+        options.json = true
 
-      break
-    }
+        break
+      }
 
-    case '--yes': {
-      options.confirm = true
+      case '--yes': {
+        options.confirm = true
 
-      break
-    }
+        break
+      }
 
-    case '--cwd': {
-      const optionValue = values[index + 1]
+      case '--cwd': {
+        const optionValue = values[index + 1]
 
-      if (!optionValue) throw new Error('--cwd requires a value.')
+        if (!optionValue) throw new Error('--cwd requires a value.')
 
-      options.cwd = optionValue
+        options.cwd = optionValue
 
-      index += 1
+        index += 1
 
-      break
-    }
+        break
+      }
 
-    case '--input': {
-      const optionValue = values[index + 1]
+      case '--input': {
+        const optionValue = values[index + 1]
 
-      if (!optionValue) throw new Error('--input requires a value.')
+        if (!optionValue) throw new Error('--input requires a value.')
 
-      options.inputPath = optionValue
+        options.inputPath = optionValue
 
-      index += 1
+        index += 1
 
-      break
-    }
+        break
+      }
 
-    default: {
-      throw new Error(`Unknown option: ${String(value)}`)
-    }
+      default: {
+        throw new Error(`Unknown option: ${String(value)}`)
+      }
     }
   }
 
@@ -124,8 +126,7 @@ const readStandardInput = async (): Promise<string> => {
   return input
 }
 
-const acceptsInput = (command: AutomationCommand): boolean =>
-  command === 'commit' || command === 'format' || command === 'validate'
+const acceptsInput = (command: AutomationCommand): boolean => command === 'commit' || command === 'format' || command === 'validate'
 
 const readAutomationInput = async (
   command: AutomationCommand,
@@ -144,13 +145,20 @@ const readAutomationInput = async (
   return await readStandardInput()
 }
 
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const getErrorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error)
+
+const writeError = (message: string): void => {
+  process.stderr.write(`${message}\n`)
+}
+
+const writeOutput = (message: string): void => {
+  process.stdout.write(`${message}\n`)
+}
 
 const printCommandError = (error: unknown, json: boolean): void => {
   const message = getErrorMessage(error)
 
-  console.error(json ? JSON.stringify({ error: message }) : message)
+  writeError(json ? JSON.stringify({ error: message }) : message)
 }
 
 const runAutomationCommand = async (
@@ -164,21 +172,24 @@ const runAutomationCommand = async (
 
     json = options.json
 
+    if (command === 'commit' && !options.confirm) {
+      throw new Error(
+        'Non-interactive commits require --yes to confirm the Git operation.'
+      )
+    }
+
+    const input = await readAutomationInput(command, options)
+
     return await runAutomation({
       command,
       confirm: options.confirm,
       cwd: options.cwd,
-      error: message => {
-        console.error(message)
-      },
-      input: await readAutomationInput(command, options),
+      error: writeError,
+      input,
       json,
-      log: message => {
-        console.log(message)
-      }
+      log: writeOutput
     })
-  }
-  catch (error) {
+  } catch (error) {
     printCommandError(error, json)
 
     return 1
@@ -186,61 +197,52 @@ const runAutomationCommand = async (
 }
 
 if (argument === '--help' || argument === '-h') {
-  console.log(HELP)
-}
-else if (argument === '--version' || argument === '-v') {
+  writeOutput(HELP)
+} else if (argument === '--version' || argument === '-v') {
   const require = createRequire(import.meta.url)
   const metadata = require('../../package.json') as PackageMetadata
 
-  console.log(metadata.version)
-}
-else if (automationCommands.has(argument as AutomationCommand)) {
+  writeOutput(metadata.version)
+} else if (automationCommands.has(argument as AutomationCommand)) {
   process.exitCode = await runAutomationCommand(
-    argument as AutomationCommand,
-    arguments_.slice(1)
+    argument as AutomationCommand, arguments_.slice(1)
   )
-}
-else if (argument === 'setup' && arguments_[1] === 'zed' && arguments_.length === 2) {
+} else if (argument === 'setup' && arguments_[1] === 'zed' && arguments_.length === 2) {
   try {
     const result = await setupZed()
 
-    console.log(
-      result.changed
-        ? `Configured Zed commit generation in ${result.settingsPath}`
-        : `Zed commit generation is already configured in ${result.settingsPath}`
+    writeOutput(
+      result.changed ?
+        `Configured Zed commit generation in ${result.settingsPath}` :
+        `Zed commit generation is already configured in ${result.settingsPath}`
     )
-  }
-  catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
+  } catch (error) {
+    writeError(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
-}
-else if (
-  argument === 'setup'
-  && arguments_[1] === 'vscode'
-  && arguments_.length === 2
+} else if (
+  argument === 'setup' &&
+  arguments_[1] === 'vscode' &&
+  arguments_.length === 2
 ) {
   try {
     const result = await setupVSCode()
 
-    console.log(
-      result.changed
-        ? `Configured VS Code commit generation in ${result.settingsPath}`
-        : `VS Code commit generation is already configured in ${result.settingsPath}`
+    writeOutput(
+      result.changed ?
+        `Configured VS Code commit generation in ${result.settingsPath}` :
+        `VS Code commit generation is already configured in ${result.settingsPath}`
     )
-  }
-  catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
+  } catch (error) {
+    writeError(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
-}
-else if (argument) {
-  console.error(`Unknown argument: ${arguments_.join(' ')}\n\n${HELP}`)
+} else if (argument) {
+  writeError(`Unknown argument: ${arguments_.join(' ')}\n\n${HELP}`)
 
   process.exitCode = 1
-}
-else {
+} else {
   process.exitCode = await runCli()
 }

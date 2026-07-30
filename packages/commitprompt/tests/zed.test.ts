@@ -13,7 +13,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { COMMIT_MESSAGE_INSTRUCTIONS } from '../src/editor.js'
 import {
   resolveZedSettingsPath,
-  setupZed,
+  setupZed
 } from '../src/zed.js'
 
 const temporaryDirectories: string[] = []
@@ -28,9 +28,7 @@ const createTemporaryDirectory = async (): Promise<string> => {
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map(directory =>
-      rm(directory, { force: true, recursive: true })
-    )
+    temporaryDirectories.splice(0).map(directory => rm(directory, { force: true, recursive: true }))
   )
 })
 
@@ -102,8 +100,7 @@ describe('setupZed', () => {
     const settingsPath = join(directory, 'settings.json')
 
     await writeFile(
-      settingsPath,
-      `{
+      settingsPath, `{
   // Keep this model preference.
   "agent": {
     "commit_message_model": {
@@ -113,8 +110,7 @@ describe('setupZed', () => {
     "commit_message_instructions": "Mention issue references."
   }
 }
-`,
-      'utf8'
+`, 'utf8'
     )
 
     await setupZed({ settingsPath })
@@ -131,16 +127,14 @@ describe('setupZed', () => {
     const settingsPath = join(directory, 'settings.json')
 
     await writeFile(
-      settingsPath,
-      `{
+      settingsPath, `{
   "agent": {
     "default_model": {
       "provider": "openai",
     },
   },
 }
-`,
-      'utf8'
+`, 'utf8'
     )
 
     await expect(setupZed({ settingsPath })).resolves.toEqual({
@@ -161,13 +155,11 @@ describe('setupZed', () => {
 
     await mkdir(directory, { recursive: true })
     await writeFile(
-      settingsPath,
-      JSON.stringify({
+      settingsPath, JSON.stringify({
         agent: {
           [instructionKey]: COMMIT_MESSAGE_INSTRUCTIONS
         }
-      }),
-      'utf8'
+      }), 'utf8'
     )
 
     await expect(setupZed({ settingsPath })).resolves.toEqual({

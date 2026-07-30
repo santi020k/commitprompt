@@ -32,6 +32,7 @@ export interface MessageValidator {
 }
 
 export interface CommitlintClient extends MessageValidator {
+  getScopes: () => Promise<readonly string[]>
   getTypes: () => Promise<readonly CommitType[]>
 }
 
@@ -45,16 +46,18 @@ export interface RunCommitFlowOptions {
   git: GitClient
   log: (message: string) => void
   prompt: Prompt
+  scopes?: readonly string[]
   types?: readonly CommitType[]
   validator: MessageValidator
 }
 
 export type AutomationCommand =
-  | 'commit'
-  | 'format'
-  | 'instructions'
-  | 'types'
-  | 'validate'
+  | 'commit' |
+  'format' |
+  'instructions' |
+  'scopes' |
+  'types' |
+  'validate'
 
 export interface RunAutomationOptions {
   command: AutomationCommand

@@ -36,7 +36,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       )
     }
 
-    console.log(`Verified ${packageName}@${expectedVersion} on npm.`)
+    process.stdout.write(
+      `Verified ${packageName}@${expectedVersion} on npm.\n`
+    )
 
     break
   }
@@ -45,8 +47,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
 
     const wait = initialDelay * attempt
 
-    console.warn(
-      `npm has not exposed ${packageName}@${expectedVersion}; retrying in ${wait}ms.`
+    process.stderr.write(
+      `npm has not exposed ${packageName}@${expectedVersion}; ` +
+      `retrying in ${wait}ms.\n`
     )
 
     await delay(wait)

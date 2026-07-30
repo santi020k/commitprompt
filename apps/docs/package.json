@@ -13,8 +13,8 @@
     "test": "vitest run --exclude=tests/** --passWithNoTests && playwright test",
     "test:a11y": "playwright test",
     "test:coverage": "vitest run --coverage --exclude=tests/** --passWithNoTests && playwright test",
-    "lint": "eslint . --no-warn-ignored",
-    "lint:fix": "eslint . --fix --no-warn-ignored",
+    "lint": "eslint . --no-warn-ignored --max-warnings=0",
+    "lint:fix": "eslint . --fix --no-warn-ignored --max-warnings=0",
     "check:exports": "echo \"No package exports to check\"",
     "clean": "rm -rf dist .astro coverage"
   },

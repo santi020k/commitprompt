@@ -49,7 +49,8 @@ const commitlintConfig = `export default {
     'header-max-length': [0],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
-    'type-enum': [2, 'always', ['feat', 'fix', 'release']]
+    'type-enum': [2, 'always', ['feat', 'fix', 'release']],
+    'scope-enum': [2, 'always', ['cli', 'docs']]
   }
 }`
 
@@ -64,6 +65,7 @@ Closes #123`
 const usageCommand = 'git add src/\npnpm commit'
 
 const automationExample = `commitprompt instructions --json
+commitprompt scopes --json
 commitprompt types --json
 
 commitprompt format --json <<'JSON'
@@ -93,6 +95,7 @@ await runCommitFlow({
   git: createGitClient(process.cwd()),
   log: console.log,
   prompt,
+  scopes: await validator.getScopes(),
   types: await validator.getTypes(),
   validator
 })`
@@ -190,8 +193,8 @@ await runCommitFlow({
           <Callout>
             <p>
               Commitprompt loads configuration from the current repository. When
-              it finds a <Code>type-enum</Code> rule, the type prompt follows that
-              rule automatically.
+              it finds <Code>type-enum</Code> or <Code>scope-enum</Code>, the
+              corresponding prompt follows that rule automatically.
             </p>
           </Callout>
           <p>
@@ -202,9 +205,11 @@ await runCommitFlow({
           </p>
           <Callout>
             <p>
-              A repository configuration takes precedence over the built-in
-              fallback. Rules that are neither declared by that configuration nor
-              supplied through its <Code>extends</Code> entries are not enforced.
+              Repository rules and <Code>extends</Code> entries take precedence
+              over the built-in fallback. Undeclared rules are not enforced. When
+              a resolved configuration has no <Code>extends</Code>, parser preset,
+              or declared rules, Commitprompt retains its other settings and uses
+              the included Conventional Commits rules.
             </p>
           </Callout>
         </section>
@@ -291,9 +296,11 @@ await runCommitFlow({
         <section id="repository-rules">
           <h2>Repository rules</h2>
           <p>
-            A repository configuration takes precedence over Commitprompt’s
-            included defaults. Custom types appear in the prompt, and a message
-            that fails validation can be revised without restarting the CLI.
+            Repository rules and extended configurations take precedence over
+            Commitprompt’s included defaults. Custom types and scopes appear in
+            the prompts, and a message that fails validation can be revised
+            without restarting the CLI. Without <Code>scope-enum</Code>, scope
+            remains optional and free-form.
           </p>
           <Callout>
             <p>
@@ -326,9 +333,10 @@ await runCommitFlow({
         <section id="automation-ai">
           <h2>Automation and AI tools</h2>
           <p>
-            AI tools can discover the repository’s allowed types, read generation
-            instructions, format structured answers, and validate the exact result
-            without parsing terminal prompts or bypassing repository rules.
+            AI tools can discover the repository’s allowed types and scopes, read
+            generation instructions, format structured answers, and validate the
+            exact result without parsing terminal prompts or bypassing repository
+            rules.
           </p>
           <Code
             code={automationExample}
@@ -363,6 +371,14 @@ await runCommitFlow({
             independently, so you can compose a custom flow without shelling out
             to the CLI.
           </p>
+          <Callout>
+            <p>
+              Commitprompt is ESM-only. Every value and type exported from the
+              package root is stable and follows semantic versioning. Source and
+              <Code>dist/</Code> file paths are implementation details, not
+              supported entry points.
+            </p>
+          </Callout>
           <Code
             code={programmaticExample}
             copy
@@ -385,13 +401,29 @@ await runCommitFlow({
             </Card>
             <Card as="article" variant="muted">
               <Code>createCommitlintValidator</Code>
-              <p>Loads repository rules or the included defaults and exposes validation and prompt types.</p>
+              <p>
+                Loads repository rules or the included defaults and exposes
+                validation, prompt types, and configured scopes.
+              </p>
             </Card>
             <Card as="article" variant="muted">
               <Code>DEFAULT_COMMIT_TYPES</Code>
               <p>Provides the built-in feat, fix, docs, refactor, test, and maintenance choices.</p>
             </Card>
+            <Card as="article" variant="muted">
+              <Code>createGitClient</Code>
+              <p>Checks the staged index and creates commits through Git without invoking a package manager.</p>
+            </Card>
+            <Card as="article" variant="muted">
+              <Code>setupZed / setupVSCode</Code>
+              <p>Updates editor commit-generation instructions while preserving unrelated settings.</p>
+            </Card>
           </div>
+          <p>
+            Within a major version, additions may extend returned objects,
+            exported unions, or optional options. Existing documented behavior
+            and required inputs will not change incompatibly.
+          </p>
         </section>
 
         <Separator />

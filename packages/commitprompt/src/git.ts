@@ -20,9 +20,9 @@ export const createGitClient = (
       cwd,
       encoding: 'utf8',
       input: message,
-      stdio: silent
-        ? ['pipe', 'pipe', 'pipe']
-        : ['pipe', 'inherit', 'inherit']
+      stdio: silent ?
+        ['pipe', 'pipe', 'pipe'] :
+        ['pipe', 'inherit', 'inherit']
     })
 
     if (result.error) throw result.error
