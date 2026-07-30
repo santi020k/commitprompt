@@ -36,8 +36,21 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       )
     }
 
+    const latestVersion = JSON.parse(execFileSync(
+      'npm',
+      ['view', packageName, 'dist-tags.latest', '--json'],
+      { encoding: 'utf8' }
+    ).trim())
+
+    if (latestVersion !== expectedVersion) {
+      throw new Error(
+        `Expected the latest dist-tag to be ${expectedVersion}, ` +
+        `received ${String(latestVersion)}.`
+      )
+    }
+
     process.stdout.write(
-      `Verified ${packageName}@${expectedVersion} on npm.\n`
+      `Verified ${packageName}@${expectedVersion} and its latest dist-tag on npm.\n`
     )
 
     break
@@ -55,3 +68,20 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     await delay(wait)
   }
 }
+
+execFileSync(
+  process.execPath,
+  [resolve(repositoryRoot, 'scripts/check-packed-install.mjs')],
+  {
+    env: {
+      ...process.env,
+      COMMITPROMPT_PACKAGE_SPEC: `${packageName}@${expectedVersion}`
+    },
+    stdio: 'inherit'
+  }
+)
+
+process.stdout.write(
+  `Verified installed contents and consumer workflows for ` +
+  `${packageName}@${expectedVersion}.\n`
+)

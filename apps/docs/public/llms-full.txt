@@ -99,7 +99,9 @@ import {
   createGitClient,
   formatCommitMessage,
   runAutomation,
-  runCommitFlow
+  runCommitFlow,
+  setupProject,
+  setupWorkspaceEditors
 } from '@santi020k/commitprompt'
 ```
 
@@ -107,7 +109,9 @@ import {
 `createCommitlintValidator(cwd)` returns cached `getTypes()`, `getScopes()`, and
 `validate(message)` operations. `createGitClient(cwd)` checks staged changes and
 commits through Git. `runAutomation(options)` powers the non-interactive commands.
-`runCommitFlow(options)` powers the interactive workflow.
+`runCommitFlow(options)` powers the interactive workflow. `setupProject(options)`
+and `setupWorkspaceEditors(options)` provide non-interactive repository setup
+and drift checking.
 
 The package is ESM-only. Every value and type exported from the package root is
 stable and follows semantic versioning. Source and `dist/` file paths are
@@ -120,12 +124,46 @@ existing documented behavior and required inputs will not change incompatibly.
 ```sh
 commitprompt setup zed
 commitprompt setup vscode
+commitprompt setup editors
 ```
 
-These commands add global Conventional Commit generation instructions while
-preserving existing editor settings and model selection. VS Code uses GitHub
-Copilot. Editor-generated messages do not pass through Commitprompt validation
-unless separately validated.
+The Zed and VS Code commands add global Conventional Commit generation
+instructions while preserving existing settings and model selection. The
+`editors` command creates tracked, repository-aware workspace settings using
+configured types and scopes. It supports `--editor`, `--dry-run`, `--check`,
+`--json`, and `--cwd`.
+
+Editor-generated messages do not pass through Commitprompt validation unless
+the repository installs the hook below.
+
+## Project setup
+
+```sh
+commitprompt setup project
+```
+
+This idempotent command detects npm, pnpm, or Yarn; adds Commitprompt and Husky;
+sets the `commit` script; installs a `commit-msg` hook; adds guarded AGENTS.md
+and GitHub Copilot instructions; and installs reusable agent skills. It reports
+obsolete Commitizen, Czg, and custom prompt configuration without deleting it.
+Run the detected package manager's install command afterward to update the
+lockfile and activate Husky.
+
+Use `--dry-run` to preview, `--check` as a non-writing CI drift gate, `--json`
+for machine-readable output, and `--only` to select actions. The canonical hook
+is:
+
+```sh
+commitprompt validate --input "$1"
+```
+
+Equivalent explicit npm, pnpm, and Yarn commands are:
+
+```sh
+npx --no-install commitprompt validate --input "$1"
+pnpm exec commitprompt validate --input "$1"
+yarn exec commitprompt validate --input "$1"
+```
 
 ## Safety boundaries
 
@@ -133,9 +171,10 @@ unless separately validated.
 - The interactive flow asks before committing.
 - The non-interactive flow requires `--yes`.
 - Commitprompt does not disable Git hooks.
-- Commitprompt does not install a `commit-msg` hook.
-- Enforce all Git-created messages by configuring Commitlint in a
-  repository `commit-msg` hook.
+- Project setup installs a guarded `commit-msg` hook without deleting unrelated
+  hook commands.
+- A failed hook states that the commit was blocked and reports violated rules.
+- Never bypass validation with `--no-verify`.
 
 ## Links
 

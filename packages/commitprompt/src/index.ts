@@ -3,7 +3,22 @@ export { runCli, runCommitFlow } from './cli.js'
 export { DEFAULT_COMMIT_TYPES } from './constants.js'
 export { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
 export { createGitClient } from './git.js'
+export {
+  AGENT_SKILL_TEMPLATE,
+  INSTRUCTION_END_MARKER,
+  INSTRUCTION_START_MARKER,
+  PROJECT_INSTRUCTION_BODY,
+  PROJECT_INSTRUCTION_SECTION
+} from './instructions.js'
 export { formatCommitMessage } from './message.js'
+export type {
+  PackageManager,
+  ProjectSetupAction,
+  ProjectSetupActionId,
+  ProjectSetupOptions,
+  ProjectSetupResult
+} from './project.js'
+export { setupProject } from './project.js'
 export {
   collectCommitAnswers,
   confirmCommit,
@@ -32,6 +47,13 @@ export {
   resolveVSCodeSettingsPath,
   setupVSCode
 } from './vscode.js'
+export type {
+  SetupWorkspaceEditorsOptions,
+  SetupWorkspaceEditorsResult,
+  WorkspaceEditor,
+  WorkspaceEditorAction
+} from './workspace-editor.js'
+export { setupWorkspaceEditors } from './workspace-editor.js'
 export type {
   ResolveZedSettingsPathOptions,
   SetupZedOptions,

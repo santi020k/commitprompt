@@ -71,7 +71,18 @@ const printValidation = (
     error(`error: ${validationError}`)
   }
 
-  if (validation.valid) log('Commit message is valid.')
+  if (validation.valid) {
+    log('Commit message is valid.')
+
+    return
+  }
+
+  error('Commit blocked: the message does not satisfy this repository\'s rules.')
+
+  error(
+    'Correct the message in Zed or VS Code and retry. ' +
+    'Run commitprompt validate --input <path> to verify it first; never bypass Git hooks.'
+  )
 }
 
 const requireInput = (input: string | undefined): string => {

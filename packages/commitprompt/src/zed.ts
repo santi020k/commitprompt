@@ -24,6 +24,8 @@ export interface ResolveZedSettingsPathOptions {
 }
 
 export interface SetupZedOptions extends ResolveZedSettingsPathOptions {
+  check?: boolean
+  instructions?: string
   settingsPath?: string
 }
 
@@ -66,9 +68,35 @@ const getExistingInstructions = (source: string): unknown => {
   return agent.commit_message_instructions
 }
 
-const combineInstructions = (existingInstructions: unknown): string => typeof existingInstructions === 'string' && existingInstructions.trim() ?
-  `${existingInstructions.trim()}\n\n${COMMIT_MESSAGE_INSTRUCTIONS}` :
-  COMMIT_MESSAGE_INSTRUCTIONS
+const WORKSPACE_START_MARKER = '[commitprompt:start]'
+const WORKSPACE_END_MARKER = '[commitprompt:end]'
+
+const combineInstructions = (
+  existingInstructions: unknown,
+  instructions: string
+): string => {
+  if (typeof existingInstructions !== 'string' || !existingInstructions.trim()) {
+    return instructions
+  }
+
+  const start = existingInstructions.indexOf(WORKSPACE_START_MARKER)
+
+  const end = existingInstructions.indexOf(
+    WORKSPACE_END_MARKER, start + WORKSPACE_START_MARKER.length
+  )
+
+  if ((start === -1) !== (end === -1)) {
+    throw new Error('Cannot update incomplete Commitprompt instructions in Zed settings.')
+  }
+
+  if (start !== -1 && end !== -1 && instructions.includes(WORKSPACE_START_MARKER)) {
+    return `${existingInstructions.slice(0, start)}${instructions}${existingInstructions.slice(
+      end + WORKSPACE_END_MARKER.length
+    )}`
+  }
+
+  return `${existingInstructions.trim()}\n\n${instructions}`
+}
 
 export const setupZed = async (
   options: SetupZedOptions = {}
@@ -78,16 +106,17 @@ export const setupZed = async (
 
   const source = await readSettings(settingsPath)
   const existingInstructions = getExistingInstructions(source)
+  const instructions = options.instructions ?? COMMIT_MESSAGE_INSTRUCTIONS
 
   if (
     typeof existingInstructions === 'string' &&
-    existingInstructions.includes(COMMIT_MESSAGE_INSTRUCTIONS)
+    existingInstructions.includes(instructions)
   ) {
     return { changed: false, settingsPath }
   }
 
   const edits = modify(
-    source, ['agent', 'commit_message_instructions'], combineInstructions(existingInstructions), {
+    source, ['agent', 'commit_message_instructions'], combineInstructions(existingInstructions, instructions), {
       formattingOptions: {
         eol: source.includes('\r\n') ? '\r\n' : '\n',
         insertSpaces: true,
@@ -96,7 +125,9 @@ export const setupZed = async (
     }
   )
 
-  await writeSettings(settingsPath, applyEdits(source, edits))
+  if (!options.check) {
+    await writeSettings(settingsPath, applyEdits(source, edits))
+  }
 
   return { changed: true, settingsPath }
 }

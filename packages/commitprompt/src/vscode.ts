@@ -30,6 +30,8 @@ export interface ResolveVSCodeSettingsPathOptions {
 }
 
 export interface SetupVSCodeOptions extends ResolveVSCodeSettingsPathOptions {
+  check?: boolean
+  instructions?: string
   settingsPath?: string
 }
 
@@ -60,14 +62,18 @@ export const resolveVSCodeSettingsPath = ({
   )
 }
 
-const getExistingInstructions = (source: string): VSCodeInstruction[] => {
-  const settings = parseSettings(source, 'VS Code')
+const getExistingInstructions = (
+  source: string
+): VSCodeInstruction[] | undefined => {
+  const settings = parseSettings(source, 'VS Code', {
+    allowTrailingComma: true
+  })
 
   const existingInstructions = isSettingsRecord(settings) ?
     settings[COMMIT_INSTRUCTIONS_SETTING] :
     undefined
 
-  if (existingInstructions === undefined) return []
+  if (existingInstructions === undefined) return undefined
 
   if (!Array.isArray(existingInstructions)) {
     throw new TypeError(
@@ -78,6 +84,66 @@ const getExistingInstructions = (source: string): VSCodeInstruction[] => {
   return existingInstructions as VSCodeInstruction[]
 }
 
+const isRepositoryInstruction = (
+  instruction: VSCodeInstruction,
+  instructions: string
+): boolean => {
+  const repositoryPrefix = 'Commitprompt repository rules:'
+
+  return instruction.text === instructions ||
+    (
+      instructions.startsWith(repositoryPrefix) &&
+      instruction.text?.startsWith(repositoryPrefix) === true
+    )
+}
+
+const getInstructionEditPath = (
+  existingInstructions: VSCodeInstruction[] | undefined,
+  existingIndex: number
+): (number | string)[] => {
+  if (existingInstructions === undefined) {
+    return [COMMIT_INSTRUCTIONS_SETTING]
+  }
+
+  return [
+    COMMIT_INSTRUCTIONS_SETTING,
+    existingIndex === -1 ? existingInstructions.length : existingIndex
+  ]
+}
+
+const createInstructionEdits = (
+  source: string,
+  existingInstructions: VSCodeInstruction[] | undefined,
+  instructions: string
+) => {
+  const existingIndex = existingInstructions?.findIndex(
+    instruction => isRepositoryInstruction(instruction, instructions)
+  ) ?? -1
+
+  if (existingInstructions?.[existingIndex]?.text === instructions) {
+    return undefined
+  }
+
+  const instruction = { text: instructions }
+
+  const editPath = getInstructionEditPath(
+    existingInstructions, existingIndex
+  )
+
+  const editValue = existingInstructions === undefined ?
+    [instruction] :
+    instruction
+
+  return modify(source, editPath, editValue, {
+    formattingOptions: {
+      eol: source.includes('\r\n') ? '\r\n' : '\n',
+      insertSpaces: true,
+      tabSize: 2
+    },
+    isArrayInsertion: existingInstructions !== undefined && existingIndex === -1
+  })
+}
+
 export const setupVSCode = async (
   options: SetupVSCodeOptions = {}
 ): Promise<SetupVSCodeResult> => {
@@ -86,27 +152,17 @@ export const setupVSCode = async (
 
   const source = await readSettings(settingsPath)
   const existingInstructions = getExistingInstructions(source)
+  const instructions = options.instructions ?? COMMIT_MESSAGE_INSTRUCTIONS
 
-  const alreadyConfigured = existingInstructions.some(
-    instruction => instruction.text === COMMIT_MESSAGE_INSTRUCTIONS
+  const edits = createInstructionEdits(
+    source, existingInstructions, instructions
   )
 
-  if (alreadyConfigured) return { changed: false, settingsPath }
+  if (edits === undefined) return { changed: false, settingsPath }
 
-  const edits = modify(
-    source, [COMMIT_INSTRUCTIONS_SETTING], [
-      ...existingInstructions,
-      { text: COMMIT_MESSAGE_INSTRUCTIONS }
-    ], {
-      formattingOptions: {
-        eol: source.includes('\r\n') ? '\r\n' : '\n',
-        insertSpaces: true,
-        tabSize: 2
-      }
-    }
-  )
-
-  await writeSettings(settingsPath, applyEdits(source, edits))
+  if (!options.check) {
+    await writeSettings(settingsPath, applyEdits(source, edits))
+  }
 
   return { changed: true, settingsPath }
 }

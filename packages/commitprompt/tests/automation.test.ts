@@ -202,6 +202,27 @@ describe('runAutomation', () => {
     }))
   })
 
+  test('explains how to correct a blocked commit message', async () => {
+    validator.validate = vi.fn(() => Promise.resolve({
+      errors: ['type-enum: type must be one of [feat]'],
+      valid: false,
+      warnings: []
+    }))
+    const options = {
+      ...createOptions(),
+      command: 'validate' as const,
+      input: 'invalid'
+    }
+
+    await expect(runAutomation(options)).resolves.toBe(1)
+    expect(options.error).toHaveBeenCalledWith(
+      'Commit blocked: the message does not satisfy this repository\'s rules.'
+    )
+    expect(options.error).toHaveBeenCalledWith(
+      expect.stringContaining('Correct the message in Zed or VS Code')
+    )
+  })
+
   test('prints plain validation warnings and success', async () => {
     validator.validate = vi.fn(() => Promise.resolve({
       errors: [],
@@ -364,6 +385,9 @@ describe('runAutomation', () => {
     await expect(runAutomation(options)).resolves.toBe(1)
     expect(options.error).toHaveBeenCalledWith(
       'error: subject-case: subject must be lower-case'
+    )
+    expect(options.error).toHaveBeenCalledWith(
+      expect.stringContaining('Commit blocked')
     )
   })
 

@@ -8,6 +8,10 @@ the target repository and staged diff, run `commitprompt types --json` and
 committing. A non-interactive commit requires the explicit `--yes` flag and
 leaves Git hooks enabled.
 
+Use `commitprompt setup project` for package-manager-neutral repository
+enforcement and reusable AI instructions. Use `commitprompt setup editors` for
+tracked, repository-aware Zed and VS Code generation guidance.
+
 ## Documentation
 
 - [Documentation](https://commitprompt.santi020k.com/docs/): Installation, interactive use, repository rules, automation commands, and programmatic API.

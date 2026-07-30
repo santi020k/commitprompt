@@ -1,7 +1,11 @@
 import { spawnSync } from 'node:child_process'
 import {
+  chmodSync,
+  mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -12,6 +16,9 @@ import { afterEach, describe, expect, test } from 'vitest'
 
 const binaryPath = resolve(
   import.meta.dirname, '../dist/bin/commitprompt.js'
+)
+const huskyPath = resolve(
+  import.meta.dirname, '../../../node_modules/.bin/husky'
 )
 const temporaryDirectories: string[] = []
 
@@ -44,6 +51,21 @@ const createRepository = (): string => {
 
     if (result.status !== 0) throw new Error('Could not create test repository.')
   }
+
+  return directory
+}
+
+const createProject = (): string => {
+  const directory = mkdtempSync(join(tmpdir(), 'commitprompt-binary-project-'))
+
+  temporaryDirectories.push(directory)
+  writeFileSync(
+    join(directory, 'package.json'), `${JSON.stringify({
+      name: 'commitprompt-consumer',
+      packageManager: 'pnpm@10.32.1',
+      private: true
+    }, undefined, 2)}\n`
+  )
 
   return directory
 }
@@ -112,6 +134,123 @@ describe('commitprompt executable', () => {
     }))
     expect(result.stderr).toBe('')
   })
+
+  test('reports project setup drift without writing', () => {
+    const directory = createProject()
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = readFileSync(manifestPath, 'utf8')
+    const result = runBinary([
+      'setup',
+      'project',
+      '--dry-run',
+      '--json',
+      '--cwd',
+      directory
+    ])
+
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout)).toEqual(expect.objectContaining({
+      changed: false,
+      drift: true,
+      packageManager: 'pnpm'
+    }))
+    expect(readFileSync(manifestPath, 'utf8')).toBe(originalManifest)
+    expect(result.stderr).toBe('')
+  })
+
+  test('uses project setup check mode as a drift gate', () => {
+    const directory = createProject()
+    const checkArguments = [
+      'setup',
+      'project',
+      '--check',
+      '--json',
+      '--cwd',
+      directory
+    ]
+    const driftResult = runBinary(checkArguments)
+
+    expect(driftResult.status).toBe(1)
+    expect(JSON.parse(driftResult.stdout)).toEqual(expect.objectContaining({
+      drift: true
+    }))
+
+    const setupResult = runBinary([
+      'setup',
+      'project',
+      '--skip-install',
+      '--json',
+      '--cwd',
+      directory
+    ])
+
+    expect(setupResult.status).toBe(0)
+    expect(JSON.parse(setupResult.stdout)).toEqual(expect.objectContaining({
+      changed: true
+    }))
+
+    const cleanResult = runBinary(checkArguments)
+
+    expect(cleanResult.status).toBe(0)
+    expect(JSON.parse(cleanResult.stdout)).toEqual(expect.objectContaining({
+      drift: false
+    }))
+  })
+
+  test.runIf(process.platform !== 'win32')(
+    'enforces valid and invalid messages through a real Husky hook', () => {
+      const directory = createRepository()
+
+      writeFileSync(
+        join(directory, 'package.json'), `${JSON.stringify({ name: 'hook-consumer', private: true })}\n`
+      )
+
+      const setupResult = runBinary([
+        'setup',
+        'project',
+        '--only',
+        'dependency,commit-script,husky-hook',
+        '--skip-install',
+        '--cwd',
+        directory
+      ])
+
+      expect(setupResult.status).toBe(0)
+
+      const huskyResult = spawnSync(huskyPath, [], {
+        cwd: directory,
+        encoding: 'utf8'
+      })
+
+      expect(huskyResult.status).toBe(0)
+
+      const binaryDirectory = join(directory, 'node_modules', '.bin')
+      const consumerBinary = join(binaryDirectory, 'commitprompt')
+
+      mkdirSync(binaryDirectory, { recursive: true })
+      symlinkSync(binaryPath, consumerBinary)
+      chmodSync(binaryPath, 0o755)
+
+      writeFileSync(join(directory, 'valid.txt'), 'valid\n')
+      expect(spawnSync('git', ['add', 'valid.txt'], { cwd: directory }).status)
+        .toBe(0)
+      expect(spawnSync(
+        'git', ['commit', '--message', 'feat: accept valid message'], { cwd: directory, encoding: 'utf8' }
+      ).status).toBe(0)
+
+      writeFileSync(join(directory, 'invalid.txt'), 'invalid\n')
+      expect(spawnSync('git', ['add', 'invalid.txt'], { cwd: directory }).status)
+        .toBe(0)
+
+      const invalidCommit = spawnSync(
+        'git', ['commit', '--message', 'invalid message'], { cwd: directory, encoding: 'utf8' }
+      )
+
+      expect(invalidCommit.status).not.toBe(0)
+      expect(`${invalidCommit.stdout}\n${invalidCommit.stderr}`)
+        .toContain('Commit blocked')
+    }, 15_000
+  )
 
   test('creates an explicitly confirmed automated commit', () => {
     const directory = createRepository()
