@@ -30,6 +30,7 @@ jobs:
             build
             revert
           scopes: |
+            commitprompt
             cli
             docs
             ci
