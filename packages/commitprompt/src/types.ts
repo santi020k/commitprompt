@@ -52,12 +52,12 @@ export interface RunCommitFlowOptions {
 }
 
 export type AutomationCommand =
-  | 'commit'
-  | 'format'
-  | 'instructions'
-  | 'scopes'
-  | 'types'
-  | 'validate'
+  | 'commit' |
+  'format' |
+  'instructions' |
+  'scopes' |
+  'types' |
+  'validate'
 
 export interface RunAutomationOptions {
   command: AutomationCommand

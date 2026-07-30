@@ -52,11 +52,7 @@ export const runCommitFlow = async ({
 
     for (;;) {
       const answers = await collectCommitAnswers(
-        prompt,
-        types,
-        log,
-        error,
-        scopes
+        prompt, types, log, error, scopes
       )
 
       const message = formatCommitMessage(answers)
@@ -80,17 +76,15 @@ export const runCommitFlow = async ({
 
       return 0
     }
-  }
-  catch (caughtError) {
-    const message = caughtError instanceof Error
-      ? caughtError.message
-      : String(caughtError)
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ?
+      caughtError.message :
+      String(caughtError)
 
     error(message)
 
     return 1
-  }
-  finally {
+  } finally {
     prompt.close()
   }
 }
@@ -122,11 +116,10 @@ export const runCli = async (cwd = process.cwd()): Promise<number> => {
       types,
       validator
     })
-  }
-  catch (caughtError) {
-    const message = caughtError instanceof Error
-      ? caughtError.message
-      : String(caughtError)
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ?
+      caughtError.message :
+      String(caughtError)
 
     console.error(message)
 

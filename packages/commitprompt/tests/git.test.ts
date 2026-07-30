@@ -44,16 +44,16 @@ describe('createGitClient', () => {
     git.commit('feat: test commit creation')
 
     expect(execFileSync(
-      'git',
-      ['log', '-1', '--pretty=%s'],
-      { cwd: directory, encoding: 'utf8' }
+      'git', ['log', '-1', '--pretty=%s'], { cwd: directory, encoding: 'utf8' }
     ).trim()).toBe('feat: test commit creation')
   })
 
   test('reports commit failures', () => {
     const directory = createRepository()
 
-    expect(() => { createGitClient(directory).commit('chore: empty'); }).toThrow(
+    expect(() => {
+      createGitClient(directory).commit('chore: empty')
+    }).toThrow(
       'git commit failed'
     )
   })

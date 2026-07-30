@@ -76,9 +76,9 @@ const selectType = async (
     const answer = (await prompt.question('Type: ')).trim().toLowerCase()
     const numericSelection = Number(answer)
 
-    const selected = Number.isInteger(numericSelection)
-      ? types[numericSelection - 1]
-      : types.find(type => type.value === answer)
+    const selected = Number.isInteger(numericSelection) ?
+      types[numericSelection - 1] :
+      types.find(type => type.value === answer)
 
     if (selected) return selected.value
 
@@ -109,9 +109,9 @@ const selectScope = async (
 
     const numericSelection = Number(answer)
 
-    const selected = Number.isInteger(numericSelection)
-      ? scopes[numericSelection - 1]
-      : scopes.find(scope => scope.toLowerCase() === answer.toLowerCase())
+    const selected = Number.isInteger(numericSelection) ?
+      scopes[numericSelection - 1] :
+      scopes.find(scope => scope.toLowerCase() === answer.toLowerCase())
 
     if (selected) return selected
 
@@ -131,19 +131,16 @@ export const collectCommitAnswers = async (
   const subject = await askRequired(prompt, error, 'Short imperative description: ')
 
   const body = await askMultiline(
-    prompt,
-    'Longer description (optional; finish with an empty line): '
+    prompt, 'Longer description (optional; finish with an empty line): '
   )
 
   const isBreaking = await askYesNo(
-    prompt,
-    error,
-    'Does this include a breaking change?'
+    prompt, error, 'Does this include a breaking change?'
   )
 
-  const breaking = isBreaking
-    ? await askRequired(prompt, error, 'Describe the breaking change: ')
-    : ''
+  const breaking = isBreaking ?
+    await askRequired(prompt, error, 'Describe the breaking change: ') :
+    ''
 
   const issues = (
     await prompt.question('Issue references (optional, e.g. "Closes #123"): ')

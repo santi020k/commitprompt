@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import process from 'node:process'
@@ -71,45 +69,45 @@ const parseAutomationArguments = (values: string[]): AutomationArguments => {
     const value = values[index]
 
     switch (value) {
-    case '--json': {
-      options.json = true
+      case '--json': {
+        options.json = true
 
-      break
-    }
+        break
+      }
 
-    case '--yes': {
-      options.confirm = true
+      case '--yes': {
+        options.confirm = true
 
-      break
-    }
+        break
+      }
 
-    case '--cwd': {
-      const optionValue = values[index + 1]
+      case '--cwd': {
+        const optionValue = values[index + 1]
 
-      if (!optionValue) throw new Error('--cwd requires a value.')
+        if (!optionValue) throw new Error('--cwd requires a value.')
 
-      options.cwd = optionValue
+        options.cwd = optionValue
 
-      index += 1
+        index += 1
 
-      break
-    }
+        break
+      }
 
-    case '--input': {
-      const optionValue = values[index + 1]
+      case '--input': {
+        const optionValue = values[index + 1]
 
-      if (!optionValue) throw new Error('--input requires a value.')
+        if (!optionValue) throw new Error('--input requires a value.')
 
-      options.inputPath = optionValue
+        options.inputPath = optionValue
 
-      index += 1
+        index += 1
 
-      break
-    }
+        break
+      }
 
-    default: {
-      throw new Error(`Unknown option: ${String(value)}`)
-    }
+      default: {
+        throw new Error(`Unknown option: ${String(value)}`)
+      }
     }
   }
 
@@ -126,8 +124,7 @@ const readStandardInput = async (): Promise<string> => {
   return input
 }
 
-const acceptsInput = (command: AutomationCommand): boolean =>
-  command === 'commit' || command === 'format' || command === 'validate'
+const acceptsInput = (command: AutomationCommand): boolean => command === 'commit' || command === 'format' || command === 'validate'
 
 const readAutomationInput = async (
   command: AutomationCommand,
@@ -146,8 +143,7 @@ const readAutomationInput = async (
   return await readStandardInput()
 }
 
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const getErrorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error)
 
 const printCommandError = (error: unknown, json: boolean): void => {
   const message = getErrorMessage(error)
@@ -187,8 +183,7 @@ const runAutomationCommand = async (
         console.log(message)
       }
     })
-  }
-  catch (error) {
+  } catch (error) {
     printCommandError(error, json)
 
     return 1
@@ -197,60 +192,51 @@ const runAutomationCommand = async (
 
 if (argument === '--help' || argument === '-h') {
   console.log(HELP)
-}
-else if (argument === '--version' || argument === '-v') {
+} else if (argument === '--version' || argument === '-v') {
   const require = createRequire(import.meta.url)
   const metadata = require('../../package.json') as PackageMetadata
 
   console.log(metadata.version)
-}
-else if (automationCommands.has(argument as AutomationCommand)) {
+} else if (automationCommands.has(argument as AutomationCommand)) {
   process.exitCode = await runAutomationCommand(
-    argument as AutomationCommand,
-    arguments_.slice(1)
+    argument as AutomationCommand, arguments_.slice(1)
   )
-}
-else if (argument === 'setup' && arguments_[1] === 'zed' && arguments_.length === 2) {
+} else if (argument === 'setup' && arguments_[1] === 'zed' && arguments_.length === 2) {
   try {
     const result = await setupZed()
 
     console.log(
-      result.changed
-        ? `Configured Zed commit generation in ${result.settingsPath}`
-        : `Zed commit generation is already configured in ${result.settingsPath}`
+      result.changed ?
+        `Configured Zed commit generation in ${result.settingsPath}` :
+        `Zed commit generation is already configured in ${result.settingsPath}`
     )
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
-}
-else if (
-  argument === 'setup'
-  && arguments_[1] === 'vscode'
-  && arguments_.length === 2
+} else if (
+  argument === 'setup' &&
+  arguments_[1] === 'vscode' &&
+  arguments_.length === 2
 ) {
   try {
     const result = await setupVSCode()
 
     console.log(
-      result.changed
-        ? `Configured VS Code commit generation in ${result.settingsPath}`
-        : `VS Code commit generation is already configured in ${result.settingsPath}`
+      result.changed ?
+        `Configured VS Code commit generation in ${result.settingsPath}` :
+        `VS Code commit generation is already configured in ${result.settingsPath}`
     )
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
 
     process.exitCode = 1
   }
-}
-else if (argument) {
+} else if (argument) {
   console.error(`Unknown argument: ${arguments_.join(' ')}\n\n${HELP}`)
 
   process.exitCode = 1
-}
-else {
+} else {
   process.exitCode = await runCli()
 }

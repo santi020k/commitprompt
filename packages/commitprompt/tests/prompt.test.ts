@@ -17,10 +17,7 @@ describe('collectCommitAnswers', () => {
     const prompt = createPrompt(['1', 'cli', 'add prompt', '', 'n', 'Closes #1'])
 
     await expect(collectCommitAnswers(
-      prompt,
-      [{ description: 'A feature', value: 'feat' }],
-      vi.fn(),
-      vi.fn()
+      prompt, [{ description: 'A feature', value: 'feat' }], vi.fn(), vi.fn()
     )).resolves.toEqual({
       body: '',
       breaking: '',
@@ -48,10 +45,7 @@ describe('collectCommitAnswers', () => {
     const error = vi.fn()
 
     const answers = await collectCommitAnswers(
-      prompt,
-      [{ description: 'A bug fix', value: 'fix' }],
-      vi.fn(),
-      error
+      prompt, [{ description: 'A bug fix', value: 'fix' }], vi.fn(), error
     )
 
     expect(answers.breaking).toBe('remove the old command')
@@ -71,10 +65,7 @@ describe('collectCommitAnswers', () => {
     ])
 
     const answers = await collectCommitAnswers(
-      prompt,
-      [{ description: 'A feature', value: 'feat' }],
-      vi.fn(),
-      vi.fn()
+      prompt, [{ description: 'A feature', value: 'feat' }], vi.fn(), vi.fn()
     )
 
     expect(answers.body).toBe('First paragraph.\nSecond paragraph.')
@@ -85,11 +76,7 @@ describe('collectCommitAnswers', () => {
     const log = vi.fn()
 
     const answers = await collectCommitAnswers(
-      prompt,
-      [{ description: 'A feature', value: 'feat' }],
-      log,
-      vi.fn(),
-      ['cli', 'docs']
+      prompt, [{ description: 'A feature', value: 'feat' }], log, vi.fn(), ['cli', 'docs']
     )
 
     expect(answers.scope).toBe('docs')
@@ -109,11 +96,7 @@ describe('collectCommitAnswers', () => {
     const error = vi.fn()
 
     const answers = await collectCommitAnswers(
-      prompt,
-      [{ description: 'A feature', value: 'feat' }],
-      vi.fn(),
-      error,
-      ['cli', 'docs']
+      prompt, [{ description: 'A feature', value: 'feat' }], vi.fn(), error, ['cli', 'docs']
     )
 
     expect(answers.scope).toBe('')
@@ -124,10 +107,7 @@ describe('collectCommitAnswers', () => {
 
   test('rejects an empty type list', async () => {
     await expect(collectCommitAnswers(
-      createPrompt([]),
-      [],
-      vi.fn(),
-      vi.fn()
+      createPrompt([]), [], vi.fn(), vi.fn()
     )).rejects.toThrow('At least one commit type is required.')
   })
 })

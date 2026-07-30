@@ -7,6 +7,7 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+  yarn: set this to true or false
 
 catalog:
   "@axe-core/playwright": ^4.12.1
@@ -20,9 +21,13 @@ catalog:
   "@commitlint/lint": ^21.2.0
   "@commitlint/load": ^21.2.0
   "@commitlint/types": ^21.2.0
-  "@santi020k/eslint-config-astro": ^3.0.0
-  "@santi020k/eslint-config-basic": ^3.0.0
-  "@santi020k/eslint-config-integrations": ^3.0.0
+  "@santi020k/eslint-config-astro": ^3.1.0
+  "@santi020k/eslint-config-basic": ^3.2.0
+  "@santi020k/eslint-config-extensions": ^3.1.0
+  "@santi020k/eslint-config-formats": ^3.1.0
+  "@santi020k/eslint-config-libraries": ^3.1.0
+  "@santi020k/eslint-config-testing": ^3.1.0
+  "@santi020k/eslint-config-tools": ^3.1.0
   "@santi020k/lumen-astro": ^0.4.0
   "@types/node": ^26.1.2
   "@vitest/coverage-v8": ^4.1.10
@@ -37,7 +42,10 @@ catalog:
   sharp: ^0.35.3
   turbo: ^2.10.7
   typescript: ^6.0.3
-  typescript-eslint: ^8.65.0
   vitest: ^4.1.10
   wrangler: ^4.114.0
   yarn: ^1.22.22
+
+minimumReleaseAgeExclude:
+  - '@santi020k/eslint-config-basic@3.2.0'
+  - '@santi020k/eslint-config-typescript'

@@ -50,9 +50,7 @@ describe('createCommitlintValidator', () => {
     })
     expect(mocks.load).toHaveBeenCalledExactlyOnceWith({}, { cwd: '/project' })
     expect(mocks.lint).toHaveBeenCalledWith(
-      'feat: add validation',
-      { 'type-empty': [2, 'never'] },
-      expect.objectContaining({
+      'feat: add validation', { 'type-empty': [2, 'never'] }, expect.objectContaining({
         parserOpts: {
           headerPattern: /^(.*)$/
         }

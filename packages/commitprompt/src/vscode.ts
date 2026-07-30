@@ -13,8 +13,8 @@ import {
 
 import { COMMIT_MESSAGE_INSTRUCTIONS } from './editor.js'
 
-const COMMIT_INSTRUCTIONS_SETTING
-  = 'github.copilot.chat.commitMessageGeneration.instructions'
+const COMMIT_INSTRUCTIONS_SETTING =
+  'github.copilot.chat.commitMessageGeneration.instructions'
 
 interface VSCodeInstruction {
   file?: string
@@ -43,41 +43,29 @@ export const resolveVSCodeSettingsPath = ({
 }: ResolveVSCodeSettingsPathOptions = {}): string => {
   if (platform === 'win32') {
     return win32.join(
-      env.APPDATA ?? win32.join(homeDirectory, 'AppData', 'Roaming'),
-      'Code',
-      'User',
-      'settings.json'
+      env.APPDATA ?? win32.join(homeDirectory, 'AppData', 'Roaming'), 'Code', 'User', 'settings.json'
     )
   }
 
   if (platform === 'darwin') {
     return posix.join(
-      homeDirectory,
-      'Library',
-      'Application Support',
-      'Code',
-      'User',
-      'settings.json'
+      homeDirectory, 'Library', 'Application Support', 'Code', 'User', 'settings.json'
     )
   }
 
   return posix.join(
-    env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'),
-    'Code',
-    'User',
-    'settings.json'
+    env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'), 'Code', 'User', 'settings.json'
   )
 }
 
 const readSettings = async (settingsPath: string): Promise<string> => {
   try {
     return await readFile(settingsPath, 'utf8')
-  }
-  catch (error) {
+  } catch (error) {
     if (
-      error instanceof Error
-      && 'code' in error
-      && error.code === 'ENOENT'
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'ENOENT'
     ) {
       return '{}\n'
     }
@@ -90,8 +78,8 @@ const getExistingInstructions = (source: string): VSCodeInstruction[] => {
   const parseErrors: ParseError[] = []
 
   const settings = parse(source, parseErrors) as
-    | Record<string, unknown>
-    | undefined
+    | Record<string, unknown> |
+    undefined
 
   if (parseErrors.length > 0) {
     const details = parseErrors
@@ -117,8 +105,8 @@ const getExistingInstructions = (source: string): VSCodeInstruction[] => {
 export const setupVSCode = async (
   options: SetupVSCodeOptions = {}
 ): Promise<SetupVSCodeResult> => {
-  const settingsPath = options.settingsPath
-    ?? resolveVSCodeSettingsPath(options)
+  const settingsPath = options.settingsPath ??
+    resolveVSCodeSettingsPath(options)
 
   const source = await readSettings(settingsPath)
   const existingInstructions = getExistingInstructions(source)
@@ -130,13 +118,10 @@ export const setupVSCode = async (
   if (alreadyConfigured) return { changed: false, settingsPath }
 
   const edits = modify(
-    source,
-    [COMMIT_INSTRUCTIONS_SETTING],
-    [
+    source, [COMMIT_INSTRUCTIONS_SETTING], [
       ...existingInstructions,
       { text: COMMIT_MESSAGE_INSTRUCTIONS }
-    ],
-    {
+    ], {
       formattingOptions: {
         eol: source.includes('\r\n') ? '\r\n' : '\n',
         insertSpaces: true,

@@ -37,17 +37,13 @@ export const resolveZedSettingsPath = ({
 }: ResolveZedSettingsPathOptions = {}): string => {
   if (platform === 'win32') {
     return win32.join(
-      env.APPDATA ?? win32.join(homeDirectory, 'AppData', 'Roaming'),
-      'Zed',
-      'settings.json'
+      env.APPDATA ?? win32.join(homeDirectory, 'AppData', 'Roaming'), 'Zed', 'settings.json'
     )
   }
 
   if (platform === 'linux' || platform === 'freebsd') {
     return posix.join(
-      env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'),
-      'zed',
-      'settings.json'
+      env.XDG_CONFIG_HOME ?? posix.join(homeDirectory, '.config'), 'zed', 'settings.json'
     )
   }
 
@@ -57,12 +53,11 @@ export const resolveZedSettingsPath = ({
 const readSettings = async (settingsPath: string): Promise<string> => {
   try {
     return await readFile(settingsPath, 'utf8')
-  }
-  catch (error) {
+  } catch (error) {
     if (
-      error instanceof Error
-      && 'code' in error
-      && error.code === 'ENOENT'
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'ENOENT'
     ) {
       return '{}\n'
     }
@@ -93,32 +88,28 @@ const getExistingInstructions = (source: string): unknown => {
   return settings?.agent?.commit_message_instructions
 }
 
-const combineInstructions = (existingInstructions: unknown): string =>
-  typeof existingInstructions === 'string' && existingInstructions.trim()
-    ? `${existingInstructions.trim()}\n\n${COMMIT_MESSAGE_INSTRUCTIONS}`
-    : COMMIT_MESSAGE_INSTRUCTIONS
+const combineInstructions = (existingInstructions: unknown): string => typeof existingInstructions === 'string' && existingInstructions.trim() ?
+  `${existingInstructions.trim()}\n\n${COMMIT_MESSAGE_INSTRUCTIONS}` :
+  COMMIT_MESSAGE_INSTRUCTIONS
 
 export const setupZed = async (
   options: SetupZedOptions = {}
 ): Promise<SetupZedResult> => {
-  const settingsPath = options.settingsPath
-    ?? resolveZedSettingsPath(options)
+  const settingsPath = options.settingsPath ??
+    resolveZedSettingsPath(options)
 
   const source = await readSettings(settingsPath)
   const existingInstructions = getExistingInstructions(source)
 
   if (
-    typeof existingInstructions === 'string'
-    && existingInstructions.includes(COMMIT_MESSAGE_INSTRUCTIONS)
+    typeof existingInstructions === 'string' &&
+    existingInstructions.includes(COMMIT_MESSAGE_INSTRUCTIONS)
   ) {
     return { changed: false, settingsPath }
   }
 
   const edits = modify(
-    source,
-    ['agent', 'commit_message_instructions'],
-    combineInstructions(existingInstructions),
-    {
+    source, ['agent', 'commit_message_instructions'], combineInstructions(existingInstructions), {
       formattingOptions: {
         eol: source.includes('\r\n') ? '\r\n' : '\n',
         insertSpaces: true,

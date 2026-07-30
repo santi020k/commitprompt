@@ -67,6 +67,16 @@ const verifyConsumer = (consumerDirectory, name) => {
     throw new Error(`${name} installed unexpected package metadata.`)
   }
 
+  readFileSync(
+    join(installedPackageDirectory, 'dist/src/index.js.map'),
+    'utf8'
+  )
+
+  readFileSync(
+    join(installedPackageDirectory, 'dist/src/index.d.ts.map'),
+    'utf8'
+  )
+
   const agentGuide = readFileSync(
     join(installedPackageDirectory, 'AI.md'),
     'utf8'

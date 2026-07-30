@@ -13,16 +13,13 @@ import type { CommitlintClient, CommitType } from './types.js'
 
 const isParserOptions = (
   value: unknown
-): value is NonNullable<LintOptions['parserOpts']> =>
-  typeof value === 'object' && value !== null
+): value is NonNullable<LintOptions['parserOpts']> => typeof value === 'object' && value !== null
 
-const hasRepositoryConfiguration = (configuration: QualifiedConfig): boolean =>
-  configuration.extends.length > 0 ||
+const hasRepositoryConfiguration = (configuration: QualifiedConfig): boolean => configuration.extends.length > 0 ||
   Object.keys(configuration.rules).length > 0 ||
   configuration.parserPreset !== undefined
 
-const getDefaultRules = (): QualifiedRules =>
-  conventionalConfig.rules
+const getDefaultRules = (): QualifiedRules => conventionalConfig.rules
 
 interface LoadedConfiguration {
   configuration: QualifiedConfig
@@ -92,10 +89,10 @@ const getConfiguredScopes = (
   const scopeRule = configuration.rules['scope-enum']
 
   if (
-    !scopeRule
-    || scopeRule[0] === RuleConfigSeverity.Disabled
-    || scopeRule[1] === 'never'
-    || !Array.isArray(scopeRule[2])
+    !scopeRule ||
+    scopeRule[0] === RuleConfigSeverity.Disabled ||
+    scopeRule[1] === 'never' ||
+    !Array.isArray(scopeRule[2])
   ) {
     return []
   }
@@ -112,16 +109,16 @@ export const createCommitlintValidator = (cwd: string): CommitlintClient => {
     getScopes: async () => {
       const loaded = await configuration
 
-      return loaded.usesDefaults
-        ? []
-        : getConfiguredScopes(loaded.configuration)
+      return loaded.usesDefaults ?
+        [] :
+        getConfiguredScopes(loaded.configuration)
     },
     getTypes: async () => {
       const loaded = await configuration
 
-      return loaded.usesDefaults
-        ? DEFAULT_COMMIT_TYPES
-        : getConfiguredTypes(loaded.configuration)
+      return loaded.usesDefaults ?
+        DEFAULT_COMMIT_TYPES :
+        getConfiguredTypes(loaded.configuration)
     },
     validate: async message => {
       const { configuration: resolvedConfiguration } = await configuration
