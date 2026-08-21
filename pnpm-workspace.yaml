@@ -46,7 +46,7 @@ catalog:
   lint-staged: ^17.2.0
   publint: ^0.3.22
   sharp: ^0.35.3
-  turbo: ^2.10.7
+  turbo: ^2.10.11
   typescript: ^6.0.3
   vitest: ^4.1.10
   wrangler: ^4.114.0
