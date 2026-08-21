@@ -2,6 +2,8 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    labels:
+      - dependencies
     schedule:
       interval: monthly
     groups:
@@ -10,6 +12,9 @@ updates:
     open-pull-requests-limit: 2
   - package-ecosystem: github-actions
     directory: /
+    labels:
+      - dependencies
+      - skip-changelog
     schedule:
       interval: monthly
     groups:
