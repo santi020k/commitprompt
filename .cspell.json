@@ -11,6 +11,8 @@
     "Commitprompt",
     "Commitizen",
     "commitlint",
+    "commitlintrc",
+    "cosmiconfig",
     "Czg",
     "domexception",
     "esbuild",

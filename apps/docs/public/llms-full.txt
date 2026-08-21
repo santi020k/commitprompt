@@ -19,6 +19,8 @@ The binary is always named `commitprompt`. Conventional Commitlint rules are
 included. Repository rules and extended configurations take precedence. When a
 resolved configuration has no extends, parser preset, or declared rules,
 Commitprompt retains its other settings and uses the included rules.
+JavaScript, JSON, YAML, and erasable TypeScript configuration files are
+supported without adding TypeScript to consumer dependencies.
 
 ## Interactive workflow
 

@@ -125,6 +125,8 @@ ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
 rules also change the choices shown by the prompt. Without `scope-enum`, the
 optional scope remains free-form. Repository rules and `extends` entries take
 precedence over the built-in fallback, and undeclared rules are not enforced.
+JavaScript, JSON, YAML, and erasable TypeScript configuration files are
+supported through Node.js without adding TypeScript to consumer dependencies.
 When a resolved configuration has no `extends`, parser preset, or declared
 rules, Commitprompt retains its other settings and supplies the included
 Conventional Commits rules so validation never uses an empty rule set by
@@ -300,4 +302,5 @@ documented behavior and required inputs will not change incompatibly.
 
 ## License
 
-MIT
+MIT. Published artifacts bundle the Commitlint lint engine and include its
+generated third-party notices in `dist/THIRD_PARTY_LICENSES.txt`.

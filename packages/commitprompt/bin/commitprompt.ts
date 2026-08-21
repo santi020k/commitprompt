@@ -6,7 +6,6 @@ import process from 'node:process'
 
 import { runAutomation } from '../src/automation.js'
 import { runCli } from '../src/cli.js'
-import { installProjectDependencies } from '../src/package-manager.js'
 import type {
   ProjectSetupAction,
   ProjectSetupActionId,
@@ -40,7 +39,7 @@ Usage:
   commitprompt validate [--json] [--input <path>] [--cwd <path>]
   commitprompt commit --yes [--json] [--input <path>] [--cwd <path>]
   commitprompt setup project [--check] [--dry-run] [--json] [--cwd <path>]
-                             [--only <action[,action]>] [--skip-install]
+                             [--only <action[,action]>]
   commitprompt setup editors [--check] [--dry-run] [--json] [--cwd <path>]
                              [--editor <zed|vscode>]
   commitprompt setup zed
@@ -94,7 +93,6 @@ interface ProjectSetupArguments {
   cwd: string
   dryRun: boolean
   json: boolean
-  skipInstall: boolean
 }
 
 interface EditorSetupArguments {
@@ -197,8 +195,7 @@ const parseProjectSetupArguments = (
     check: false,
     cwd: process.cwd(),
     dryRun: false,
-    json: false,
-    skipInstall: false
+    json: false
   }
 
   for (let index = 0; index < values.length; index += 1) {
@@ -243,12 +240,6 @@ const parseProjectSetupArguments = (
         options.actions.push(...parseProjectSetupActions(optionValue))
 
         index += 1
-
-        break
-      }
-
-      case '--skip-install': {
-        options.skipInstall = true
 
         break
       }
@@ -457,27 +448,6 @@ const runProjectSetupCommand = async (
       dryRun: options.dryRun,
       packageVersion: metadata.version
     })
-
-    const selectedActions = new Set(
-      options.actions.length === 0 ? projectSetupActions : options.actions
-    )
-
-    const managesDependencies =
-      selectedActions.has('dependency') ||
-      selectedActions.has('husky-hook')
-
-    if (
-      managesDependencies &&
-      !options.check &&
-      !options.dryRun &&
-      !options.skipInstall
-    ) {
-      installProjectDependencies({
-        cwd: options.cwd,
-        packageManager: result.packageManager,
-        silent: options.json
-      })
-    }
 
     printProjectSetupResult(result, options)
 

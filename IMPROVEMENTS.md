@@ -22,15 +22,15 @@ next release, and the remaining work that should guide a later iteration.
 - sets the neutral `commitprompt` package script;
 - installs the canonical `commit-msg` validation hook while preserving
   unrelated hook commands;
-- updates the dependency installation and lockfile with the detected package
-  manager;
+- reports the detected package manager so the user can update the dependency
+  installation and lockfile explicitly;
 - writes guarded AGENTS.md and GitHub Copilot instructions;
 - installs reusable Commitprompt skills for common agent layouts;
 - reports obsolete Commitizen, Czg, and custom prompt configuration without
   deleting it.
 
 The command supports independent `--only` actions, `--check`, `--dry-run`,
-`--json`, `--cwd`, and `--skip-install`.
+`--json`, and `--cwd`.
 
 ### Repository-aware editor instructions
 
@@ -68,27 +68,18 @@ checks:
 Published-package verification also checks the npm `latest` dist-tag and runs
 the same consumer workflow against the registry artifact.
 
-## Remaining improvement: isolate Commitlint's TypeScript loader
+### Warning-free minimal consumers
 
-Yarn 1 reports unmet `@types/node` and `typescript` peers from
-`cosmiconfig-typescript-loader`, a transitive dependency of `@commitlint/load`.
-Version 6.3.0 declares both peers as mandatory and provides no
-`peerDependenciesMeta` entries.
-
-Adding TypeScript and its Node types to Commitprompt would silence the warning,
-but would violate the dependency-light goal for JavaScript-config consumers.
-The warning is therefore documented rather than hidden.
-
-For a later release, evaluate these options in order:
-
-1. contribute optional peer metadata or lazy TypeScript loading upstream;
-2. adopt an upstream Commitlint release after it makes the peers optional;
-3. isolate configuration loading behind an optional adapter while retaining
-   JavaScript configuration support by default.
-
-Acceptance remains: minimal npm, pnpm, and Yarn consumers install without
-dependency warnings and without adding TypeScript to Commitprompt's default
-runtime dependencies.
+Commitprompt now loads Commitlint configuration without
+`cosmiconfig-typescript-loader`. JavaScript, JSON, YAML, extends, plugins,
+parser presets, asynchronous rules, and native Node.js TypeScript configuration
+remain supported. Minimal consumers no longer need TypeScript or
+`@types/node`. Packed npm, pnpm, and Yarn consumers load and enforce a native
+TypeScript configuration while verifying that neither package was installed.
+The Commitlint lint engine is bundled with generated third-party license
+notices, avoiding the upstream `es-toolkit` manifest warning in Yarn Classic.
+The packed verifier rejects every npm, pnpm, or Yarn installer warning rather
+than suppressing output.
 
 ## Candidates for the following release
 
@@ -99,3 +90,5 @@ runtime dependencies.
 - Add a setup report format suitable for pull-request annotations.
 - Explore editor-native validation feedback so generated messages can be
   corrected before Git invokes the authoritative hook.
+- Report changes to the bundled lint engine's dependency, license, and byte-size
+  inventory during dependency upgrades.

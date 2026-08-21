@@ -17,6 +17,7 @@ export default defineConfig({
   ],
   reporter: process.env.CI ? 'github' : 'list',
   retries: process.env.CI ? 2 : 0,
+  timeout: 60_000,
   testDir: 'tests',
   use: {
     baseURL,

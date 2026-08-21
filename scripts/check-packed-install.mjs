@@ -4,9 +4,11 @@ import {
   spawnSync
 } from 'node:child_process'
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  unlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -39,6 +41,53 @@ const executePnpmSync = (arguments_, options) => {
   const invocation = getPnpmInvocation(arguments_)
 
   return executeBinarySync(invocation.command, invocation.arguments_, options)
+}
+
+const cleanPackageManagerEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => !/^npm_(?:config|package)_/iu.test(key)
+  )
+)
+
+const installPackage = packageManager => {
+  const packageInvocation = packageManager.name === 'pnpm' ?
+    getPnpmInvocation(packageManager.args) :
+    {
+      arguments_: packageManager.args,
+      command: packageManager.command
+    }
+
+  const invocation = getBinaryInvocation(
+    packageInvocation.command, packageInvocation.arguments_
+  )
+
+  const install = spawnSync(invocation.command, invocation.arguments_, {
+    cwd: packageManager.consumerDirectory,
+    encoding: 'utf8',
+    env: packageManager.name === 'pnpm' ?
+      process.env :
+      cleanPackageManagerEnvironment,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments
+  })
+
+  const output = `${install.stdout}${install.stderr}`
+
+  process.stdout.write(output)
+
+  if (install.error !== undefined) throw install.error
+
+  if (install.status !== 0) {
+    throw new Error(
+      `${packageManager.name} installation exited with ` +
+      `${String(install.status)}.`
+    )
+  }
+
+  if (/\b(?:warn|warning)\b/iu.test(output)) {
+    throw new Error(
+      `${packageManager.name} installation reported a warning:\n${output}`
+    )
+  }
 }
 
 const createLocalPackageSpecifier = () => {
@@ -86,7 +135,7 @@ const packageManagers = [
     name: 'pnpm'
   },
   {
-    args: ['add', '--ignore-scripts', '--non-interactive', packageSpecifier],
+    args: ['add', '--non-interactive', packageSpecifier],
     command: 'yarn',
     name: 'Yarn'
   }
@@ -157,6 +206,109 @@ const verifyInstalledCommands = (binary, consumerDirectory, name) => {
   }
 }
 
+const verifyInstalledMetadata = (metadata, name) => {
+  if (metadata.name !== '@santi020k/commitprompt') {
+    throw new Error(`${name} installed unexpected package metadata.`)
+  }
+
+  if (metadata.dependencies?.['@commitlint/load'] !== undefined) {
+    throw new Error(
+      `${name} installed the TypeScript-dependent Commitlint loader.`
+    )
+  }
+
+  if (metadata.dependencies?.['@commitlint/lint'] !== undefined) {
+    throw new Error(`${name} installed the unbundled Commitlint lint engine.`)
+  }
+
+  if (
+    metadata.dependencies?.typescript !== undefined ||
+    metadata.optionalDependencies?.typescript !== undefined
+  ) {
+    throw new Error(
+      `${name} installed TypeScript in the runtime dependency surface.`
+    )
+  }
+}
+
+const verifyNoStaleArtifacts = (installedPackageDirectory, name) => {
+  for (const artifact of [
+    'dist/src/package-manager.d.ts',
+    'dist/src/package-manager.d.ts.map',
+    'dist/src/package-manager.js',
+    'dist/src/package-manager.js.map'
+  ]) {
+    if (existsSync(join(installedPackageDirectory, artifact))) {
+      throw new Error(`${name} installed stale artifact ${artifact}.`)
+    }
+  }
+}
+
+const verifyNativeTypeScriptConfiguration = (
+  binary,
+  consumerDirectory,
+  name
+) => {
+  for (const dependencyPath of [
+    'node_modules/typescript',
+    'node_modules/@types/node'
+  ]) {
+    if (existsSync(join(consumerDirectory, dependencyPath))) {
+      throw new Error(
+        `${name} installed unexpected runtime tooling at ${dependencyPath}.`
+      )
+    }
+  }
+
+  const configurationPath = join(
+    consumerDirectory, 'commitlint.config.ts'
+  )
+
+  writeFileSync(configurationPath, `const types: string[] = ['fix', 'release']
+
+export default {
+  rules: {
+    'type-enum': [2, 'always', types]
+  }
+}
+`)
+
+  try {
+    const configuredTypes = JSON.parse(executeBinarySync(
+      binary,
+      ['types', '--json'],
+      {
+        cwd: consumerDirectory,
+        encoding: 'utf8'
+      }
+    ))
+
+    if (configuredTypes.types.map(type => type.value).join(',') !== 'fix,release') {
+      throw new Error(
+        `${name} did not load its native TypeScript Commitlint configuration.`
+      )
+    }
+
+    const validation = JSON.parse(executeBinarySync(
+      binary,
+      ['validate', '--json'],
+      {
+        cwd: consumerDirectory,
+        encoding: 'utf8',
+        input: 'release: verify native TypeScript configuration'
+      }
+    ))
+
+    if (validation.valid !== true) {
+      throw new Error(
+        `${name} did not enforce its native TypeScript configuration.`
+      )
+    }
+  } finally {
+    unlinkSync(configurationPath)
+  }
+}
+
 const verifyConsumer = (consumerDirectory, name) => {
   const installedPackageDirectory = join(
     consumerDirectory,
@@ -168,8 +320,21 @@ const verifyConsumer = (consumerDirectory, name) => {
     'utf8'
   ))
 
-  if (installedMetadata.name !== '@santi020k/commitprompt') {
-    throw new Error(`${name} installed unexpected package metadata.`)
+  verifyInstalledMetadata(installedMetadata, name)
+
+  verifyNoStaleArtifacts(installedPackageDirectory, name)
+
+  const thirdPartyLicenses = readFileSync(
+    join(installedPackageDirectory, 'dist/THIRD_PARTY_LICENSES.txt'),
+    'utf8'
+  )
+
+  for (const bundledDependency of ['@commitlint/lint@', 'es-toolkit@']) {
+    if (!thirdPartyLicenses.includes(bundledDependency)) {
+      throw new Error(
+        `${name} omitted the ${bundledDependency} bundled license notice.`
+      )
+    }
   }
 
   readFileSync(
@@ -241,6 +406,8 @@ const verifyConsumer = (consumerDirectory, name) => {
 
   verifyInstalledCommands(binary, consumerDirectory, name)
 
+  verifyNativeTypeScriptConfiguration(binary, consumerDirectory, name)
+
   return binary
 }
 
@@ -254,23 +421,17 @@ for (const packageManager of packageManagers) {
 
   writeFileSync(
     join(consumerDirectory, 'package.json'),
-    JSON.stringify({ name: `commitprompt-${packageManager.name.toLowerCase()}-test`, private: true })
+    JSON.stringify({
+      name: `commitprompt-${packageManager.name.toLowerCase()}-test`,
+      private: true,
+      type: 'module'
+    })
   )
 
-  const installOptions = {
-    cwd: consumerDirectory,
-    stdio: 'inherit'
-  }
-
-  if (packageManager.name === 'pnpm') {
-    executePnpmSync(packageManager.args, installOptions)
-  } else {
-    executeBinarySync(
-      packageManager.command,
-      packageManager.args,
-      installOptions
-    )
-  }
+  installPackage({
+    ...packageManager,
+    consumerDirectory
+  })
 
   const binary = verifyConsumer(consumerDirectory, packageManager.name)
 
@@ -583,7 +744,7 @@ const invalidMessagePath = join(temporaryDirectory, 'invalid-message.txt')
 
 writeFileSync(validMessagePath, 'fix: verify generated hook\n')
 
-writeFileSync(invalidMessagePath, 'invalid message\n')
+writeFileSync(invalidMessagePath, 'feat: reject configured type\n')
 
 const hookPath = join(integrationConsumer, '.husky', 'commit-msg')
 

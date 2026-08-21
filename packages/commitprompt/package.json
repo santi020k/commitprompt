@@ -20,6 +20,7 @@
     "dist/**/*.js",
     "dist/**/*.d.ts",
     "dist/**/*.map",
+    "dist/THIRD_PARTY_LICENSES.txt",
     "templates/**/*.md",
     "README.md",
     "AI.md",
@@ -29,27 +30,30 @@
     "commitprompt": "./dist/bin/commitprompt.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "node scripts/clean.mjs dist && tsc --project tsconfig.json && node scripts/bundle-runtime.mjs",
     "dev": "tsc --project tsconfig.json --watch",
     "typecheck": "tsc --noEmit && tsc --project tests/tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "eslint src tests bin --cache --no-warn-ignored --max-warnings=0",
-    "lint:fix": "eslint src tests bin --cache --fix --no-warn-ignored --max-warnings=0",
+    "lint": "eslint src tests bin scripts --cache --no-warn-ignored --max-warnings=0",
+    "lint:fix": "eslint src tests bin scripts --cache --fix --no-warn-ignored --max-warnings=0",
     "check:exports": "publint",
-    "clean": "rm -rf dist coverage"
+    "clean": "node scripts/clean.mjs dist coverage"
   },
   "dependencies": {
+    "@commitlint/config-validator": "catalog:",
     "@commitlint/config-conventional": "catalog:",
-    "@commitlint/lint": "catalog:",
-    "@commitlint/load": "catalog:",
+    "@commitlint/execute-rule": "catalog:",
     "@commitlint/types": "catalog:",
+    "cosmiconfig": "catalog:",
     "jsonc-parser": "catalog:"
   },
   "devDependencies": {
+    "@commitlint/lint": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "esbuild": "catalog:",
     "eslint": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",

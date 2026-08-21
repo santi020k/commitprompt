@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -178,7 +179,6 @@ describe('commitprompt executable', () => {
     const setupResult = runBinary([
       'setup',
       'project',
-      '--skip-install',
       '--json',
       '--cwd',
       directory
@@ -198,6 +198,33 @@ describe('commitprompt executable', () => {
   })
 
   test.runIf(process.platform !== 'win32')(
+    'does not invoke the detected package manager', () => {
+      const directory = createProject()
+      const binaryDirectory = join(directory, 'bin')
+      const markerPath = join(directory, 'package-manager-invoked')
+      const packageManagerPath = join(binaryDirectory, 'pnpm')
+
+      mkdirSync(binaryDirectory)
+      writeFileSync(packageManagerPath, `#!/bin/sh\nprintf invoked > "${markerPath}"\n`)
+      chmodSync(packageManagerPath, 0o755)
+
+      const result = spawnSync(process.execPath, [
+        binaryPath, 'setup', 'project', '--cwd', directory
+      ], {
+        cwd: directory,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${binaryDirectory}:${process.env.PATH ?? ''}`
+        }
+      })
+
+      expect(result.status).toBe(0)
+      expect(existsSync(markerPath)).toBe(false)
+    }
+  )
+
+  test.runIf(process.platform !== 'win32')(
     'enforces valid and invalid messages through a real Husky hook', () => {
       const directory = createRepository()
 
@@ -210,7 +237,6 @@ describe('commitprompt executable', () => {
         'project',
         '--only',
         'dependency,commit-script,husky-hook',
-        '--skip-install',
         '--cwd',
         directory
       ])
