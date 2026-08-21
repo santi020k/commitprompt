@@ -1,6 +1,4 @@
 import conventionalConfig from '@commitlint/config-conventional'
-import lint from '@commitlint/lint'
-import load from '@commitlint/load'
 import type {
   LintOptions,
   QualifiedConfig,
@@ -8,6 +6,8 @@ import type {
 } from '@commitlint/types'
 import { RuleConfigSeverity } from '@commitlint/types'
 
+import lint from './commitlint-lint.js'
+import { loadCommitlintConfiguration } from './configuration.js'
 import { DEFAULT_COMMIT_TYPES } from './constants.js'
 import type { CommitlintClient, CommitType } from './types.js'
 
@@ -27,7 +27,7 @@ interface LoadedConfiguration {
 }
 
 const loadConfiguration = async (cwd: string): Promise<LoadedConfiguration> => {
-  const configuration = await load({}, { cwd })
+  const configuration = await loadCommitlintConfiguration(cwd)
 
   if (hasRepositoryConfiguration(configuration)) {
     return { configuration, usesDefaults: false }

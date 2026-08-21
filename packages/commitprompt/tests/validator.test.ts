@@ -6,17 +6,19 @@ import { createCommitlintValidator } from '../src/validator.js'
 
 const mocks = vi.hoisted(() => ({
   lint: vi.fn(),
-  load: vi.fn()
+  loadConfiguration: vi.fn()
 }))
 
 vi.mock('@commitlint/lint', () => ({ default: mocks.lint }))
-vi.mock('@commitlint/load', () => ({ default: mocks.load }))
+vi.mock('../src/configuration.js', () => ({
+  loadCommitlintConfiguration: mocks.loadConfiguration
+}))
 
 describe('createCommitlintValidator', () => {
   beforeEach(() => {
     mocks.lint.mockReset()
-    mocks.load.mockReset()
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockReset()
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: ['@commitlint/config-conventional'],
       formatter: '',
@@ -49,7 +51,7 @@ describe('createCommitlintValidator', () => {
       valid: true,
       warnings: []
     })
-    expect(mocks.load).toHaveBeenCalledExactlyOnceWith({}, { cwd: '/project' })
+    expect(mocks.loadConfiguration).toHaveBeenCalledExactlyOnceWith('/project')
     expect(mocks.lint).toHaveBeenCalledWith(
       'feat: add validation', { 'type-empty': [2, 'never'] }, expect.objectContaining({
         parserOpts: {
@@ -62,7 +64,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('maps errors and warnings without invalid parser options', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',
@@ -91,7 +93,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('uses built-in conventional rules when the repository has no config', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',
@@ -121,7 +123,7 @@ describe('createCommitlintValidator', () => {
   test('retains non-rule settings when supplying built-in rules', async () => {
     const ignore = (message: string) => message.startsWith('release:')
 
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: false,
       extends: [],
       formatter: '',
@@ -143,7 +145,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('derives prompt types from the repository type-enum rule', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',
@@ -166,7 +168,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('keeps the curated order for the conventional type set', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: ['@commitlint/config-conventional'],
       formatter: '',
@@ -202,7 +204,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('excludes types forbidden by a never rule', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',
@@ -224,7 +226,7 @@ describe('createCommitlintValidator', () => {
   })
 
   test('derives prompt scopes from the repository scope-enum rule', async () => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',
@@ -250,7 +252,7 @@ describe('createCommitlintValidator', () => {
     severity,
     condition
   ) => {
-    mocks.load.mockResolvedValue({
+    mocks.loadConfiguration.mockResolvedValue({
       defaultIgnores: true,
       extends: [],
       formatter: '',

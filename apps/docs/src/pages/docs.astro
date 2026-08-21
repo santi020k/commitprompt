@@ -64,6 +64,27 @@ Closes #123`
 
 const usageCommand = 'git add src/\npnpm commit'
 
+const hookItems = [
+  {
+    code: 'npx --no-install commitprompt validate --input "$1"',
+    label: 'npm',
+    language: 'shell',
+    value: 'npm'
+  },
+  {
+    code: 'pnpm exec commitprompt validate --input "$1"',
+    label: 'pnpm',
+    language: 'shell',
+    value: 'pnpm'
+  },
+  {
+    code: 'yarn exec commitprompt validate --input "$1"',
+    label: 'Yarn',
+    language: 'shell',
+    value: 'yarn'
+  }
+] as const
+
 const automationExample = `commitprompt instructions --json
 commitprompt scopes --json
 commitprompt types --json
@@ -111,6 +132,7 @@ await runCommitFlow({
       <nav aria-label="Documentation">
         <p>Start here</p>
         <a href="#installation">Installation</a>
+        <a href="#project-setup">Project setup</a>
         <a href="#configuration">Configuration</a>
         <a href="#usage">Usage</a>
         <a href="#editor-ai">Editor AI</a>
@@ -163,6 +185,46 @@ await runCommitFlow({
 
         <Separator />
 
+        <section id="project-setup">
+          <h2>Project setup</h2>
+          <p>
+            Configure package metadata, repository enforcement, and AI
+            instructions in one idempotent operation:
+          </p>
+          <Code
+            code="commitprompt setup project"
+            copy
+            label="Terminal"
+            language="shell"
+            variant="block"
+          />
+          <p>
+            Setup detects npm, pnpm, or Yarn; adds Commitprompt and Husky as
+            development dependencies; sets the neutral <Code>commit</Code>
+            script; installs a <Code>commit-msg</Code> validation hook; and adds
+            guarded guidance to <Code>AGENTS.md</Code> and GitHub Copilot
+            instructions plus reusable agent skills. Run the detected package
+            manager’s install command afterward to update the lockfile and
+            activate Husky.
+          </p>
+          <Callout>
+            <p>
+              Existing Commitizen, Czg, and custom prompt configuration is
+              reported but never deleted. Preview with
+              <Code>commitprompt setup project --dry-run</Code>, or use
+              <Code>--check --json</Code> as a non-writing CI drift gate.
+            </p>
+          </Callout>
+          <p>
+            Run <Code>commitprompt setup editors</Code> to create tracked,
+            repository-aware instructions in <Code>.vscode/settings.json</Code>
+            and <Code>.zed/settings.json</Code>. Configured commit types and
+            scopes are included without writing model preferences.
+          </p>
+        </section>
+
+        <Separator />
+
         <section id="configuration">
           <h2>Configuration</h2>
           <p>
@@ -202,6 +264,9 @@ await runCommitFlow({
             <Code>1</Code> for a warning, and <Code>2</Code> for an error.
             Commitprompt also passes through repository parser presets, plugins,
             ignores, default ignores, and help URLs when it validates a message.
+            JavaScript, JSON, YAML, and erasable TypeScript configuration files
+            load through Node.js without adding TypeScript to consumer
+            dependencies.
           </p>
           <Callout>
             <p>
@@ -316,15 +381,29 @@ await runCommitFlow({
         <section id="git-hooks">
           <h2>Git hooks</h2>
           <p>
-            Commitprompt validates every message created through its own commit
-            flow. It does not currently install Git hooks, so a commit created
-            directly by Git or an editor does not pass through Commitprompt.
+            Project setup installs a Husky <Code>commit-msg</Code> hook that runs
+            <Code>commitprompt validate --input "$1"</Code>. It preserves
+            unrelated hook commands and replaces known package-manager-specific
+            Commitlint invocations.
           </p>
           <p>
-            To enforce the same policy for every commit, configure Commitlint in
-            your repository’s <Code>commit-msg</Code> hook. A
-            <Code>pre-commit</Code> hook runs before the commit message exists and
-            is better suited to staged-file checks.
+            The hook enforces the same repository rules for commits created
+            directly by Git, Zed, or VS Code. A <Code>pre-commit</Code> hook runs
+            before the commit message exists and is better suited to staged-file
+            checks.
+          </p>
+          <CodeTabs
+            ariaLabel="Explicit hook commands by package manager"
+            copy
+            items={hookItems}
+            storageKey="commitprompt-hook-package-manager"
+            wrap={false}
+          />
+          <p>
+            On failure, Commitprompt lists the violated rules, states that the
+            commit was blocked, and directs the author to correct the message.
+            The generated neutral command works with npm, pnpm, and Yarn because
+            Husky adds local binaries to <Code>PATH</Code>.
           </p>
         </section>
 

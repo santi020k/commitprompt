@@ -9,6 +9,11 @@ import type {
   GitClient,
   MessageValidation,
   MessageValidator,
+  PackageManager,
+  ProjectSetupAction,
+  ProjectSetupActionId,
+  ProjectSetupOptions,
+  ProjectSetupResult,
   Prompt,
   ResolveVSCodeSettingsPathOptions,
   ResolveZedSettingsPathOptions,
@@ -16,8 +21,12 @@ import type {
   RunCommitFlowOptions,
   SetupVSCodeOptions,
   SetupVSCodeResult,
+  SetupWorkspaceEditorsOptions,
+  SetupWorkspaceEditorsResult,
   SetupZedOptions,
-  SetupZedResult
+  SetupZedResult,
+  WorkspaceEditor,
+  WorkspaceEditorAction
 } from '../src/index.js'
 import * as publicApi from '../src/index.js'
 
@@ -30,15 +39,24 @@ type PublicApiTypes = [
   GitClient,
   MessageValidation,
   MessageValidator,
+  PackageManager,
   Prompt,
+  ProjectSetupAction,
+  ProjectSetupActionId,
+  ProjectSetupOptions,
+  ProjectSetupResult,
   ResolveVSCodeSettingsPathOptions,
   ResolveZedSettingsPathOptions,
   RunAutomationOptions,
   RunCommitFlowOptions,
+  SetupWorkspaceEditorsOptions,
+  SetupWorkspaceEditorsResult,
   SetupVSCodeOptions,
   SetupVSCodeResult,
   SetupZedOptions,
-  SetupZedResult
+  SetupZedResult,
+  WorkspaceEditor,
+  WorkspaceEditorAction
 ]
 
 describe('public API', () => {
@@ -46,8 +64,13 @@ describe('public API', () => {
     expectTypeOf<PublicApiTypes>().toBeArray()
 
     expect(Object.keys(publicApi).sort()).toEqual([
+      'AGENT_SKILL_TEMPLATE',
       'COMMIT_MESSAGE_INSTRUCTIONS',
       'DEFAULT_COMMIT_TYPES',
+      'INSTRUCTION_END_MARKER',
+      'INSTRUCTION_START_MARKER',
+      'PROJECT_INSTRUCTION_BODY',
+      'PROJECT_INSTRUCTION_SECTION',
       'ZED_COMMIT_MESSAGE_INSTRUCTIONS',
       'collectCommitAnswers',
       'confirmCommit',
@@ -60,7 +83,9 @@ describe('public API', () => {
       'runAutomation',
       'runCli',
       'runCommitFlow',
+      'setupProject',
       'setupVSCode',
+      'setupWorkspaceEditors',
       'setupZed'
     ])
   })

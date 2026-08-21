@@ -27,10 +27,13 @@ catalogs:
     '@commitlint/config-conventional':
       specifier: ^21.2.0
       version: 21.2.0
-    '@commitlint/lint':
+    '@commitlint/config-validator':
       specifier: ^21.2.0
       version: 21.2.0
-    '@commitlint/load':
+    '@commitlint/execute-rule':
+      specifier: ^21.0.1
+      version: 21.0.1
+    '@commitlint/lint':
       specifier: ^21.2.0
       version: 21.2.0
     '@commitlint/types':
@@ -61,8 +64,8 @@ catalogs:
       specifier: ^3.1.0
       version: 3.1.0
     '@santi020k/lumen-astro':
-      specifier: ^0.4.0
-      version: 0.4.0
+      specifier: ^1.0.0
+      version: 1.0.0
     '@types/node':
       specifier: ^26.1.2
       version: 26.1.2
@@ -72,9 +75,15 @@ catalogs:
     astro:
       specifier: ^7.1.4
       version: 7.1.6
+    cosmiconfig:
+      specifier: ^9.0.2
+      version: 9.0.2
     cspell:
       specifier: ^10.0.1
       version: 10.0.1
+    esbuild:
+      specifier: ^0.28.1
+      version: 0.28.1
     eslint:
       specifier: ^10.8.0
       version: 10.8.0
@@ -136,13 +145,13 @@ importers:
         version: link:packages/commitprompt
       '@santi020k/eslint-config-astro':
         specifier: 'catalog:'
-        version: 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
+        version: 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
       '@santi020k/eslint-config-basic':
         specifier: 'catalog:'
-        version: 3.2.0(55807c7df92636618edd9298efe436d5)
+        version: 3.2.0(c7b6aad22b619d721b97f684a7d7fd28)
       '@santi020k/eslint-config-extensions':
         specifier: 'catalog:'
-        version: 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)
+        version: 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)
       '@santi020k/eslint-config-formats':
         specifier: 'catalog:'
         version: 3.1.0(@types/node@26.1.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(crossws@0.3.5)(eslint@10.8.0(jiti@2.7.0))(graphql@16.14.2)(typescript@6.0.3)
@@ -199,7 +208,7 @@ importers:
         version: 3.7.3
       '@santi020k/lumen-astro':
         specifier: 'catalog:'
-        version: 0.4.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 1.0.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))
       astro:
         specifier: 'catalog:'
         version: 7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0)
@@ -228,25 +237,34 @@ importers:
       '@commitlint/config-conventional':
         specifier: 'catalog:'
         version: 21.2.0
-      '@commitlint/lint':
+      '@commitlint/config-validator':
         specifier: 'catalog:'
         version: 21.2.0
-      '@commitlint/load':
+      '@commitlint/execute-rule':
         specifier: 'catalog:'
-        version: 21.2.0(@types/node@26.1.2)(typescript@6.0.3)
+        version: 21.0.1
       '@commitlint/types':
         specifier: 'catalog:'
         version: 21.2.0
+      cosmiconfig:
+        specifier: 'catalog:'
+        version: 9.0.2(typescript@6.0.3)
       jsonc-parser:
         specifier: 'catalog:'
         version: 3.3.1
     devDependencies:
+      '@commitlint/lint':
+        specifier: 'catalog:'
+        version: 21.2.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.2
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.1
       eslint:
         specifier: 'catalog:'
         version: 10.8.0(jiti@2.7.0)
@@ -2772,18 +2790,18 @@ packages:
     peerDependencies:
       eslint: ^10.0.0
 
-  '@santi020k/lumen-astro@0.4.0':
-    resolution: {integrity: sha512-gSYbGbh1tptP1nQENw2xY5dINVj8Axrm0T4SLzNyIGiwbbQm9EKzog2HDbyHXMtAe91QMWw64LB0YZb38ZuWWA==}
+  '@santi020k/lumen-astro@1.0.0':
+    resolution: {integrity: sha512-cut8XG+0ieAZAm4REJTiQ4PtxhPtynFJV39INXVUG9iwe4sjtpzfsYzqLrUZVaEp/siqqhcOuvo1lr9LXPU+5w==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       astro: '>=5'
 
-  '@santi020k/lumen-core@0.4.0':
-    resolution: {integrity: sha512-pmjBHZMMSnlvs8njR1uKymeH4FCYf68eMpO+CuTZg3gCWNjrenBn4KbBSZi+B8aJoCjflia9/QNyPf6sPtNhpw==}
+  '@santi020k/lumen-core@1.0.0':
+    resolution: {integrity: sha512-+5bV6PZuL8f2obGgWJkM1Q0n0R6giiGf90OIJUF/UwN69B+YstwWpx3qNOTzsxpWE4XqS8G+3eZOeolzJ85V3Q==}
     engines: {node: '>=22.12.0'}
 
-  '@santi020k/lumen@0.4.0':
-    resolution: {integrity: sha512-qFCjszu5hMdjG2I+C/lFd1o/peuZ7eiiqzERmK4775WwUJAze2FKGXJFeyhJaFkdPvIVTBVdV2+TG06Kdc1t7A==}
+  '@santi020k/lumen@1.0.0':
+    resolution: {integrity: sha512-iGdqGWsi0zImHxcl+RPcUn5KCiPAySJwhcbcHiNs4wKOCH80exAvIgY7oaE61f/9SXJK6rnkVgVWqJq2EIMAPA==}
     engines: {node: '>=22.12.0'}
     hasBin: true
 
@@ -7401,6 +7419,14 @@ snapshots:
   '@astrojs/compiler-binding-linux-x64-musl@0.3.2':
     optional: true
 
+  '@astrojs/compiler-binding-wasm32-wasi@0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.2.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   '@astrojs/compiler-binding-wasm32-wasi@0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)':
     dependencies:
       '@napi-rs/wasm-runtime': 1.2.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)
@@ -7415,6 +7441,21 @@ snapshots:
   '@astrojs/compiler-binding-win32-x64-msvc@0.3.2':
     optional: true
 
+  '@astrojs/compiler-binding@0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+    optionalDependencies:
+      '@astrojs/compiler-binding-darwin-arm64': 0.3.2
+      '@astrojs/compiler-binding-darwin-x64': 0.3.2
+      '@astrojs/compiler-binding-linux-arm64-gnu': 0.3.2
+      '@astrojs/compiler-binding-linux-arm64-musl': 0.3.2
+      '@astrojs/compiler-binding-linux-x64-gnu': 0.3.2
+      '@astrojs/compiler-binding-linux-x64-musl': 0.3.2
+      '@astrojs/compiler-binding-wasm32-wasi': 0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@astrojs/compiler-binding-win32-arm64-msvc': 0.3.2
+      '@astrojs/compiler-binding-win32-x64-msvc': 0.3.2
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+
   '@astrojs/compiler-binding@0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)':
     optionalDependencies:
       '@astrojs/compiler-binding-darwin-arm64': 0.3.2
@@ -7426,6 +7467,13 @@ snapshots:
       '@astrojs/compiler-binding-wasm32-wasi': 0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)
       '@astrojs/compiler-binding-win32-arm64-msvc': 0.3.2
       '@astrojs/compiler-binding-win32-x64-msvc': 0.3.2
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+
+  '@astrojs/compiler-rs@0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+    dependencies:
+      '@astrojs/compiler-binding': 0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -9545,12 +9593,12 @@ snapshots:
 
   '@rviscomi/capo.js@2.2.0': {}
 
-  '@santi020k/eslint-config-astro@3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@santi020k/eslint-config-astro@3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@santi020k/eslint-config-core': 3.1.0(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
       '@typescript-eslint/utils': 8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
       eslint: 10.8.0(jiti@2.7.0)
-      eslint-plugin-astro: 3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
+      eslint-plugin-astro: 3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -9562,7 +9610,7 @@ snapshots:
       - ts-declaration-location
       - typescript
 
-  '@santi020k/eslint-config-basic@3.2.0(55807c7df92636618edd9298efe436d5)':
+  '@santi020k/eslint-config-basic@3.2.0(c7b6aad22b619d721b97f684a7d7fd28)':
     dependencies:
       '@santi020k/eslint-config-core': 3.1.0(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
       '@santi020k/eslint-config-typescript': 3.1.1(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
@@ -9570,8 +9618,8 @@ snapshots:
       eslint: 10.8.0(jiti@2.7.0)
       semver: 7.8.5
     optionalDependencies:
-      '@santi020k/eslint-config-astro': 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
-      '@santi020k/eslint-config-extensions': 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)
+      '@santi020k/eslint-config-astro': 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
+      '@santi020k/eslint-config-extensions': 3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)
       '@santi020k/eslint-config-formats': 3.1.0(@types/node@26.1.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(crossws@0.3.5)(eslint@10.8.0(jiti@2.7.0))(graphql@16.14.2)(typescript@6.0.3)
       '@santi020k/eslint-config-libraries': 3.1.0(@eslint/css@1.4.0)(@stencil/core@4.43.5)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(oxlint@1.76.0)(storybook@10.5.5(prettier@3.9.6)(react@19.2.8))(tailwindcss@4.3.3)(turbo@2.10.7)(typescript@6.0.3)(zod@4.4.3)
       '@santi020k/eslint-config-testing': 3.1.0(@testing-library/dom@10.4.1)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)(vitest@4.1.10)
@@ -9603,7 +9651,7 @@ snapshots:
       - ts-declaration-location
       - typescript
 
-  '@santi020k/eslint-config-extensions@3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)':
+  '@santi020k/eslint-config-extensions@3.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)(oxlint@1.76.0)(typescript@6.0.3)':
     dependencies:
       '@santi020k/eslint-config-core': 3.1.0(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
       '@typescript-eslint/utils': 8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
@@ -9622,7 +9670,7 @@ snapshots:
       eslint-plugin-unicorn: 72.0.0(eslint@10.8.0(jiti@2.7.0))
       eslint-plugin-vuejs-accessibility: 2.5.0(eslint@10.8.0(jiti@2.7.0))(globals@17.8.0)
     optionalDependencies:
-      '@santi020k/eslint-plugin-astro-doctor': 1.2.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
+      '@santi020k/eslint-plugin-astro-doctor': 1.2.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
       oxlint: 1.76.0
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -9784,11 +9832,11 @@ snapshots:
       - supports-color
       - ts-declaration-location
 
-  '@santi020k/eslint-plugin-astro-doctor@1.2.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))':
+  '@santi020k/eslint-plugin-astro-doctor@1.2.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))':
     dependencies:
-      astro-eslint-parser: 3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)
+      astro-eslint-parser: 3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       eslint: 10.8.0(jiti@2.7.0)
-      eslint-plugin-astro: 3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
+      eslint-plugin-astro: 3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0))
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -9797,20 +9845,20 @@ snapshots:
       - supports-color
     optional: true
 
-  '@santi020k/lumen-astro@0.4.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))':
+  '@santi020k/lumen-astro@1.0.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
-      '@santi020k/lumen': 0.4.0
-      '@santi020k/lumen-core': 0.4.0
+      '@santi020k/lumen': 1.0.0
+      '@santi020k/lumen-core': 1.0.0
       astro: 7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0)
       uqr: 0.1.3
 
-  '@santi020k/lumen-core@0.4.0':
+  '@santi020k/lumen-core@1.0.0':
     dependencies:
       '@lucide/icons': 1.27.0
 
-  '@santi020k/lumen@0.4.0':
+  '@santi020k/lumen@1.0.0':
     dependencies:
-      '@santi020k/lumen-core': 0.4.0
+      '@santi020k/lumen-core': 1.0.0
       semver: 7.8.5
 
   '@shikijs/core@4.3.1':
@@ -10040,7 +10088,7 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 24.13.3
+      '@types/node': 26.1.2
 
   '@types/supports-color@8.1.3': {}
 
@@ -10578,9 +10626,9 @@ snapshots:
       estree-walker: 3.0.3
       js-tokens: 10.0.0
 
-  astro-eslint-parser@3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3):
+  astro-eslint-parser@3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2):
     dependencies:
-      '@astrojs/compiler-rs': 0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)
+      '@astrojs/compiler-rs': 0.3.2(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       '@typescript-eslint/scope-manager': 8.65.0
       '@typescript-eslint/types': 8.65.0
       debug: 4.4.3
@@ -11424,12 +11472,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-astro@3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0)):
+  eslint-plugin-astro@3.0.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3))(eslint-plugin-jsx-a11y@6.10.2(eslint@10.8.0(jiti@2.7.0)))(eslint@10.8.0(jiti@2.7.0)):
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.8.0(jiti@2.7.0))
       '@jridgewell/sourcemap-codec': 1.5.5
       '@typescript-eslint/types': 8.65.0
-      astro-eslint-parser: 3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)
+      astro-eslint-parser: 3.0.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       eslint: 10.8.0(jiti@2.7.0)
       espree: 11.2.0
       globals: 17.8.0

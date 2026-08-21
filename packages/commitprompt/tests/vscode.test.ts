@@ -17,6 +17,8 @@ import {
 
 const instructionSetting =
   'github.copilot.chat.commitMessageGeneration.instructions'
+const realisticSettingsFixture =
+  new URL('./fixtures/vscode-settings.jsonc', import.meta.url)
 const temporaryDirectories: string[] = []
 
 const createTemporaryDirectory = async (): Promise<string> => {
@@ -124,6 +126,42 @@ describe('setupVSCode', () => {
     expect(source).toContain(COMMIT_MESSAGE_INSTRUCTIONS)
   })
 
+  test('updates realistic JSONC with trailing commas and is idempotent', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const fixture = await readFile(realisticSettingsFixture, 'utf8')
+
+    await writeFile(settingsPath, fixture, 'utf8')
+
+    await expect(setupVSCode({ settingsPath })).resolves.toEqual({
+      changed: true,
+      settingsPath
+    })
+
+    const updatedSource = await readFile(settingsPath, 'utf8')
+
+    expect(updatedSource).toContain(
+      '// Workbench preferences exported from VS Code.'
+    )
+    expect(updatedSource).toContain(
+      '// Run the configured linter without changing other save actions.'
+    )
+    expect(updatedSource).toContain(
+      '// Keep team-authored guidance ahead of generated guidance.'
+    )
+    expect(updatedSource).toContain('"source.fixAll.eslint": "explicit",')
+    expect(updatedSource).toContain('"**/.turbo": true,')
+    expect(updatedSource).toContain('"file": "./commit-guidance.md",')
+    expect(updatedSource).toContain('"window.titleSeparator": " — ",')
+    expect(updatedSource).toContain(COMMIT_MESSAGE_INSTRUCTIONS)
+
+    await expect(setupVSCode({ settingsPath })).resolves.toEqual({
+      changed: false,
+      settingsPath
+    })
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(updatedSource)
+  })
+
   test('does not duplicate an existing Commitprompt instruction', async () => {
     const directory = await createTemporaryDirectory()
     const settingsPath = join(directory, 'settings.json')
@@ -140,6 +178,51 @@ describe('setupVSCode', () => {
       changed: false,
       settingsPath
     })
+  })
+
+  test('replaces repository instructions without changing user guidance', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const oldInstructions = 'Commitprompt repository rules: use feat.'
+    const newInstructions = 'Commitprompt repository rules: use release.'
+
+    await writeFile(
+      settingsPath, JSON.stringify({
+        [instructionSetting]: [
+          { text: 'Mention issue references.' },
+          { text: oldInstructions }
+        ]
+      }, undefined, 2), 'utf8'
+    )
+
+    await setupVSCode({
+      instructions: newInstructions,
+      settingsPath
+    })
+
+    const source = await readFile(settingsPath, 'utf8')
+
+    expect(source).toContain('Mention issue references.')
+    expect(source).not.toContain(oldInstructions)
+    expect(source).toContain(newInstructions)
+  })
+
+  test('reports workspace drift without writing in check mode', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const source = '{\n  // Keep this.\n  "editor.fontSize": 16,\n}\n'
+
+    await writeFile(settingsPath, source, 'utf8')
+
+    await expect(setupVSCode({
+      check: true,
+      instructions: 'Commitprompt repository rules: use release.',
+      settingsPath
+    })).resolves.toEqual({
+      changed: true,
+      settingsPath
+    })
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
   })
 
   test('refuses to replace a malformed instruction setting', async () => {

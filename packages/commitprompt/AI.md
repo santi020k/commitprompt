@@ -56,6 +56,17 @@ the terminal questionnaire.
 `commit --yes` requires staged changes, rejects invalid messages, and then calls
 Git normally. Git hooks remain active. Never use `--no-verify` to bypass them.
 
+## Repository setup assets
+
+`commitprompt setup project` installs guarded agent instructions, reusable
+skills, and the enforcing `commit-msg` hook. `commitprompt setup editors`
+creates tracked Zed and VS Code instructions using the repository's configured
+types and scopes. Both commands support `--dry-run`, `--check`, `--json`, and
+`--cwd <path>` for automation and drift detection.
+
+The published package also includes reusable templates for `AGENTS.md`, GitHub
+Copilot instructions, and `SKILL.md` under `templates/`.
+
 ## Input contract
 
 `format` and `commit` accept one JSON object from standard input. Every field is

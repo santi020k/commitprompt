@@ -1,0 +1,25 @@
+{
+  // Workbench preferences exported from VS Code.
+  "workbench.colorTheme": "Default Dark Modern",
+  "editor.codeActionsOnSave": {
+    // Run the configured linter without changing other save actions.
+    "source.fixAll.eslint": "explicit",
+  },
+  "files.exclude": {
+    "**/.astro": true,
+    "**/.turbo": true,
+  },
+  "files.associations": {
+    "*.mdx": "markdown",
+  },
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    // Keep team-authored guidance ahead of generated guidance.
+    {
+      "text": "Mention issue references when they are relevant.",
+    },
+    {
+      "file": "./commit-guidance.md",
+    },
+  ],
+  "window.titleSeparator": " — ",
+}

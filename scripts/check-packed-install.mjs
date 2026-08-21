@@ -1,12 +1,18 @@
-import { execFileSync, spawn } from 'node:child_process'
 import {
+  execFileSync,
+  spawn,
+  spawnSync
+} from 'node:child_process'
+import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  unlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { isAbsolute, join, resolve } from 'node:path'
+import { delimiter, isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
 
 import {
@@ -37,43 +43,286 @@ const executePnpmSync = (arguments_, options) => {
   return executeBinarySync(invocation.command, invocation.arguments_, options)
 }
 
-const packOutput = executePnpmSync(
-  ['pack', '--json', '--pack-destination', temporaryDirectory],
-  {
-    cwd: packageDirectory,
-    encoding: 'utf8'
+const resolveWindowsCommand = command => {
+  if (process.platform !== 'win32') return command
+
+  const resolvedCommands = (process.env.Path ?? process.env.PATH ?? '')
+    .split(delimiter)
+    .map(directory => join(directory, `${command}.cmd`))
+    .filter(candidate => existsSync(candidate))
+
+  if (resolvedCommands.length === 0) {
+    throw new Error(`Could not resolve the ${command} command on Windows.`)
   }
+
+  return resolvedCommands[0]
+}
+
+const cleanPackageManagerEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => !/^npm_(?:config|package)_/iu.test(key)
+  )
 )
 
-const packResult = JSON.parse(packOutput)
+const installPackage = packageManager => {
+  const packageInvocation = packageManager.name === 'pnpm' ?
+    getPnpmInvocation(packageManager.args) :
+    {
+      arguments_: packageManager.args,
+      command: packageManager.command
+    }
 
-const tarballName = Array.isArray(packResult)
-  ? packResult[0]?.filename
-  : packResult.filename
+  const invocation = getBinaryInvocation(
+    packageInvocation.command, packageInvocation.arguments_
+  )
 
-if (!tarballName) throw new Error('pnpm pack did not return a tarball filename.')
+  const install = spawnSync(invocation.command, invocation.arguments_, {
+    cwd: packageManager.consumerDirectory,
+    encoding: 'utf8',
+    env: packageManager.name === 'pnpm' ?
+      process.env :
+      cleanPackageManagerEnvironment,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments
+  })
 
-const tarballPath = isAbsolute(tarballName)
-  ? tarballName
-  : join(temporaryDirectory, tarballName)
+  const output = `${install.stdout}${install.stderr}`
+
+  process.stdout.write(output)
+
+  if (install.error !== undefined) throw install.error
+
+  if (install.status !== 0) {
+    throw new Error(
+      `${packageManager.name} installation exited with ` +
+      `${String(install.status)}.`
+    )
+  }
+
+  if (/\b(?:warn|warning)\b/iu.test(output)) {
+    throw new Error(
+      `${packageManager.name} installation reported a warning:\n${output}`
+    )
+  }
+}
+
+const createLocalPackageSpecifier = () => {
+  const packOutput = executePnpmSync(
+    ['pack', '--json', '--pack-destination', temporaryDirectory],
+    {
+      cwd: packageDirectory,
+      encoding: 'utf8'
+    }
+  )
+
+  const packResult = JSON.parse(packOutput)
+
+  const tarballName = Array.isArray(packResult) ?
+    packResult[0]?.filename :
+    packResult.filename
+
+  if (!tarballName) {
+    throw new Error('pnpm pack did not return a tarball filename.')
+  }
+
+  return isAbsolute(tarballName) ?
+    tarballName :
+    join(temporaryDirectory, tarballName)
+}
+
+const packageSpecifier = process.env.COMMITPROMPT_PACKAGE_SPEC ??
+  createLocalPackageSpecifier()
 
 const packageManagers = [
   {
-    args: ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarballPath],
-    command: 'npm',
+    args: [
+      'install',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      packageSpecifier
+    ],
+    command: resolveWindowsCommand('npm'),
     name: 'npm'
   },
   {
-    args: ['add', '--ignore-scripts', tarballPath],
+    args: ['add', '--ignore-scripts', packageSpecifier],
     command: 'pnpm',
     name: 'pnpm'
   },
   {
-    args: ['add', '--ignore-scripts', '--non-interactive', tarballPath],
-    command: 'yarn',
+    args: ['add', '--non-interactive', packageSpecifier],
+    command: resolveWindowsCommand('yarn'),
     name: 'Yarn'
   }
 ]
+
+const verifyInstalledCommands = (binary, consumerDirectory, name) => {
+  const structuredInput = JSON.stringify({
+    body: '',
+    breaking: '',
+    issues: '',
+    scope: 'cli',
+    subject: 'verify automation',
+    type: 'feat'
+  })
+
+  const formatted = JSON.parse(executeBinarySync(
+    binary,
+    ['format', '--json'],
+    {
+      cwd: consumerDirectory,
+      encoding: 'utf8',
+      input: structuredInput
+    }
+  ))
+
+  if (formatted.message !== 'feat(cli): verify automation') {
+    throw new Error(`${name} returned unexpected structured output.`)
+  }
+
+  const instructions = JSON.parse(executeBinarySync(
+    binary,
+    ['instructions', '--json'],
+    {
+      cwd: consumerDirectory,
+      encoding: 'utf8'
+    }
+  ))
+
+  if (!instructions.instructions.includes('Use Conventional Commits')) {
+    throw new Error(`${name} returned unexpected generation instructions.`)
+  }
+
+  const validation = JSON.parse(executeBinarySync(
+    binary,
+    ['validate', '--json'],
+    {
+      cwd: consumerDirectory,
+      encoding: 'utf8',
+      input: 'feat: verify installed validation'
+    }
+  ))
+
+  if (validation.valid !== true) {
+    throw new Error(`${name} rejected a valid installed message.`)
+  }
+
+  const projectPreview = JSON.parse(executeBinarySync(
+    binary,
+    ['setup', 'project', '--dry-run', '--json'],
+    {
+      cwd: consumerDirectory,
+      encoding: 'utf8'
+    }
+  ))
+
+  if (projectPreview.drift !== true || projectPreview.changed !== false) {
+    throw new Error(`${name} returned an unexpected project setup preview.`)
+  }
+}
+
+const verifyInstalledMetadata = (metadata, name) => {
+  if (metadata.name !== '@santi020k/commitprompt') {
+    throw new Error(`${name} installed unexpected package metadata.`)
+  }
+
+  if (metadata.dependencies?.['@commitlint/load'] !== undefined) {
+    throw new Error(
+      `${name} installed the TypeScript-dependent Commitlint loader.`
+    )
+  }
+
+  if (metadata.dependencies?.['@commitlint/lint'] !== undefined) {
+    throw new Error(`${name} installed the unbundled Commitlint lint engine.`)
+  }
+
+  if (
+    metadata.dependencies?.typescript !== undefined ||
+    metadata.optionalDependencies?.typescript !== undefined
+  ) {
+    throw new Error(
+      `${name} installed TypeScript in the runtime dependency surface.`
+    )
+  }
+}
+
+const verifyNoStaleArtifacts = (installedPackageDirectory, name) => {
+  for (const artifact of [
+    'dist/src/package-manager.d.ts',
+    'dist/src/package-manager.d.ts.map',
+    'dist/src/package-manager.js',
+    'dist/src/package-manager.js.map'
+  ]) {
+    if (existsSync(join(installedPackageDirectory, artifact))) {
+      throw new Error(`${name} installed stale artifact ${artifact}.`)
+    }
+  }
+}
+
+const verifyNativeTypeScriptConfiguration = (
+  binary,
+  consumerDirectory,
+  name
+) => {
+  for (const dependencyPath of [
+    'node_modules/typescript',
+    'node_modules/@types/node'
+  ]) {
+    if (existsSync(join(consumerDirectory, dependencyPath))) {
+      throw new Error(
+        `${name} installed unexpected runtime tooling at ${dependencyPath}.`
+      )
+    }
+  }
+
+  const configurationPath = join(
+    consumerDirectory, 'commitlint.config.ts'
+  )
+
+  writeFileSync(configurationPath, `const types: string[] = ['fix', 'release']
+
+export default {
+  rules: {
+    'type-enum': [2, 'always', types]
+  }
+}
+`)
+
+  try {
+    const configuredTypes = JSON.parse(executeBinarySync(
+      binary,
+      ['types', '--json'],
+      {
+        cwd: consumerDirectory,
+        encoding: 'utf8'
+      }
+    ))
+
+    if (configuredTypes.types.map(type => type.value).join(',') !== 'fix,release') {
+      throw new Error(
+        `${name} did not load its native TypeScript Commitlint configuration.`
+      )
+    }
+
+    const validation = JSON.parse(executeBinarySync(
+      binary,
+      ['validate', '--json'],
+      {
+        cwd: consumerDirectory,
+        encoding: 'utf8',
+        input: 'release: verify native TypeScript configuration'
+      }
+    ))
+
+    if (validation.valid !== true) {
+      throw new Error(
+        `${name} did not enforce its native TypeScript configuration.`
+      )
+    }
+  } finally {
+    unlinkSync(configurationPath)
+  }
+}
 
 const verifyConsumer = (consumerDirectory, name) => {
   const installedPackageDirectory = join(
@@ -86,8 +335,21 @@ const verifyConsumer = (consumerDirectory, name) => {
     'utf8'
   ))
 
-  if (installedMetadata.name !== '@santi020k/commitprompt') {
-    throw new Error(`${name} installed unexpected package metadata.`)
+  verifyInstalledMetadata(installedMetadata, name)
+
+  verifyNoStaleArtifacts(installedPackageDirectory, name)
+
+  const thirdPartyLicenses = readFileSync(
+    join(installedPackageDirectory, 'dist/THIRD_PARTY_LICENSES.txt'),
+    'utf8'
+  )
+
+  for (const bundledDependency of ['@commitlint/lint@', 'es-toolkit@']) {
+    if (!thirdPartyLicenses.includes(bundledDependency)) {
+      throw new Error(
+        `${name} omitted the ${bundledDependency} bundled license notice.`
+      )
+    }
   }
 
   readFileSync(
@@ -107,6 +369,14 @@ const verifyConsumer = (consumerDirectory, name) => {
 
   if (!agentGuide.includes('commitprompt types --json')) {
     throw new Error(`${name} did not install the AI agent guide.`)
+  }
+
+  for (const templatePath of [
+    'templates/AGENTS.md',
+    'templates/copilot-instructions.md',
+    'templates/skills/commitprompt/SKILL.md'
+  ]) {
+    readFileSync(join(installedPackageDirectory, templatePath), 'utf8')
   }
 
   const binary = join(
@@ -149,26 +419,9 @@ const verifyConsumer = (consumerDirectory, name) => {
     }
   )
 
-  const structuredInput = JSON.stringify({
-    body: '',
-    breaking: '',
-    issues: '',
-    scope: 'cli',
-    subject: 'verify automation',
-    type: 'feat'
-  })
+  verifyInstalledCommands(binary, consumerDirectory, name)
 
-  const formatOutput = executeBinarySync(binary, ['format', '--json'], {
-    cwd: consumerDirectory,
-    encoding: 'utf8',
-    input: structuredInput
-  })
-
-  const formatted = JSON.parse(formatOutput)
-
-  if (formatted.message !== 'feat(cli): verify automation') {
-    throw new Error(`${name} returned unexpected structured output.`)
-  }
+  verifyNativeTypeScriptConfiguration(binary, consumerDirectory, name)
 
   return binary
 }
@@ -183,23 +436,17 @@ for (const packageManager of packageManagers) {
 
   writeFileSync(
     join(consumerDirectory, 'package.json'),
-    JSON.stringify({ name: `commitprompt-${packageManager.name.toLowerCase()}-test`, private: true })
+    JSON.stringify({
+      name: `commitprompt-${packageManager.name.toLowerCase()}-test`,
+      private: true,
+      type: 'module'
+    })
   )
 
-  const installOptions = {
-    cwd: consumerDirectory,
-    stdio: 'inherit'
-  }
-
-  if (packageManager.name === 'pnpm') {
-    executePnpmSync(packageManager.args, installOptions)
-  } else {
-    executeBinarySync(
-      packageManager.command,
-      packageManager.args,
-      installOptions
-    )
-  }
+  installPackage({
+    ...packageManager,
+    consumerDirectory
+  })
 
   const binary = verifyConsumer(consumerDirectory, packageManager.name)
 
@@ -425,6 +672,120 @@ const configuredScopes = JSON.parse(executeBinarySync(
 
 if (configuredScopes.scopes.join(',') !== 'cli,docs') {
   throw new Error('Installed CLI returned unexpected repository scopes.')
+}
+
+mkdirSync(join(integrationConsumer, '.vscode'))
+
+writeFileSync(
+  join(integrationConsumer, '.vscode', 'settings.json'),
+  `{
+  // Preserve exported VS Code preferences.
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+  },
+}
+`
+)
+
+mkdirSync(join(integrationConsumer, '.zed'))
+
+writeFileSync(
+  join(integrationConsumer, '.zed', 'settings.json'),
+  `{
+  // Preserve exported Zed preferences.
+  "agent": {
+    "default_model": {
+      "provider": "openai",
+    },
+  },
+}
+`
+)
+
+const editorSetup = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['setup', 'editors', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (editorSetup.changed !== true || editorSetup.drift !== true) {
+  throw new Error('Installed CLI did not configure workspace editors.')
+}
+
+const editorCheck = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['setup', 'editors', '--check', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (editorCheck.drift !== false) {
+  throw new Error('Installed workspace editor setup was not idempotent.')
+}
+
+const projectSetup = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['setup', 'project', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (projectSetup.changed !== true) {
+  throw new Error('Installed CLI did not configure the consumer repository.')
+}
+
+const projectCheck = JSON.parse(executeBinarySync(
+  integrationBinary,
+  ['setup', 'project', '--check', '--json'],
+  {
+    cwd: integrationConsumer,
+    encoding: 'utf8'
+  }
+))
+
+if (projectCheck.drift !== false) {
+  throw new Error('Installed project setup was not idempotent.')
+}
+
+const validMessagePath = join(temporaryDirectory, 'valid-message.txt')
+const invalidMessagePath = join(temporaryDirectory, 'invalid-message.txt')
+
+writeFileSync(validMessagePath, 'fix: verify generated hook\n')
+
+writeFileSync(invalidMessagePath, 'feat: reject configured type\n')
+
+const hookPath = join(integrationConsumer, '.husky', 'commit-msg')
+
+const hookEnvironment = {
+  ...process.env,
+  PATH: `${join(integrationConsumer, 'node_modules/.bin')}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`
+}
+
+execFileSync('sh', [hookPath, validMessagePath], {
+  cwd: integrationConsumer,
+  env: hookEnvironment,
+  stdio: 'inherit'
+})
+
+const invalidHook = spawnSync('sh', [hookPath, invalidMessagePath], {
+  cwd: integrationConsumer,
+  encoding: 'utf8',
+  env: hookEnvironment
+})
+
+if (invalidHook.status === 0) {
+  throw new Error('Generated consumer hook accepted an invalid message.')
+}
+
+if (!`${invalidHook.stdout}\n${invalidHook.stderr}`.includes('Commit blocked')) {
+  throw new Error('Generated consumer hook omitted blocked-commit diagnostics.')
 }
 
 process.stdout.write(

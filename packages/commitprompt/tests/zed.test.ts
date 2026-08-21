@@ -168,6 +168,58 @@ describe('setupZed', () => {
     })
   })
 
+  test('replaces guarded repository instructions and preserves user text', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const instructionKey = 'commit_message_instructions'
+
+    await writeFile(
+      settingsPath, JSON.stringify({
+        agent: {
+          [instructionKey]: [
+            'Mention issue references.',
+            '[commitprompt:start]',
+            'Commitprompt repository rules: use feat.',
+            '[commitprompt:end]'
+          ].join('\n')
+        }
+      }, undefined, 2), 'utf8'
+    )
+
+    await setupZed({
+      instructions: [
+        '[commitprompt:start]',
+        'Commitprompt repository rules: use release.',
+        '[commitprompt:end]'
+      ].join('\n'),
+      settingsPath
+    })
+
+    const source = await readFile(settingsPath, 'utf8')
+
+    expect(source).toContain('Mention issue references.')
+    expect(source).not.toContain('use feat.')
+    expect(source).toContain('use release.')
+  })
+
+  test('reports workspace drift without writing in check mode', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const source = '{\n  // Keep this.\n  "ui_font_size": 16,\n}\n'
+
+    await writeFile(settingsPath, source, 'utf8')
+
+    await expect(setupZed({
+      check: true,
+      instructions: 'Commitprompt repository rules: use release.',
+      settingsPath
+    })).resolves.toEqual({
+      changed: true,
+      settingsPath
+    })
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+  })
+
   test('refuses to overwrite invalid settings', async () => {
     const directory = await createTemporaryDirectory()
     const settingsPath = join(directory, 'settings.json')
