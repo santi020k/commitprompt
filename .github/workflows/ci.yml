@@ -85,7 +85,9 @@ jobs:
           github.event_name == 'pull_request' &&
           !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
           !startsWith(github.head_ref, 'changeset-release/')
-        run: pnpm changeset status --since=origin/main
+        run: |
+          pnpm changeset status --since=origin/main --output=/tmp/changeset-status.json
+          jq -e '.releases | length > 0' /tmp/changeset-status.json >/dev/null
       - name: Run package and documentation checks
         run: pnpm exec turbo run build typecheck lint test:coverage check:exports
       - name: Run repository checks
