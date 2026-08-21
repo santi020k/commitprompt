@@ -15,6 +15,11 @@ jobs:
     name: Verify Infisical OIDC
     runs-on: ubuntu-latest
     steps:
+      - name: Inspect GitHub OIDC claims
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: https://github.com/santi020k
+
       - name: Authenticate and fetch development secrets
         uses: Infisical/secrets-action@v1.0.16
         with:
