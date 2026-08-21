@@ -20,4 +20,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      - dependency-name: changesets/action
+        versions: [">=2.0.0"]
     open-pull-requests-limit: 2

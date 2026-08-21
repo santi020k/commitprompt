@@ -35,18 +35,18 @@ catalog:
   "@santi020k/lumen-astro": ^1.0.0
   "@types/node": ^26.1.2
   "@vitest/coverage-v8": ^4.1.10
-  astro: ^7.1.4
+  astro: ^7.2.3
   cosmiconfig: ^9.0.2
   cspell: ^10.0.1
   esbuild: ^0.28.1
   eslint: ^10.8.0
   husky: ^9.1.7
   jsonc-parser: ^3.3.1
-  knip: ^6.29.0
+  knip: ^6.32.2
   lint-staged: ^17.2.0
   publint: ^0.3.22
   sharp: ^0.35.3
-  turbo: ^2.10.7
+  turbo: ^2.10.11
   typescript: ^6.0.3
   vitest: ^4.1.10
   wrangler: ^4.114.0
