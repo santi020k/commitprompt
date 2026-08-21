@@ -137,7 +137,9 @@ jobs:
     name: Deploy documentation
     needs: [changes, full, compatibility, windows]
     if: >-
-      always() && github.event_name == 'push' &&
+      always() &&
+      (github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) &&
       needs.changes.outputs.docs == 'true' &&
       needs.full.result == 'success' &&
       (needs.compatibility.result == 'success' || needs.compatibility.result == 'skipped') &&
