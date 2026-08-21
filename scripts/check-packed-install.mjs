@@ -12,7 +12,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { isAbsolute, join, resolve } from 'node:path'
+import { delimiter, isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
 
 import {
@@ -41,6 +41,21 @@ const executePnpmSync = (arguments_, options) => {
   const invocation = getPnpmInvocation(arguments_)
 
   return executeBinarySync(invocation.command, invocation.arguments_, options)
+}
+
+const resolveWindowsCommand = command => {
+  if (process.platform !== 'win32') return command
+
+  const resolvedCommands = (process.env.Path ?? process.env.PATH ?? '')
+    .split(delimiter)
+    .map(directory => join(directory, `${command}.cmd`))
+    .filter(candidate => existsSync(candidate))
+
+  if (resolvedCommands.length === 0) {
+    throw new Error(`Could not resolve the ${command} command on Windows.`)
+  }
+
+  return resolvedCommands[0]
 }
 
 const cleanPackageManagerEnvironment = Object.fromEntries(
@@ -126,7 +141,7 @@ const packageManagers = [
       '--no-fund',
       packageSpecifier
     ],
-    command: 'npm',
+    command: resolveWindowsCommand('npm'),
     name: 'npm'
   },
   {
@@ -136,7 +151,7 @@ const packageManagers = [
   },
   {
     args: ['add', '--non-interactive', packageSpecifier],
-    command: 'yarn',
+    command: resolveWindowsCommand('yarn'),
     name: 'Yarn'
   }
 ]
