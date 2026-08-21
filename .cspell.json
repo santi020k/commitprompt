@@ -4,7 +4,6 @@
   "useGitignore": true,
   "ignorePaths": ["apps/docs/public/**/*.svg", "pnpm-lock.yaml"],
   "words": [
-    "amannn",
     "astrojs",
     "Autobuild",
     "autorelease",
@@ -23,6 +22,7 @@
     "publint",
     "santi",
     "Turborepo",
+    "undici",
     "unrs",
     "vitest",
     "workerd",

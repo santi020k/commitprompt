@@ -23,6 +23,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
     "publish-packages": "pnpm run validate && changeset publish && pnpm run verify:published",
+    "publish-packages:ci": "pnpm --filter commitprompt-docs exec playwright install --with-deps chromium && pnpm run publish-packages",
     "release": "pnpm run publish-packages",
     "verify:published": "node scripts/verify-published-package.mjs",
     "docs:dev": "pnpm --filter commitprompt-docs dev",

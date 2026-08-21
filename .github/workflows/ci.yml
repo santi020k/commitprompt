@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -14,81 +16,206 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and validate
+  changes:
+    name: Detect affected areas
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [22.x, 24.x]
+    outputs:
+      docs: ${{ steps.paths.outputs.docs }}
+      package: ${{ steps.paths.outputs.package }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+        with:
+          fetch-depth: 2
+      - id: paths
+        name: Classify changed paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"
+            echo "package=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            BASE_SHA="$(git rev-parse HEAD^)"
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git diff --name-only "$BASE_SHA" HEAD > /tmp/changed-files
+          if grep -Eq '^(apps/docs/|packages/|\.github/workflows/ci\.yml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|turbo\.json$|tsconfig\.base\.json$|wrangler\.jsonc$)' /tmp/changed-files; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs=false" >> "$GITHUB_OUTPUT"
+          fi
+          if grep -Eq '^(packages/commitprompt/|scripts/|\.github/workflows/ci\.yml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|turbo\.json$|tsconfig\.base\.json$|eslint\.config\.)' /tmp/changed-files; then
+            echo "package=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "package=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  full:
+    name: Full validation (22.x)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
-
-      - name: Cache Turborepo
-        uses: actions/cache@v5
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ matrix.node-version }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-${{ matrix.node-version }}-
-            ${{ runner.os }}-turbo-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install accessibility test browser
-        run: pnpm --filter commitprompt-docs exec playwright install --with-deps chromium
-
-      - name: Run package checks
-        run: pnpm exec turbo run build typecheck lint test:coverage check:exports
-
-      - name: Run repository checks
-        if: matrix.node-version == '22.x'
-        run: pnpm exec turbo run //#lint:repo //#lint:spell //#lint:knip
-
-      - name: Check packed installation
-        if: matrix.node-version == '22.x'
-        run: pnpm run check:packed-install
-
-  windows-smoke:
-    name: Windows smoke
-    runs-on: windows-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.0.0
         with:
           node-version: 22.x
           cache: pnpm
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
+      - name: Audit dependencies
+        run: pnpm audit --audit-level moderate
       - name: Install accessibility test browser
-        run: pnpm --filter commitprompt-docs exec playwright install chromium
-
-      - name: Build and typecheck
-        run: pnpm exec turbo run build typecheck
-
-      - name: Test
-        run: pnpm exec turbo run test --concurrency=1
-
+        run: pnpm --filter commitprompt-docs exec playwright install --with-deps chromium
+      - name: Validate pull request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
+      - name: Require a changeset
+        if: >-
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
+          !startsWith(github.head_ref, 'changeset-release/')
+        run: pnpm changeset status --since=origin/main
+      - name: Run package and documentation checks
+        run: pnpm exec turbo run build typecheck lint test:coverage check:exports
+      - name: Run repository checks
+        run: pnpm exec turbo run //#lint:repo //#lint:spell //#lint:knip
       - name: Check packed installation
         run: pnpm run check:packed-install
+
+  compatibility:
+    name: Package compatibility (24.x)
+    needs: changes
+    if: needs.changes.outputs.package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.0.0
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build, typecheck, and test the package
+        run: pnpm exec turbo run build typecheck test --filter=@santi020k/commitprompt
+      - name: Check packed installation
+        run: pnpm run check:packed-install
+
+  windows:
+    name: Windows package smoke
+    needs: changes
+    if: needs.changes.outputs.package == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.0.0
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build, typecheck, and test the package
+        run: pnpm exec turbo run build typecheck test --filter=@santi020k/commitprompt --concurrency=1
+      - name: Check packed installation
+        run: pnpm run check:packed-install
+
+  deploy-docs:
+    name: Deploy documentation
+    needs: [changes, full, compatibility, windows]
+    if: >-
+      always() && github.event_name == 'push' &&
+      needs.changes.outputs.docs == 'true' &&
+      needs.full.result == 'success' &&
+      (needs.compatibility.result == 'success' || needs.compatibility.result == 'skipped') &&
+      (needs.windows.result == 'success' || needs.windows.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: docs-production
+      url: https://commitprompt.santi020k.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.0.0
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Fetch production secrets
+        uses: Infisical/secrets-action@77ab1f4ccd183a543cb5b42435fbd181189f4995 # v1.0.16
+        with:
+          method: oidc
+          identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
+          project-slug: ${{ vars.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          secret-path: /
+          recursive: true
+      - name: Build and deploy documentation
+        env:
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'commitprompt' }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          pnpm run docs:build
+          pnpm exec wrangler pages deploy apps/docs/dist \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch="$GITHUB_REF_NAME" \
+            --commit-hash="$GITHUB_SHA" \
+            --commit-dirty=true
+
+  gate:
+    name: Required checks
+    if: always()
+    needs: [changes, full, compatibility, windows, deploy-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify relevant jobs
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          FULL: ${{ needs.full.result }}
+          COMPATIBILITY: ${{ needs.compatibility.result }}
+          WINDOWS: ${{ needs.windows.result }}
+          DEPLOY: ${{ needs.deploy-docs.result }}
+        run: |
+          for result in "$CHANGES" "$FULL" "$COMPATIBILITY" "$WINDOWS" "$DEPLOY"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              exit 1
+            fi
+          done
+
+  report-dispatched-validation:
+    name: Report dispatched validation
+    if: github.event_name == 'workflow_dispatch'
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Report successful validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method POST
+          "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+          -f state=success
+          -f context='Required checks'
+          -f description='Dispatched release validation passed'
