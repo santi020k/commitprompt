@@ -25,7 +25,7 @@ catalog:
   "@commitlint/lint": ^21.2.0
   "@commitlint/types": ^21.2.0
   "@playwright/test": ^1.62.0
-  "@santi020k/eslint-config-astro": ^3.1.0
+  "@santi020k/eslint-config-astro": ^3.1.1
   "@santi020k/eslint-config-basic": ^3.2.0
   "@santi020k/eslint-config-extensions": ^3.1.0
   "@santi020k/eslint-config-formats": ^3.1.0
