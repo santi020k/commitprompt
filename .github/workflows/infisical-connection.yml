@@ -16,9 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Inspect GitHub OIDC claims
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: https://github.com/santi020k
+        shell: bash
+        run: |
+          response=$(curl --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/santi020k")
+          token=$(jq --raw-output '.value' <<<"$response")
+          payload=${token#*.}
+          payload=${payload%%.*}
+          padding=$(( (4 - ${#payload} % 4) % 4 ))
+          payload="${payload}$(printf '=%.0s' $(seq 1 "$padding"))"
+          printf '%s' "$payload" | tr '_-' '/+' | base64 --decode 2>/dev/null |
+            jq '{sub, aud, repository, repository_owner, event_name, ref}'
 
       - name: Authenticate and fetch development secrets
         uses: Infisical/secrets-action@v1.0.16
