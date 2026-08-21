@@ -9,17 +9,18 @@ import {
 
 describe('published instruction templates', () => {
   test('stay synchronized with the canonical generated content', async () => {
-    const agents = await readFile(
+    const normalizeNewlines = (value: string) => value.replace(/\r\n/g, '\n')
+    const agents = normalizeNewlines(await readFile(
       new URL('../templates/AGENTS.md', import.meta.url), 'utf8'
-    )
-    const copilot = await readFile(
+    ))
+    const copilot = normalizeNewlines(await readFile(
       new URL('../templates/copilot-instructions.md', import.meta.url), 'utf8'
-    )
-    const skill = await readFile(
+    ))
+    const skill = normalizeNewlines(await readFile(
       new URL(
         '../templates/skills/commitprompt/SKILL.md', import.meta.url
       ), 'utf8'
-    )
+    ))
 
     expect(agents).toBe(`${PROJECT_INSTRUCTION_SECTION}\n`)
     expect(copilot).toBe(`${PROJECT_INSTRUCTION_SECTION}\n`)
