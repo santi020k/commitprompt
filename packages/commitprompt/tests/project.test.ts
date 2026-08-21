@@ -180,6 +180,33 @@ describe('setupProject', () => {
     ])).resolves.toEqual(filesAfterFirstRun)
   })
 
+  test('preserves commands surrounding an existing Commitlint invocation', async () => {
+    const directory = await createProject({ name: 'consumer' })
+    const hookPath = join(directory, '.husky', 'commit-msg')
+
+    await mkdir(join(directory, '.husky'))
+    await writeFile(
+      hookPath, [
+        'node scripts/before.mjs && pnpm exec commitlint --edit "$1" && node scripts/after.mjs',
+        'npx commitlint --edit \'$1\'',
+        'yarn commitlint --edit $1',
+        'commitlint --edit "$1"'
+      ].join('\n'), 'utf8'
+    )
+
+    await setupProject({
+      actions: ['husky-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    const hook = await readFile(hookPath, 'utf8')
+
+    expect(hook).toContain('node scripts/before.mjs && true && node scripts/after.mjs')
+    expect(hook).not.toContain('commitlint')
+    expect(hook).toContain('commitprompt validate --input "$1"')
+  })
+
   test('reports pnpm drift without writing during a dry run', async () => {
     const directory = await createProject({
       name: 'consumer',
@@ -320,8 +347,57 @@ catalog:
       scripts: Record<string, string>
     }
 
-    expect(manifest.devDependencies.husky).toBe('^9.1.7')
+    expect(manifest.devDependencies.husky).toBe('^8.0.0')
     expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky')
+  })
+
+  test('preserves a workspace catalog specifier for Husky', async () => {
+    const directory = await createProject({
+      devDependencies: { husky: 'catalog:' },
+      name: 'consumer',
+      scripts: { prepare: 'husky' }
+    })
+
+    await setupProject({
+      actions: ['husky-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    const manifest = JSON.parse(
+      await readFile(join(directory, 'package.json'), 'utf8')
+    ) as { devDependencies: Record<string, string> }
+
+    expect(manifest.devDependencies.husky).toBe('catalog:')
+  })
+
+  test('appends Husky to an unrelated prepare script', async () => {
+    const directory = await createProject({
+      name: 'consumer',
+      scripts: { prepare: 'node scripts/prepare.mjs' }
+    })
+
+    await setupProject({
+      actions: ['husky-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    const manifest = JSON.parse(
+      await readFile(join(directory, 'package.json'), 'utf8')
+    ) as { scripts: Record<string, string> }
+
+    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky')
+  })
+
+  test('rejects an empty project action selection', async () => {
+    const directory = await createProject({ name: 'consumer' })
+
+    await expect(setupProject({
+      actions: [],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })).rejects.toThrow('Project setup requires at least one action.')
   })
 
   test('uses check mode to detect and clear repository drift', async () => {

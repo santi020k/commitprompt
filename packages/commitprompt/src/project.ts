@@ -284,13 +284,13 @@ const replaceGuardedSection = (
   return `${source.trimEnd()}\n\n${section}\n`
 }
 
-const isKnownCommitlintHook = (line: string): boolean => line.includes('commitlint') && line.includes('--edit') && line.includes('$1')
+const KNOWN_COMMITLINT_INVOCATION =
+  /(?:(?:pnpm\s+exec|npx|yarn)\s+)?commitlint\s+--edit\s+(?:"\$1"|'\$1'|\$1)/gu
 
 const updateHook = (source: string | undefined): string => {
-  const withoutKnownValidator = source
-    ?.split('\n')
-    .filter(line => !isKnownCommitlintHook(line))
-    .join('\n')
+  // Replace only the obsolete validator command. Using `true` preserves any
+  // surrounding `&&`, `if`, or multiline shell structure in an existing hook.
+  const withoutKnownValidator = source?.replace(KNOWN_COMMITLINT_INVOCATION, 'true')
 
   return replaceGuardedSection(
     withoutKnownValidator, HOOK_SECTION, HOOK_START_MARKER, HOOK_END_MARKER
@@ -464,7 +464,7 @@ const configureManifest = (
 
   if (selectedActions.has('husky-hook')) {
     const huskyDependencyChanged =
-      setDependency(manifest, 'husky', HUSKY_VERSION, true)
+      setDependency(manifest, 'husky', HUSKY_VERSION)
 
     const prepareScriptChanged = ensurePrepareScript(manifest)
 
