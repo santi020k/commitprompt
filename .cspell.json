@@ -2,7 +2,11 @@
   "version": "0.2",
   "language": "en",
   "useGitignore": true,
-  "ignorePaths": ["apps/docs/public/**/*.svg", "pnpm-lock.yaml"],
+  "ignorePaths": [
+    ".eslint-config-snapshot.json",
+    "apps/docs/public/**/*.svg",
+    "pnpm-lock.yaml"
+  ],
   "words": [
     "amannn",
     "astrojs",
