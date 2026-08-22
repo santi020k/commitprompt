@@ -77,7 +77,7 @@ const projectSetupActions = new Set<ProjectSetupActionId>([
   'commit-script',
   'copilot-instructions',
   'dependency',
-  'husky-hook'
+  'quality-hook'
 ])
 
 interface AutomationArguments {

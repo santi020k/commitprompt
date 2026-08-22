@@ -6,6 +6,19 @@
 
 Write the commit. Not the syntax.
 
+[Documentation](https://commitprompt.santi020k.com) ·
+[npm](https://www.npmjs.com/package/@santi020k/commitprompt) ·
+[Package guide](packages/commitprompt/README.md) ·
+[Releases](https://github.com/santi020k/commitprompt/releases) ·
+[Issues](https://github.com/santi020k/commitprompt/issues) ·
+[Contributing](CONTRIBUTING.md)
+
+[![CI](https://github.com/santi020k/commitprompt/actions/workflows/ci.yml/badge.svg)](https://github.com/santi020k/commitprompt/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml/badge.svg)](https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml)
+[![npm version](https://img.shields.io/npm/v/@santi020k/commitprompt.svg)](https://www.npmjs.com/package/@santi020k/commitprompt)
+[![npm downloads](https://img.shields.io/npm/dm/@santi020k/commitprompt.svg)](https://www.npmjs.com/package/@santi020k/commitprompt)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Commitprompt is a focused, package-manager-neutral prompt for Conventional
 Commits. It checks staged changes, guides the author through the message,
 validates with included Commitlint rules or the repository's own configuration,
@@ -51,8 +64,10 @@ project.
 
 ## Repository
 
-- `packages/commitprompt` — public CLI and programmatic API
-- `apps/docs` — Astro documentation website built with Lumen
+| Workspace | Purpose | Destination |
+| --- | --- | --- |
+| [`packages/commitprompt`](packages/commitprompt) | Public CLI and programmatic API | [npm](https://www.npmjs.com/package/@santi020k/commitprompt) · [Package guide](packages/commitprompt/README.md) |
+| [`apps/docs`](apps/docs) | Astro documentation website built with Lumen | [Documentation](https://commitprompt.santi020k.com) |
 
 ## Development
 

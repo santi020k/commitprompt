@@ -1,0 +1,37 @@
+{
+  "cacheKey": "preset-v1",
+  "entries": {
+    "og/pages/index.webp": {
+      "baseDirectory": "public",
+      "digest": "a09029fcd7136f6b11792448cf2e0d949fe36315a9d79bb5aee7effde2fe9ad2",
+      "fingerprint": "b97b5b07b65c5536fccdc61d000a37383ba92e694ee6e292fd331c88561bc65b",
+      "output": "og/pages/index.webp"
+    },
+    "og/pages/docs.webp": {
+      "baseDirectory": "public",
+      "digest": "353e01fca7e3fb1b0107d55534b3cb018a94aa6301ef51e54e27ef27e84ff825",
+      "fingerprint": "230eaf12553e4ca016232af1452cd68d34f6688fcbd0907608b63586c6aad627",
+      "output": "og/pages/docs.webp"
+    },
+    "og/pages/404.webp": {
+      "baseDirectory": "public",
+      "digest": "3eaae18336118b38e41da4edea3a06fce3aa489ebf2e5a59880ad598f861734b",
+      "fingerprint": "f7408e22ede6fc745a19ba6a1cc2ae6eee4a542539b5bfda650951104e38aa48",
+      "output": "og/pages/404.webp"
+    },
+    "og.png": {
+      "baseDirectory": "public",
+      "digest": "e3e946d7f6efb5f231e3abf60bbfa52359963a7be94fa5b4c808bc9dbbd2b8a2",
+      "fingerprint": "dcc1a909986677fd8397adb8f68382cfe244237282bdf28afc8ff9e19d4a4f7a",
+      "output": "og.png"
+    },
+    "og.svg": {
+      "baseDirectory": "public",
+      "digest": "29018b4e688f5d77dd8ef92a6554fd4aafdf2fbff1ab0197bfe3284c3559f07c",
+      "fingerprint": "478ee606d992a8624c53d930fe947a9a42f2e79554ff7c64be4993e2737b762c",
+      "output": "og.svg"
+    }
+  },
+  "generatorVersion": "0.4.0",
+  "version": 3
+}

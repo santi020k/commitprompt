@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -17,9 +16,6 @@ import { afterEach, describe, expect, test } from 'vitest'
 
 const binaryPath = resolve(
   import.meta.dirname, '../dist/bin/commitprompt.js'
-)
-const huskyPath = resolve(
-  import.meta.dirname, '../../../node_modules/.bin/husky'
 )
 const temporaryDirectories: string[] = []
 
@@ -224,59 +220,26 @@ describe('commitprompt executable', () => {
     }
   )
 
-  test.runIf(process.platform !== 'win32')(
-    'enforces valid and invalid messages through a real Husky hook', () => {
-      const directory = createRepository()
+  test('configures Commitprompt validation through quality.yml', () => {
+    const directory = createRepository()
 
-      writeFileSync(
-        join(directory, 'package.json'), `${JSON.stringify({ name: 'hook-consumer', private: true })}\n`
-      )
+    writeFileSync(
+      join(directory, 'package.json'), `${JSON.stringify({ name: 'hook-consumer', private: true })}\n`
+    )
 
-      const setupResult = runBinary([
-        'setup',
-        'project',
-        '--only',
-        'dependency,commit-script,husky-hook',
-        '--cwd',
-        directory
-      ])
+    const setupResult = runBinary([
+      'setup',
+      'project',
+      '--only',
+      'dependency,commit-script,quality-hook',
+      '--cwd',
+      directory
+    ])
 
-      expect(setupResult.status).toBe(0)
-
-      const huskyResult = spawnSync(huskyPath, [], {
-        cwd: directory,
-        encoding: 'utf8'
-      })
-
-      expect(huskyResult.status).toBe(0)
-
-      const binaryDirectory = join(directory, 'node_modules', '.bin')
-      const consumerBinary = join(binaryDirectory, 'commitprompt')
-
-      mkdirSync(binaryDirectory, { recursive: true })
-      symlinkSync(binaryPath, consumerBinary)
-      chmodSync(binaryPath, 0o755)
-
-      writeFileSync(join(directory, 'valid.txt'), 'valid\n')
-      expect(spawnSync('git', ['add', 'valid.txt'], { cwd: directory }).status)
-        .toBe(0)
-      expect(spawnSync(
-        'git', ['commit', '--message', 'feat: accept valid message'], { cwd: directory, encoding: 'utf8' }
-      ).status).toBe(0)
-
-      writeFileSync(join(directory, 'invalid.txt'), 'invalid\n')
-      expect(spawnSync('git', ['add', 'invalid.txt'], { cwd: directory }).status)
-        .toBe(0)
-
-      const invalidCommit = spawnSync(
-        'git', ['commit', '--message', 'invalid message'], { cwd: directory, encoding: 'utf8' }
-      )
-
-      expect(invalidCommit.status).not.toBe(0)
-      expect(`${invalidCommit.stdout}\n${invalidCommit.stderr}`)
-        .toContain('Commit blocked')
-    }, 15_000
-  )
+    expect(setupResult.status).toBe(0)
+    expect(readFileSync(join(directory, 'quality.yml'), 'utf8'))
+      .toContain('Validate commit message with Commitprompt')
+  })
 
   test('creates an explicitly confirmed automated commit', () => {
     const directory = createRepository()
