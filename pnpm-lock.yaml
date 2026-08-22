@@ -64,8 +64,8 @@ catalogs:
       specifier: ^3.1.0
       version: 3.1.0
     '@santi020k/lumen-astro':
-      specifier: ^1.2.0
-      version: 1.2.0
+      specifier: ^1.4.0
+      version: 1.4.0
     '@santi020k/og':
       specifier: ^0.4.0
       version: 0.4.0
@@ -208,7 +208,7 @@ importers:
         version: 3.7.3
       '@santi020k/lumen-astro':
         specifier: 'catalog:'
-        version: 1.2.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 1.4.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))
       astro:
         specifier: 'catalog:'
         version: 7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0)
@@ -3048,18 +3048,18 @@ packages:
     peerDependencies:
       eslint: ^10.0.0
 
-  '@santi020k/lumen-astro@1.2.0':
-    resolution: {integrity: sha512-/TyBM+BjEtNhKvyiy9N5SwzJjai9n5AiZ3Tj66B12kwHCPr4UmSvQz0sXL3g5HLRPr6Bl/OHl9asHYQ/vD9yZw==}
+  '@santi020k/lumen-astro@1.4.0':
+    resolution: {integrity: sha512-bZwHKpemGjSH5cLnc19ODTGwBXW7tWe6B1Y770xMXO76rYcZJUaMeCvgspTiBDHHnKyNGXhM3uRMemmX808K3Q==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       astro: '>=5'
 
-  '@santi020k/lumen-core@1.2.0':
-    resolution: {integrity: sha512-pl+Zrdi9FILVUp1xY5zlte6+I2DMek7Msb4NTJy4CdH/kAlIwzBiJFjUZ20/sSbGnXulDhRhi5Zd0FurrZlMDQ==}
+  '@santi020k/lumen-core@1.4.0':
+    resolution: {integrity: sha512-46s3CLyCa4LpERMnygExLAGF5Hhei5vjHT8tH1cC38DCedvklrCtOUq2rS/FdflEVvNrsAHjx1vPzugwgH8Heg==}
     engines: {node: '>=22.12.0'}
 
-  '@santi020k/lumen@1.2.0':
-    resolution: {integrity: sha512-wiIBdt3LTadShASWev6Wrj+36YpqqTJ9riuvonQ/6ac0sqnf+xV11vwTgWuXDxLXiWy7JAKoUYYbqPKRKJ1zVQ==}
+  '@santi020k/lumen@1.4.0':
+    resolution: {integrity: sha512-UQloTduJzrJft0MstvYR0ne24XVqKmq+rMHegyZvU6tVHKMrgHzidO1oVOGqqzDexjpd4Qcja0dW6TdnjDypAw==}
     engines: {node: '>=22.12.0'}
     hasBin: true
 
@@ -10377,20 +10377,20 @@ snapshots:
       - supports-color
     optional: true
 
-  '@santi020k/lumen-astro@1.2.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))':
+  '@santi020k/lumen-astro@1.4.0(astro@7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
-      '@santi020k/lumen': 1.2.0
-      '@santi020k/lumen-core': 1.2.0
+      '@santi020k/lumen': 1.4.0
+      '@santi020k/lumen-core': 1.4.0
       astro: 7.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0)
       uqr: 0.1.3
 
-  '@santi020k/lumen-core@1.2.0':
+  '@santi020k/lumen-core@1.4.0':
     dependencies:
       '@lucide/icons': 1.33.0
 
-  '@santi020k/lumen@1.2.0':
+  '@santi020k/lumen@1.4.0':
     dependencies:
-      '@santi020k/lumen-core': 1.2.0
+      '@santi020k/lumen-core': 1.4.0
       semver: 7.8.5
 
   '@santi020k/og@0.4.0(@types/node@26.1.2)':

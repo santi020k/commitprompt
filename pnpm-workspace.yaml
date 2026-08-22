@@ -32,7 +32,7 @@ catalog:
   "@santi020k/eslint-config-libraries": ^3.1.0
   "@santi020k/eslint-config-testing": ^3.1.0
   "@santi020k/eslint-config-tools": ^3.1.0
-  "@santi020k/lumen-astro": ^1.2.0
+  "@santi020k/lumen-astro": ^1.4.0
   "@santi020k/og": ^0.4.0
   "@types/node": ^26.1.2
   "@vitest/coverage-v8": ^4.1.10
@@ -55,9 +55,9 @@ catalog:
 
 minimumReleaseAgeExclude:
   - "@santi020k/og"
-  - "@santi020k/lumen-astro@1.2.0"
-  - "@santi020k/lumen-core@1.2.0"
-  - "@santi020k/lumen@1.2.0"
+  - "@santi020k/lumen-astro@1.4.0"
+  - "@santi020k/lumen-core@1.4.0"
+  - "@santi020k/lumen@1.4.0"
   - "@santi020k/eslint-config-typescript"
 
 overrides:
