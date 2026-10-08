@@ -30,7 +30,7 @@ for (const theme of ['dark', 'light'] as const) {
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', nextTheme)
 
-    await page.getByRole('link', { name: 'Commitprompt home' }).click()
+    await page.getByRole('banner').getByRole('link', { name: 'Commitprompt home' }).click()
 
     await expect(page).toHaveURL('/')
 
@@ -112,9 +112,23 @@ test('reduced motion keeps the full homepage content available', async ({ page }
     await expect(section).toHaveCSS('opacity', '1')
   }
 
-  await page.getByRole('link', { name: 'Commitprompt home' }).focus()
+  await page.getByRole('banner').getByRole('link', { name: 'Commitprompt home' }).focus()
 
   await page.keyboard.press('Tab')
 
   await expect(page.locator(':focus')).toHaveCSS('outline-style', 'solid')
+})
+
+test('footer links navigate between the homepage and documentation', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Read the docs' }).click()
+
+  await expect(page).toHaveURL(/\/docs\/$/)
+
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Commitprompt home' }).click()
+
+  await expect(page).toHaveURL('/')
+
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 })

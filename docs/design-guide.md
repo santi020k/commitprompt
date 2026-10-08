@@ -19,6 +19,8 @@ terminal and monospace wordmark remain central to this project.
   The sidebar becomes a horizontally scrollable guide on small screens.
 - Keep navigation available without a menu overlay. The wordmark links home;
   Docs, GitHub, and appearance controls remain reachable at 320px.
+- Close with an open footer: a prominent monospace identity, two resource links,
+  and a separate credit rail.
 - Retain meaningful external link names, protected new tabs, and visible author attribution.
 
 ## Motion and appearance

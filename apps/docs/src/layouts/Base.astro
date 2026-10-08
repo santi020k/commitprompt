@@ -132,11 +132,26 @@ const page = site.page({
     </main>
     <footer class="site-footer">
       <div class="shell footer-content">
-        <p class="footer-signature"><Icon name="terminal" /> Commit with intent.</p>
-        <div class="footer-links">
-          <span>Made by <Link href="https://santi020k.com" newTab>santi020k</Link></span>
-          <Link href="https://github.com/santi020k/commitprompt/blob/main/LICENSE" newTab>MIT licensed</Link>
-          <Link href="https://lumen.santi020k.com" newTab>Built with Lumen</Link>
+        <div class="footer-main">
+          <div class="footer-identity">
+            <Link href="/" class="footer-wordmark" aria-label="Commitprompt home">
+              <Icon name="terminal" />
+              <span>commit<span class="wordmark-accent">prompt</span></span>
+            </Link>
+            <p>A small tool. A clearer history.</p>
+          </div>
+          <nav class="footer-navigation" aria-label="Footer">
+            <Link href="/docs/">Read the docs <Icon name="arrow-right" /></Link>
+            <Link href="https://github.com/santi020k/commitprompt" newTab>Explore on GitHub <Icon name="arrow-up-right" /></Link>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <p class="footer-signature"><Icon name="git-commit-horizontal" /> Commit with intent.</p>
+          <div class="footer-links">
+            <span>Made by <Link href="https://santi020k.com" newTab>santi020k</Link></span>
+            <Link href="https://github.com/santi020k/commitprompt/blob/main/LICENSE" newTab>MIT licensed</Link>
+            <Link href="https://lumen.santi020k.com" newTab>Built with Lumen</Link>
+          </div>
         </div>
       </div>
     </footer>
