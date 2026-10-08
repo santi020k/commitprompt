@@ -20,6 +20,16 @@ for (const theme of themes) {
 
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
+      for (const section of await page.locator('main [data-ui-scroll-reveal]').all()) {
+        await section.scrollIntoViewIfNeeded()
+
+        await expect(section).toHaveCSS('opacity', '1')
+      }
+
+      await page.evaluate(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' })
+      })
+
       const results = await new AxeBuilder({ page })
         .withTags([
           'best-practice',

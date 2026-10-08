@@ -104,7 +104,7 @@ const page = site.page({
   <body>
     <UIPrimitives />
     <SkipLink href="#main-content">Skip to content</SkipLink>
-    <header class="site-header" data-page={Astro.url.pathname === '/' ? 'home' : 'compact'}>
+    <header class="site-header">
       <div class="shell nav-shell">
         <Link
           aria-label="Commitprompt home"
@@ -120,6 +120,7 @@ const page = site.page({
           <Link href="/docs/" aria-current={Astro.url.pathname.startsWith('/docs') ? 'page' : undefined}>Docs</Link>
           <Link aria-label="Commitprompt on GitHub" href="https://github.com/santi020k/commitprompt" newTab>
             <span class="nav-github-label">GitHub</span>
+            <Icon name="arrow-up-right" class="nav-external-icon" />
           </Link>
           <ThemeToggle storageKey="commitprompt-theme" />
         </NavigationMenu>

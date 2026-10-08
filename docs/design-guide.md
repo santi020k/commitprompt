@@ -2,13 +2,14 @@
 
 Commitprompt keeps its yellow/gold, teal, charcoal, and warm ivory palette. The
 shared direction follows the sculpted website and theme projects: deliberate
-spacing, medium-weight headings, fine rules, and a raised identity tab. The
+spacing, medium-weight headings, fine rules, and compact framed navigation. The
 terminal and monospace wordmark remain central to this project.
 
 ## Layout and components
 
 - Align the shared header, homepage, documentation, and footer to a 72rem grid.
-- Use one solid opening surface and open content rows instead of nested glass cards.
+- Use a compact navigation frame and one solid opening surface, with open content
+  rows below. Give the hero a fine metadata rail and a strong two-part headline.
 - Preserve all documentation section IDs and the full CLI/API reference content.
 - Use Lumen v4 primitives, semantic color tokens, public props, and public slots.
   Consumer-owned classes style composed layouts; do not depend on private component classes.

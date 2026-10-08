@@ -131,10 +131,13 @@ const structuredData = {
   structuredData={structuredData}
 >
   <section class="cp-home-hero shell signature-frame" aria-labelledby="home-title">
+    <div class="cp-home-hero-rail">
+      <p class="cp-eyebrow"><span class="cp-status-mark" aria-hidden="true"></span> Commit with intent</p>
+      <span class="cp-home-hero-platforms">npm / pnpm / Yarn</span>
+    </div>
     <div class="cp-home-hero-grid">
       <ScrollReveal class="cp-home-hero-copy" animation="slide-up" duration="standard" threshold={0}>
-        <p class="cp-eyebrow"><span class="cp-status-mark" aria-hidden="true"></span> A small tool. A clearer history.</p>
-        <h1 id="home-title">Write the commit.<br /><span>Not the syntax.</span></h1>
+        <h1 id="home-title">Write the commit. <span>Not the syntax.</span></h1>
         <p class="cp-home-intro">
           Turn staged work into a clear, validated Conventional Commit.
           Keep the rules your repository trusts and the tools you already use.
@@ -152,7 +155,7 @@ const structuredData = {
             View on GitHub <Icon name="arrow-up-right" />
           </ButtonLink>
         </div>
-        <p class="cp-home-hero-note">Open source. Package-manager neutral. Yours to configure.</p>
+        <p class="cp-home-hero-note"><Icon name="git-commit-horizontal" /> A small tool. A clearer history.</p>
       </ScrollReveal>
 
       <ScrollReveal class="cp-home-preview" animation="fade" delay={80} duration="standard" threshold={0}>

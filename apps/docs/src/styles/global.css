@@ -105,33 +105,22 @@ main:focus {
   justify-content: space-between;
   gap: 1rem;
   min-height: 4.75rem;
-  border-bottom: 1px solid hsl(var(--line));
+  padding: 0.5rem 0.65rem 0.5rem 1.25rem;
+  border: 1px solid hsl(var(--line) / 0.7);
+  border-radius: 1.3rem;
+  background: hsl(var(--surface));
 }
 .wordmark {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  align-self: stretch;
-  padding-inline: 1.15rem 1.75rem;
-  background: hsl(var(--surface));
-  border-radius: 1.25rem 1.25rem 0 0;
+  min-height: 2.75rem;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.055em;
   text-decoration: none;
   white-space: nowrap;
-}
-.wordmark::after {
-  content: "";
-  position: absolute;
-  right: -0.95rem;
-  bottom: 0;
-  width: 1rem;
-  height: 1.5rem;
-  background: hsl(var(--surface));
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 .wordmark img {
   display: block;
@@ -143,7 +132,7 @@ main:focus {
 }
 .primary-nav {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.2rem;
   align-items: center;
 }
 .primary-nav > a {
@@ -153,8 +142,8 @@ main:focus {
   gap: 0.35rem;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 0.7rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.9rem;
   color: hsl(var(--ink-soft));
   font-size: 0.82rem;
   font-weight: 500;
@@ -165,11 +154,12 @@ main:focus {
   color: hsl(var(--ink));
 }
 .primary-nav > a[aria-current="page"] {
-  color: hsl(var(--ink));
-  text-decoration: underline;
-  text-decoration-color: hsl(var(--brand));
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.6em;
+  color: hsl(var(--brand));
+  background: hsl(var(--brand-soft));
+}
+.nav-external-icon {
+  width: 0.85rem;
+  height: 0.85rem;
 }
 .primary-nav [data-slot="theme-toggle"] {
   width: 2.75rem;
@@ -177,15 +167,10 @@ main:focus {
   margin-left: 0.2rem;
   border-radius: 0.75rem;
 }
-.site-header[data-page="compact"] .wordmark {
-  background: transparent;
-}
-.site-header[data-page="compact"] .wordmark::after {
-  display: none;
-}
 .signature-frame {
   background: hsl(var(--surface));
-  border-radius: 0 0 1.75rem 1.75rem;
+  border: 1px solid hsl(var(--line) / 0.7);
+  border-radius: 1.75rem;
 }
 .site-footer {
   margin-top: 3rem;
@@ -465,14 +450,12 @@ main:focus {
   .nav-shell {
     gap: 0.3rem;
     min-height: 4rem;
+    padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+    border-radius: 1.05rem;
   }
   .wordmark {
     gap: 0.4rem;
-    padding-inline: 0.6rem;
     font-size: 0.85rem;
-  }
-  .wordmark::after {
-    display: none;
   }
   .wordmark img {
     width: 1.35rem;
@@ -485,6 +468,9 @@ main:focus {
     padding-inline: 0.5rem;
   }
   .primary-nav .nav-home {
+    display: none;
+  }
+  .nav-external-icon {
     display: none;
   }
   .primary-nav [data-slot="theme-toggle"] {
@@ -518,12 +504,16 @@ main:focus {
   }
 }
 @media (max-width: 360px) {
+  .nav-shell {
+    gap: 0.15rem;
+    padding-inline: 0.4rem 0.25rem;
+  }
   .wordmark {
-    padding-inline: 0.4rem;
     gap: 0.3rem;
     font-size: 0.78rem;
   }
   .primary-nav > a {
     font-size: 0.75rem;
+    padding-inline: 0.35rem;
   }
 }
