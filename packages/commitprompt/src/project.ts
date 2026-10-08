@@ -187,21 +187,11 @@ const formatManifest = (
 const setDependency = (
   manifest: PackageManifest,
   name: string,
-  version: string,
-  updateExisting = false
+  version: string
 ): boolean => {
   const developmentVersion = manifest.devDependencies?.[name]
 
-  if (developmentVersion !== undefined) {
-    if (!updateExisting || developmentVersion === version) return false
-
-    manifest.devDependencies = {
-      ...manifest.devDependencies,
-      [name]: version
-    }
-
-    return true
-  }
+  if (developmentVersion !== undefined) return false
 
   const existingVersion = manifest.dependencies?.[name]
 
@@ -527,7 +517,7 @@ const analyzeHook = async (
   const desiredStep = {
     args: packageManager === 'npm' ?
       ['--no-install', 'commitprompt', 'validate', '--input'] :
-      ['exec', 'commitprompt', 'validate', '--input'],
+      ['exec', ...(packageManager === 'yarn' ? ['--'] : []), 'commitprompt', 'validate', '--input'],
     command: packageManager === 'npm' ? 'npx' : packageManager,
     name: HOOK_STEP_NAME,
     pass_hook_args: true

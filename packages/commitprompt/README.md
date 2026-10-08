@@ -169,7 +169,7 @@ Equivalent explicit commands are:
 ```sh
 npx --no-install commitprompt validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
-yarn exec commitprompt validate --input "$1"
+yarn exec -- commitprompt validate --input "$1"
 ```
 
 When validation fails, Commitprompt identifies the violated rules, states that
