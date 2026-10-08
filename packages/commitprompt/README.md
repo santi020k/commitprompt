@@ -1,4 +1,35 @@
-# Commitprompt
+<p align="center">
+  <a href="https://github.com/santi020k/commitprompt/blob/main/README.md"><img src="https://raw.githubusercontent.com/santi020k/commitprompt/main/apps/docs/public/logo.svg" alt="Commitprompt" width="300"></a>
+</p>
+
+<p align="center"><a href="https://github.com/santi020k/commitprompt/blob/main/README.md">Commitprompt</a></p>
+
+<h1 align="center">CLI and API</h1>
+
+<p align="center">
+  <a href="https://github.com/santi020k/commitprompt/blob/main/README.md">Project overview</a> ·
+  <a href="https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/package.json">Package manifest</a> ·
+  <a href="https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/CHANGELOG.md">Changelog</a> ·
+  <a href="#resources">Resources</a>
+</p>
+
+<details>
+<summary>On this page</summary>
+
+- [Install](#install)
+- [Usage](#usage)
+- [Editor AI](#editor-ai)
+- [Requirements](#requirements)
+- [Repository rules](#repository-rules)
+- [Migrating an existing prompt](#migrating-an-existing-prompt)
+- [Git hooks](#git-hooks)
+- [AI instruction assets](#ai-instruction-assets)
+- [Automation and AI tools](#automation-and-ai-tools)
+- [Programmatic API](#programmatic-api)
+- [License](#license)
+- [Resources](#resources)
+
+</details>
 
 A focused, package-manager-neutral prompt for Conventional Commits.
 
@@ -304,3 +335,7 @@ documented behavior and required inputs will not change incompatibly.
 
 MIT. Published artifacts bundle the Commitlint lint engine and include its
 generated third-party notices in `dist/THIRD_PARTY_LICENSES.txt`.
+
+## Resources
+
+[Project overview](https://github.com/santi020k/commitprompt/blob/main/README.md) · [Contributing](https://github.com/santi020k/commitprompt/blob/main/CONTRIBUTING.md) · [License](https://github.com/santi020k/commitprompt/blob/main/LICENSE)
