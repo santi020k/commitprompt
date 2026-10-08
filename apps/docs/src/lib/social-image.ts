@@ -1,3 +1,5 @@
+import { getGeneratedSocialImagePath } from './generated-social-image'
+
 const defaultSiteUrl = 'https://commitprompt.santi020k.com/'
 
 const safeDecodeURIComponent = (value: string) => {
@@ -18,7 +20,7 @@ export const getSocialImageSlug = (pathname: string) => pathname
 export const getSocialImagePath = (pathname: string) => {
   const slug = getSocialImageSlug(pathname)
 
-  return `/og/pages/${slug || 'index'}.webp`
+  return getGeneratedSocialImagePath(pathname) ?? `/og/pages/${slug || 'index'}.webp`
 }
 
 export const getSocialImageUrl = (

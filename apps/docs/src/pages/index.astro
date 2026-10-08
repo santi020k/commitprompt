@@ -1,16 +1,14 @@
 ---
+import '../styles/home.css'
+
 import {
-  Badge,
   ButtonLink,
-  Callout,
-  Card,
   Code,
   CodeTabs,
-  Eyebrow,
   Icon,
-  Separator,
-  Stat,
-  Stepper
+  RevealGroup,
+  ScrollReveal,
+  Stat
 } from '@santi020k/lumen-astro'
 
 import Base from '../layouts/Base.astro'
@@ -36,18 +34,39 @@ const installItems = [
   }
 ] as const
 
+const features = [
+  {
+    description: 'Use the included Conventional Commits rules or the Commitlint configuration already in your repository.',
+    icon: 'shield-check',
+    title: 'Your rules, already understood.'
+  },
+  {
+    description: 'Install and run the same neutral binary with npm, pnpm, or Yarn. No adapter configuration needed.',
+    icon: 'package',
+    title: 'At home in your toolchain.'
+  },
+  {
+    description: 'Review the complete message before anything is committed. Your Git hooks still have the final say.',
+    icon: 'eye',
+    title: 'The decision stays yours.'
+  }
+] as const
+
 const workflowSteps = [
   {
-    description: 'Commitprompt stops early when the index is empty.',
+    command: 'git add src/',
+    description: 'Stage the work you mean to commit. An empty index stops the flow before the first prompt.',
     title: 'Stage the change'
   },
   {
-    description: 'Choose a type, scope, subject, and optional details.',
-    title: 'Answer focused prompts'
+    command: 'commitprompt',
+    description: 'Choose a type, add a scope, and describe the change. Include extra context only when it helps.',
+    title: 'Find the right words'
   },
   {
-    description: 'Commitlint checks the complete message before Git sees it.',
-    title: 'Validate and confirm'
+    command: 'feat(cli): add validation',
+    description: 'Validate the finished message, review it, and confirm. Commitprompt passes it directly to Git.',
+    title: 'Commit with confidence'
   }
 ] as const
 
@@ -66,6 +85,13 @@ feat(cli): add repository-aware validation
 
 Create this commit? [y/N] y`
 
+const completeMessage = `feat(cli)!: add repository-aware validation
+
+Keep commit messages consistent across the team.
+
+BREAKING CHANGE: require Node.js 22.18 or newer
+Closes #123`
+
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -78,6 +104,11 @@ const structuredData = {
     {
       '@type': 'SoftwareApplication',
       applicationCategory: 'DeveloperApplication',
+      author: {
+        '@type': 'Person',
+        name: 'Santiago Molina',
+        url: 'https://santi020k.com'
+      },
       description: 'A focused CLI for writing validated Conventional Commits with your repository’s Commitlint rules.',
       isAccessibleForFree: true,
       license: 'https://opensource.org/license/mit',
@@ -99,174 +130,174 @@ const structuredData = {
   description="A focused, package-manager-neutral prompt for Conventional Commits."
   structuredData={structuredData}
 >
-  <section class="hero shell">
-    <div class="hero-copy">
-      <Badge variant="secondary">
-        <span class="status-dot" aria-hidden="true"></span>
-        Conventional Commits, without the ceremony
-      </Badge>
-      <h1>Write the commit.<br /><span>Not the syntax.</span></h1>
-      <p class="lede">
-        A focused CLI that turns staged work into a clear, validated
-        Conventional Commit—using the rules your repository already trusts.
-      </p>
-      <div class="actions">
-        <ButtonLink href="/docs/" showArrow>Get started</ButtonLink>
-        <ButtonLink
-          href="https://github.com/santi020k/commitprompt"
-          newTab
-          variant="secondary"
-        >
-          View on GitHub
-        </ButtonLink>
-      </div>
-      <CodeTabs
-        ariaLabel="Install Commitprompt"
-        class="install-tabs"
-        items={installItems}
-        storageKey="commitprompt-package-manager"
-        wrap={false}
-      />
-      <p class="install-note">
-        <Icon name="terminal" />
-        <span>
-          Add <Code code={'"commit": "commitprompt"'} />, then run it with npm,
-          pnpm, or Yarn.
-        </span>
-      </p>
+  <section class="cp-home-hero shell signature-frame" aria-labelledby="home-title">
+    <div class="cp-home-hero-grid">
+      <ScrollReveal class="cp-home-hero-copy" animation="slide-up" duration="standard" threshold={0}>
+        <p class="cp-eyebrow"><span class="cp-status-mark" aria-hidden="true"></span> A small tool. A clearer history.</p>
+        <h1 id="home-title">Write the commit.<br /><span>Not the syntax.</span></h1>
+        <p class="cp-home-intro">
+          Turn staged work into a clear, validated Conventional Commit.
+          Keep the rules your repository trusts and the tools you already use.
+        </p>
+        <div class="cp-actions">
+          <ButtonLink class="cp-action cp-action-primary" href="/docs/" variant="unstyled">
+            Get started <span class="cp-action-arrow"><Icon name="arrow-right" /></span>
+          </ButtonLink>
+          <ButtonLink
+            class="cp-action cp-action-secondary"
+            href="https://github.com/santi020k/commitprompt"
+            newTab
+            variant="unstyled"
+          >
+            View on GitHub <Icon name="arrow-up-right" />
+          </ButtonLink>
+        </div>
+        <p class="cp-home-hero-note">Open source. Package-manager neutral. Yours to configure.</p>
+      </ScrollReveal>
+
+      <ScrollReveal class="cp-home-preview" animation="fade" delay={80} duration="standard" threshold={0}>
+        <div class="cp-home-preview-heading">
+          <span><Icon name="terminal" /> A commit, from start to finish</span>
+          <span class="cp-home-preview-label">CLI</span>
+        </div>
+        <Code
+          class="cp-home-terminal"
+          code={terminalSession}
+          codeLabel="Example interactive Commitprompt session"
+          label="commitprompt · ~/project"
+          variant="block"
+          wrap
+        />
+        <div class="cp-home-result">
+          <Icon name="circle-check" />
+          <span>Validated. Reviewed. Ready for the history.</span>
+        </div>
+      </ScrollReveal>
     </div>
 
-    <Card as="section" class="terminal-shell" glass="strong" aria-label="Commitprompt example">
-      <Code
-        class="terminal"
-        code={terminalSession}
-        label="commitprompt · ~/project"
-        variant="block"
-        wrap
-      />
-      <div class="terminal-result">
-        <Icon name="circle-check" />
-        <span>Commit created with the repository’s rules.</span>
+    <div class="cp-home-install">
+      <div>
+        <p class="cp-eyebrow">Start with one command</p>
+        <h2>Your next commit starts here.</h2>
+        <p>Install it as a development dependency.</p>
       </div>
-    </Card>
+      <div class="cp-home-install-commands">
+        <CodeTabs
+          ariaLabel="Install Commitprompt"
+          class="cp-home-install-tabs"
+          items={installItems}
+          storageKey="commitprompt-package-manager"
+          wrap={false}
+        />
+        <p class="cp-home-install-note">
+          Then add <Code code={'"commit": "commitprompt"'} /> to your package scripts.{' '}
+          <a href="/docs/#project-setup">Or let project setup do it.</a>
+        </p>
+      </div>
+    </div>
   </section>
 
-  <div class="shell trust-strip" aria-label="Project highlights">
-    <Stat label="Runtime" value="Node 22+" />
-    <Separator orientation="vertical" />
-    <Stat label="Package managers" value="npm · pnpm · Yarn" />
-    <Separator orientation="vertical" />
-    <Stat label="Configuration" value="Your Commitlint rules" />
+  <div class="cp-home-facts shell" aria-label="Project details">
+    <Stat as="article" label="Runtime" value="Node.js 22.18+" variant="bare" />
+    <Stat as="article" label="Works with" value="npm · pnpm · Yarn" variant="bare" />
+    <Stat as="article" label="Conventions" value="Your Commitlint rules" variant="bare" />
   </div>
 
-  <section class="section shell">
-    <div class="section-heading">
-      <Eyebrow>One small command</Eyebrow>
-      <h2>Built around your repository</h2>
-      <p>
-        No adapter configuration and no package-manager lock-in. Commitprompt
-        stays focused on the moment between staging changes and creating the commit.
-      </p>
+  <ScrollReveal as="section" class="cp-home-section cp-home-principles shell" animation="fade" duration="standard" aria-labelledby="principles-title">
+    <div class="cp-home-section-heading">
+      <p class="cp-eyebrow">01 / Fits the way you work</p>
+      <h2 id="principles-title">One small command.<br />Your whole repository.</h2>
+      <p>Focused on the moment between staging a change and giving it a useful place in your history.</p>
     </div>
-    <div class="feature-grid">
-      <Card as="article" variant="interactive">
-        <div class="feature-icon"><Icon name="shield-check" size="lg" /></div>
-        <h3>Your rules</h3>
-        <p>
-          Loads the repository’s Commitlint configuration and validates before
-          Git receives the message.
-        </p>
-      </Card>
-      <Card as="article" variant="interactive">
-        <div class="feature-icon"><Icon name="package" size="lg" /></div>
-        <h3>Your package manager</h3>
-        <p>
-          Runs the same through pnpm, npm, or Yarn because validation happens
-          through Commitlint’s API.
-        </p>
-      </Card>
-      <Card as="article" variant="interactive">
-        <div class="feature-icon"><Icon name="eye" size="lg" /></div>
-        <h3>Your final say</h3>
-        <p>
-          Shows the complete message—including body, breaking change, and issue
-          references—before committing.
-        </p>
-      </Card>
-    </div>
-  </section>
+    <RevealGroup class="cp-home-feature-list" animation="fade" duration="standard" stagger={35}>
+      {features.map((feature, index) => (
+        <article class="cp-home-feature">
+          <span class="cp-home-row-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+          <div>
+            <h3>{feature.title}</h3>
+            <p>{feature.description}</p>
+          </div>
+          <span class="cp-home-feature-icon"><Icon name={feature.icon} /></span>
+        </article>
+      ))}
+    </RevealGroup>
+  </ScrollReveal>
 
-  <section class="section shell workflow-section">
-    <div class="section-heading">
-      <Eyebrow>The whole workflow</Eyebrow>
-      <h2>Stage. Prompt. Commit.</h2>
-      <p>
-        The happy path stays short, while every guardrail remains visible and
-        testable.
-      </p>
-    </div>
-    <Card class="workflow-card" variant="muted">
-      <Stepper currentStep={3} orientation="vertical" steps={[...workflowSteps]} />
-    </Card>
-  </section>
-
-  <section class="section shell message-section">
-    <div class="section-heading">
-      <Eyebrow>Complete when you need it</Eyebrow>
-      <h2>Small prompt. Full commit.</h2>
-      <p>
-        Keep the common case quick, then add the detail that makes a change
-        useful to humans and release tooling.
-      </p>
-    </div>
-    <div class="message-grid">
-      <Card class="commit-anatomy" glass="subtle">
-        <div class="anatomy-line">
-          <Badge>type</Badge><Code code="feat" />
-          <Badge variant="outline">scope</Badge><Code code="(cli)" />
-          <Badge variant="outline">breaking</Badge><Code code="!" />
-          <span>: add repository-aware validation</span>
-        </div>
-        <Separator />
-        <p>Explain why the new validation belongs in the prompt flow.</p>
-        <p class="breaking">BREAKING CHANGE: require Node.js 22.18 or newer</p>
-        <p class="issue">Closes #123</p>
-      </Card>
-      <div class="message-benefits">
-        <Callout>
-          <p>
-            <strong>Fast by default.</strong>{' '}
-            Scope, body, breaking change, and issue references are optional.
-          </p>
-        </Callout>
-        <Callout>
-          <p>
-            <strong>Safe at the boundary.</strong>{' '}
-            The exact final text is linted, previewed, and confirmed before commit.
-          </p>
-        </Callout>
-      </div>
-    </div>
-  </section>
-
-  <section class="section shell">
-    <Card class="final-cta" variant="muted">
+  <ScrollReveal as="section" class="cp-home-section cp-home-workflow shell" animation="fade" duration="standard" aria-labelledby="workflow-title">
+    <div class="cp-home-section-heading cp-home-heading-wide">
       <div>
-        <Eyebrow>Ready when the index is</Eyebrow>
-        <h2>Make the next commit unmistakable.</h2>
-        <p>Install it in minutes. Use the included rules or keep your existing configuration.</p>
+        <p class="cp-eyebrow">02 / A familiar rhythm</p>
+        <h2 id="workflow-title">Stage. Prompt. Commit.</h2>
       </div>
-      <div class="actions">
-        <ButtonLink href="/docs/" showArrow>Read the docs</ButtonLink>
-        <ButtonLink
-          href="https://github.com/santi020k/commitprompt"
-          newTab
-          showArrow
-          variant="ghost"
-        >
-          Explore the source
-        </ButtonLink>
+      <p>A short path to a useful message, with a check at every boundary.</p>
+    </div>
+    <RevealGroup as="ol" class="cp-home-steps" animation="slide-up" duration="standard" stagger={35}>
+      {workflowSteps.map((step, index) => (
+        <li class="cp-home-step">
+          <span class="cp-home-step-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+          <h3>{step.title}</h3>
+          <p>{step.description}</p>
+          <Code code={step.command} />
+        </li>
+      ))}
+    </RevealGroup>
+  </ScrollReveal>
+
+  <ScrollReveal as="section" class="cp-home-section cp-home-message shell" animation="fade" duration="standard" aria-labelledby="message-title">
+    <div class="cp-home-section-heading">
+      <p class="cp-eyebrow">03 / Room for the full story</p>
+      <h2 id="message-title">Small prompt.<br />Complete context.</h2>
+      <p>Keep the everyday commit short. Add a body, a breaking change, or an issue reference when the work calls for more.</p>
+      <ButtonLink class="cp-action cp-action-secondary" href="/docs/#commit-format" variant="unstyled">
+        Explore the message format <Icon name="arrow-right" />
+      </ButtonLink>
+    </div>
+    <div class="cp-home-message-example">
+      <div class="cp-home-example-caption"><span>One message, all the detail</span><span>Example</span></div>
+      <Code code={completeMessage} codeLabel="Example Conventional Commit with a breaking change" variant="block" wrap />
+      <dl class="cp-home-message-key">
+        <div><dt>Header</dt><dd>What changed</dd></div>
+        <div><dt>Body</dt><dd>Why it matters</dd></div>
+        <div><dt>Footer</dt><dd>What comes next</dd></div>
+      </dl>
+    </div>
+  </ScrollReveal>
+
+  <ScrollReveal as="section" class="cp-home-section cp-home-tools shell" animation="fade" duration="standard" aria-labelledby="tools-title">
+    <div class="cp-home-section-heading">
+      <p class="cp-eyebrow">04 / Beyond the prompt</p>
+      <h2 id="tools-title">The same rules.<br />Every way you commit.</h2>
+      <p>Give AI tools repository-aware instructions and bring Conventional Commit guidance into your editor. Discover types and scopes, format structured input, and validate the exact result.</p>
+      <ButtonLink class="cp-action cp-action-secondary" href="/docs/#automation-ai" variant="unstyled">
+        Read the automation guide <Icon name="arrow-right" />
+      </ButtonLink>
+    </div>
+    <div class="cp-home-tool-routes">
+      <a class="cp-home-tool-route" href="/docs/#project-setup">
+        <div><span class="cp-eyebrow">Set up the repository</span><h3>One shared starting point.</h3><p>Package scripts, commit validation, and agent guidance.</p></div>
+        <Icon name="arrow-up-right" />
+      </a>
+      <a class="cp-home-tool-route" href="/docs/#editor-ai">
+        <div><span class="cp-eyebrow">Bring your editor</span><h3>Keep the context close.</h3><p>Conventional Commit instructions for VS Code and Zed.</p></div>
+        <Icon name="arrow-up-right" />
+      </a>
+      <a class="cp-home-tool-route" href="/docs/#programmatic-api">
+        <div><span class="cp-eyebrow">Compose your workflow</span><h3>A small API, too.</h3><p>Use the same Git, formatting, and validation building blocks.</p></div>
+        <Icon name="arrow-up-right" />
+      </a>
+    </div>
+  </ScrollReveal>
+
+  <section class="cp-home-closing shell" aria-labelledby="closing-title">
+    <ScrollReveal class="cp-home-closing-panel" animation="fade" duration="standard">
+      <div>
+        <p class="cp-eyebrow">Ready when the index is</p>
+        <h2 id="closing-title">Leave a clearer history.</h2>
+        <p>The next person reading it might be you.</p>
       </div>
-    </Card>
+      <ButtonLink class="cp-action cp-action-primary" href="/docs/" variant="unstyled">
+        Make your first commit <span class="cp-action-arrow"><Icon name="arrow-right" /></span>
+      </ButtonLink>
+    </ScrollReveal>
   </section>
 </Base>

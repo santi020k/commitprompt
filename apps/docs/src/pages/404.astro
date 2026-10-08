@@ -1,5 +1,7 @@
 ---
-import { ButtonLink, Card } from '@santi020k/lumen-astro'
+import '../styles/home.css'
+
+import { ButtonLink, Code, Icon, ScrollReveal } from '@santi020k/lumen-astro'
 
 import Base from '../layouts/Base.astro'
 ---
@@ -9,12 +11,24 @@ import Base from '../layouts/Base.astro'
   description="The requested Commitprompt page could not be found."
   noindex
 >
-  <section class="not-found shell">
-    <Card>
-      <p class="eyebrow">404</p>
-      <h1>This page was not staged.</h1>
-      <p>Return to the documentation and keep the commit focused.</p>
-      <ButtonLink href="/" showArrow>Go home</ButtonLink>
-    </Card>
+  <section class="cp-not-found shell" aria-labelledby="not-found-title">
+    <ScrollReveal class="cp-not-found-content" animation="fade" duration="standard" threshold={0}>
+      <p class="cp-eyebrow">404 / Nothing in the index</p>
+      <h1 id="not-found-title">This page<br />was not staged.</h1>
+      <p class="cp-home-intro">The link may have moved, or the address may be incomplete. There is still a clear path to your next commit.</p>
+      <div class="cp-actions">
+        <ButtonLink class="cp-action cp-action-primary" href="/" variant="unstyled">
+          Go home <span class="cp-action-arrow"><Icon name="arrow-right" /></span>
+        </ButtonLink>
+        <ButtonLink class="cp-action cp-action-secondary" href="/docs/" variant="unstyled">
+          Read the docs <Icon name="arrow-right" />
+        </ButtonLink>
+      </div>
+    </ScrollReveal>
+    <div class="cp-not-found-index" aria-hidden="true">
+      <span class="cp-not-found-number">404<span>_</span></span>
+      <Code code="nothing to display, working tree clean" />
+      <span class="cp-not-found-caption">Good commits have context. So do good links.</span>
+    </div>
   </section>
 </Base>

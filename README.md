@@ -2,9 +2,10 @@
   <img src="apps/docs/public/logo.svg" alt="Commitprompt" width="440" />
 </p>
 
-# Commitprompt
+<h1 align="center">Commitprompt</h1>
 
-Write the commit. Not the syntax.
+<p align="center">Write the commit. Not the syntax.</p>
+
 
 [Documentation](https://commitprompt.santi020k.com) ·
 [npm](https://www.npmjs.com/package/@santi020k/commitprompt) ·
@@ -13,16 +14,20 @@ Write the commit. Not the syntax.
 [Issues](https://github.com/santi020k/commitprompt/issues) ·
 [Contributing](CONTRIBUTING.md)
 
-[![CI](https://github.com/santi020k/commitprompt/actions/workflows/ci.yml/badge.svg)](https://github.com/santi020k/commitprompt/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml/badge.svg)](https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml)
-[![npm version](https://img.shields.io/npm/v/@santi020k/commitprompt.svg)](https://www.npmjs.com/package/@santi020k/commitprompt)
-[![npm downloads](https://img.shields.io/npm/dm/@santi020k/commitprompt.svg)](https://www.npmjs.com/package/@santi020k/commitprompt)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/santi020k/commitprompt/actions/workflows/ci.yml"><img src="https://github.com/santi020k/commitprompt/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml"><img src="https://github.com/santi020k/commitprompt/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <a href="https://www.npmjs.com/package/@santi020k/commitprompt"><img src="https://img.shields.io/npm/v/@santi020k/commitprompt.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@santi020k/commitprompt"><img src="https://img.shields.io/npm/dm/@santi020k/commitprompt.svg" alt="npm downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
+</p>
 
 Commitprompt is a focused, package-manager-neutral prompt for Conventional
 Commits. It checks staged changes, guides the author through the message,
 validates with included Commitlint rules or the repository's own configuration,
 previews the result, and commits only after confirmation.
+
+**Explore:** [Install](#install) · [Editor AI](#editor-ai) · [Repository](#repository) · [Development](#development)
 
 ## Install
 
@@ -82,6 +87,14 @@ User-visible package changes require a Changeset:
 ```sh
 pnpm changeset
 ```
+
+## Find your next step
+
+| Resource | Use it for |
+| --- | --- |
+| [`@santi020k/commitprompt`](packages/commitprompt/README.md) | Focused installation and usage reference. |
+| [Contributing](CONTRIBUTING.md) | Contributor setup and validation workflow. |
+| [Security policy](SECURITY.md) | Private vulnerability reporting and support boundaries. |
 
 ## License
 

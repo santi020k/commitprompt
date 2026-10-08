@@ -15,6 +15,7 @@ for (const theme of themes) {
       page
     }) => {
       await page.emulateMedia({ colorScheme: theme })
+
       await page.goto(pageUnderTest.path)
 
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)

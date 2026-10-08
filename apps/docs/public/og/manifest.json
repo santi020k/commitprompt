@@ -1,0 +1,76 @@
+{
+  "generatorVersion": "1.2.0",
+  "routes": {
+    "/": {
+      "alt": "Commitprompt home",
+      "description": "A focused, package-manager-neutral Conventional Commits prompt.",
+      "images": [
+        {
+          "format": "webp",
+          "height": 630,
+          "output": "og/pages/index.webp",
+          "primary": true,
+          "url": "/og/pages/index.webp?v=d440f3e4eaa7",
+          "version": "d440f3e4eaa7",
+          "width": 1200
+        },
+        {
+          "format": "png",
+          "height": 630,
+          "output": "og/pages/index.png",
+          "primary": true,
+          "url": "/og/pages/index.png?v=f47902a67e28",
+          "version": "f47902a67e28",
+          "width": 1200
+        },
+        {
+          "format": "png",
+          "height": 630,
+          "output": "og.png",
+          "primary": false,
+          "url": "/og.png?v=f47902a67e28",
+          "version": "f47902a67e28",
+          "width": 1200
+        },
+        {
+          "format": "svg",
+          "height": 630,
+          "output": "og/pages/index.svg",
+          "primary": true,
+          "url": "/og/pages/index.svg?v=e2f76f99d793",
+          "version": "e2f76f99d793",
+          "width": 1200
+        },
+        {
+          "format": "svg",
+          "height": 630,
+          "output": "og.svg",
+          "primary": false,
+          "url": "/og.svg?v=e2f76f99d793",
+          "version": "e2f76f99d793",
+          "width": 1200
+        }
+      ],
+      "pathname": "/",
+      "title": "Write the commit. Not the syntax."
+    },
+    "/docs": {
+      "alt": "Commitprompt documentation",
+      "description": "Install, configure, and use Commitprompt in any Git repository.",
+      "images": [
+        {
+          "format": "webp",
+          "height": 630,
+          "output": "og/pages/docs.webp",
+          "primary": true,
+          "url": "/og/pages/docs.webp?v=9bf000d8dd5b",
+          "version": "9bf000d8dd5b",
+          "width": 1200
+        }
+      ],
+      "pathname": "/docs",
+      "title": "Commit with your repository’s rules."
+    }
+  },
+  "version": 1
+}

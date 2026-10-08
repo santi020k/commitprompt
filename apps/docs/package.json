@@ -7,14 +7,16 @@
   "scripts": {
     "dev": "astro dev",
     "build": "santi-og generate --config scripts/generate-og-images.mjs && astro build",
+    "postbuild": "santi-og audit",
     "generate:og": "santi-og generate --config scripts/generate-og-images.mjs",
     "generate:og:force": "santi-og generate --config scripts/generate-og-images.mjs --force",
     "check:og": "santi-og check --config scripts/generate-og-images.mjs",
+    "audit:seo": "santi-og audit",
     "preview": "astro preview",
     "typecheck": "astro check",
-    "test": "vitest run --exclude=tests/** --passWithNoTests && playwright test",
+    "test": "playwright test",
     "test:a11y": "playwright test",
-    "test:coverage": "vitest run --coverage --exclude=tests/** --passWithNoTests && playwright test",
+    "test:coverage": "playwright test",
     "lint": "eslint . --no-warn-ignored --max-warnings=0",
     "lint:fix": "eslint . --fix --no-warn-ignored --max-warnings=0",
     "check:exports": "echo \"No package exports to check\"",
@@ -30,9 +32,7 @@
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
     "@santi020k/og": "catalog:",
-    "sharp": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=22.18.0"

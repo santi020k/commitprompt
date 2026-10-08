@@ -164,7 +164,7 @@ Equivalent explicit npm, pnpm, and Yarn commands are:
 ```sh
 npx --no-install commitprompt validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
-yarn exec commitprompt validate --input "$1"
+yarn exec -- commitprompt validate --input "$1"
 ```
 
 ## Safety boundaries
