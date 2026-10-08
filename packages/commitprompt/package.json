@@ -47,7 +47,8 @@
     "@commitlint/execute-rule": "catalog:",
     "@commitlint/types": "catalog:",
     "cosmiconfig": "catalog:",
-    "jsonc-parser": "catalog:"
+    "jsonc-parser": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@commitlint/lint": "catalog:",

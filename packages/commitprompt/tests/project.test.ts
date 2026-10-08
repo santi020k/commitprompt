@@ -1,17 +1,12 @@
-import { spawnSync } from 'node:child_process'
 import {
   access,
-  chmod,
-  mkdir,
   mkdtemp,
   readFile,
   rm,
-  stat,
   writeFile
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-import process from 'node:process'
+import { join } from 'node:path'
 
 import { afterEach, describe, expect, test } from 'vitest'
 
@@ -71,12 +66,11 @@ describe('setupProject', () => {
       }
     })
     const agentsPath = join(directory, 'AGENTS.md')
-    const hookPath = join(directory, '.husky', 'commit-msg')
+    const hookPath = join(directory, 'quality.yml')
 
     await writeFile(agentsPath, '# Project guidance\n', 'utf8')
-    await mkdir(join(directory, '.husky'))
     await writeFile(
-      hookPath, 'node scripts/check-ticket.mjs\npnpm exec commitlint --edit "$1"\n', 'utf8'
+      hookPath, 'version: 1\nhooks:\n  pre-push:\n    steps:\n      - command: npm\n        args: [test]\n', 'utf8'
     )
 
     const firstResult = await setupProject({
@@ -98,7 +92,7 @@ describe('setupProject', () => {
     expect(firstResult.actions.map(action => action.id)).toEqual([
       'dependency',
       'commit-script',
-      'husky-hook',
+      'quality-hook',
       'agents-instructions',
       'copilot-instructions',
       'agent-skill',
@@ -116,26 +110,20 @@ describe('setupProject', () => {
     expect(manifest.devDependencies).toEqual({
       '@santi020k/commitprompt': '^1.2.3',
       commitizen: '^4.3.1',
-      czg: '^1.12.0',
-      husky: '^9.1.7'
+      czg: '^1.12.0'
     })
     expect(manifest.scripts).toEqual({
       commit: 'commitprompt',
       legacyCommit: 'git-cz',
-      prepare: 'husky',
       test: 'node --test'
     })
     expect(manifest.config.commitizen).toBeDefined()
 
     const hook = await readFile(hookPath, 'utf8')
 
-    expect(hook).toContain('node scripts/check-ticket.mjs')
-    expect(hook).not.toContain('commitlint')
-    expect(hook).toContain('commitprompt validate --input "$1"')
-
-    const hookIsExecutable = ((await stat(hookPath)).mode & 0o111) !== 0
-
-    expect(process.platform === 'win32' || hookIsExecutable).toBe(true)
+    expect(hook).toContain('pre-push:')
+    expect(hook).toContain('Validate commit message with Commitprompt')
+    expect(hook).toContain('pass_hook_args: true')
 
     const agents = await readFile(agentsPath, 'utf8')
     const copilot = await readFile(
@@ -180,31 +168,26 @@ describe('setupProject', () => {
     ])).resolves.toEqual(filesAfterFirstRun)
   })
 
-  test('preserves commands surrounding an existing Commitlint invocation', async () => {
+  test('preserves existing quality hook steps', async () => {
     const directory = await createProject({ name: 'consumer' })
-    const hookPath = join(directory, '.husky', 'commit-msg')
+    const hookPath = join(directory, 'quality.yml')
 
-    await mkdir(join(directory, '.husky'))
     await writeFile(
-      hookPath, [
-        'node scripts/before.mjs && pnpm exec commitlint --edit "$1" && node scripts/after.mjs',
-        'npx commitlint --edit \'$1\'',
-        'yarn commitlint --edit $1',
-        'commitlint --edit "$1"'
-      ].join('\n'), 'utf8'
+      hookPath,
+      'version: 1\nhooks:\n  commit-msg:\n    steps:\n      - name: Check ticket\n        command: node\n        args: [scripts/check-ticket.mjs]\n',
+      'utf8'
     )
 
     await setupProject({
-      actions: ['husky-hook'],
+      actions: ['quality-hook'],
       cwd: directory,
       packageVersion: '1.2.3'
     })
 
     const hook = await readFile(hookPath, 'utf8')
 
-    expect(hook).toContain('node scripts/before.mjs && true && node scripts/after.mjs')
-    expect(hook).not.toContain('commitlint')
-    expect(hook).toContain('commitprompt validate --input "$1"')
+    expect(hook).toContain('Check ticket')
+    expect(hook).toContain('Validate commit message with Commitprompt')
   })
 
   test('reports pnpm drift without writing during a dry run', async () => {
@@ -323,7 +306,7 @@ catalog:
     await expect(pathExists(join(directory, 'AGENTS.md'))).resolves.toBe(false)
   })
 
-  test('upgrades legacy Husky setup when the hook action is selected', async () => {
+  test('preserves unrelated legacy setup when the quality hook is selected', async () => {
     const directory = await createProject({
       devDependencies: {
         husky: '^8.0.0'
@@ -335,7 +318,7 @@ catalog:
     })
 
     await setupProject({
-      actions: ['husky-hook'],
+      actions: ['quality-hook'],
       cwd: directory,
       packageVersion: '1.2.3'
     })
@@ -348,10 +331,12 @@ catalog:
     }
 
     expect(manifest.devDependencies.husky).toBe('^8.0.0')
-    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky')
+    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky install')
+    await expect(readFile(join(directory, 'quality.yml'), 'utf8'))
+      .resolves.toContain('Validate commit message with Commitprompt')
   })
 
-  test('preserves a workspace catalog specifier for Husky', async () => {
+  test('preserves unrelated workspace catalog dependencies', async () => {
     const directory = await createProject({
       devDependencies: { husky: 'catalog:' },
       name: 'consumer',
@@ -359,7 +344,7 @@ catalog:
     })
 
     await setupProject({
-      actions: ['husky-hook'],
+      actions: ['quality-hook'],
       cwd: directory,
       packageVersion: '1.2.3'
     })
@@ -371,14 +356,14 @@ catalog:
     expect(manifest.devDependencies.husky).toBe('catalog:')
   })
 
-  test('appends Husky to an unrelated prepare script', async () => {
+  test('does not change an unrelated prepare script', async () => {
     const directory = await createProject({
       name: 'consumer',
       scripts: { prepare: 'node scripts/prepare.mjs' }
     })
 
     await setupProject({
-      actions: ['husky-hook'],
+      actions: ['quality-hook'],
       cwd: directory,
       packageVersion: '1.2.3'
     })
@@ -387,7 +372,7 @@ catalog:
       await readFile(join(directory, 'package.json'), 'utf8')
     ) as { scripts: Record<string, string> }
 
-    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky')
+    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs')
   })
 
   test('rejects an empty project action selection', async () => {
@@ -463,80 +448,26 @@ catalog:
     )
   })
 
-  test.skipIf(process.platform === 'win32')(
-    'enforces valid and invalid messages through a real Husky hook', async () => {
-      const directory = await createProject({ name: 'consumer', private: true })
-      const binaryDirectory = join(directory, 'test-bin')
-      const commitpromptBinary = join(binaryDirectory, 'commitprompt')
-      const builtBinary = resolve(
-        import.meta.dirname, '../dist/bin/commitprompt.js'
-      )
-      const huskyBinary = resolve(
-        import.meta.dirname, '../../../node_modules/.bin/husky'
-      )
+  test('writes an idempotent Commitprompt step into quality.yml', async () => {
+    const directory = await createProject({ name: 'consumer', private: true })
 
-      await mkdir(binaryDirectory)
-      await writeFile(
-        commitpromptBinary, `#!/bin/sh
-exec ${JSON.stringify(process.execPath)} ${JSON.stringify(builtBinary)} "$@"
-`, 'utf8'
-      )
-      await chmod(commitpromptBinary, 0o755)
+    await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+    const first = await readFile(join(directory, 'quality.yml'), 'utf8')
 
-      for (const arguments_ of [
-        ['init', '--quiet'],
-        ['config', 'user.name', 'Commitprompt Tests'],
-        ['config', 'user.email', 'tests@commitprompt.dev']
-      ]) {
-        expect(spawnSync('git', arguments_, { cwd: directory }).status).toBe(0)
-      }
+    await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+    const second = await readFile(join(directory, 'quality.yml'), 'utf8')
 
-      await setupProject({
-        actions: ['husky-hook'],
-        cwd: directory,
-        packageVersion: '1.2.3'
-      })
-
-      expect(spawnSync(huskyBinary, [], { cwd: directory }).status).toBe(0)
-
-      const hookEnvironment = {
-        ...process.env,
-        PATH: `${binaryDirectory}:${String(process.env.PATH)}`
-      }
-
-      await writeFile(join(directory, 'valid.txt'), 'valid\n', 'utf8')
-      expect(spawnSync('git', ['add', 'valid.txt'], {
-        cwd: directory,
-        env: hookEnvironment
-      }).status).toBe(0)
-
-      const validCommit = spawnSync(
-        'git', ['commit', '--message', 'feat: accept valid hook message'], {
-          cwd: directory,
-          encoding: 'utf8',
-          env: hookEnvironment
-        }
-      )
-
-      expect(validCommit.status).toBe(0)
-
-      await writeFile(join(directory, 'invalid.txt'), 'invalid\n', 'utf8')
-      expect(spawnSync('git', ['add', 'invalid.txt'], {
-        cwd: directory,
-        env: hookEnvironment
-      }).status).toBe(0)
-
-      const invalidCommit = spawnSync(
-        'git', ['commit', '--message', 'invalid message'], {
-          cwd: directory,
-          encoding: 'utf8',
-          env: hookEnvironment
-        }
-      )
-
-      expect(invalidCommit.status).toBe(1)
-      expect(`${invalidCommit.stdout}${invalidCommit.stderr}`)
-        .toContain('Commit blocked:')
-    }
-  )
+    expect(second).toBe(first)
+    expect(second.match(/Validate commit message with Commitprompt/gu))
+      .toHaveLength(1)
+    expect(second).toContain('pass_hook_args: true')
+  })
 })

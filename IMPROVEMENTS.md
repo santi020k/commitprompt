@@ -17,7 +17,7 @@ next release, and the remaining work that should guide a later iteration.
 `commitprompt setup project` now:
 
 - detects npm, pnpm, or Yarn from repository metadata and lockfiles;
-- adds Commitprompt and Husky development dependencies;
+- adds the Commitprompt development dependency and a `quality.yml` hook step;
 - respects pnpm workspace catalogs;
 - sets the neutral `commitprompt` package script;
 - installs the canonical `commit-msg` validation hook while preserving
@@ -45,8 +45,7 @@ modes.
 - Invalid hooks explicitly state that the commit was blocked, list violated
   rules, and provide a correction-and-retry workflow.
 - npm, pnpm, and Yarn hook examples use the same canonical validation command.
-- A real Husky integration test accepts a valid message and rejects an invalid
-  one.
+- The quality hook configuration is idempotent and preserves unrelated steps.
 - Versioned AGENTS.md, GitHub Copilot, and agent-skill templates ship from one
   canonical source.
 - The instructions require repository and diff inspection, type and scope

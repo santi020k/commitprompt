@@ -25,22 +25,22 @@ catalog:
   "@commitlint/lint": ^21.2.0
   "@commitlint/types": ^21.2.0
   "@playwright/test": ^1.62.0
-  "@santi020k/eslint-config-astro": ^3.1.0
-  "@santi020k/eslint-config-basic": ^3.4.0
-  "@santi020k/eslint-config-extensions": ^3.1.0
-  "@santi020k/eslint-config-formats": ^3.1.0
-  "@santi020k/eslint-config-libraries": ^3.1.0
-  "@santi020k/eslint-config-testing": ^3.1.0
-  "@santi020k/eslint-config-tools": ^3.1.0
-  "@santi020k/lumen-astro": ^1.0.0
+  "@santi020k/eslint-config-astro": ^3.1.5
+  "@santi020k/eslint-config-basic": ^3.6.0
+  "@santi020k/eslint-config-extensions": ^3.1.4
+  "@santi020k/eslint-config-formats": ^3.1.4
+  "@santi020k/eslint-config-libraries": ^3.1.4
+  "@santi020k/eslint-config-testing": ^3.1.4
+  "@santi020k/eslint-config-tools": ^3.1.4
+  "@santi020k/lumen-astro": ^1.4.0
+  "@santi020k/og": ^0.4.0
   "@types/node": ^26.1.2
   "@vitest/coverage-v8": ^4.1.11
   astro: ^7.3.4
   cosmiconfig: ^9.0.2
   cspell: ^10.0.1
   esbuild: ^0.28.1
-  eslint: ^10.8.0
-  husky: ^9.1.7
+  eslint: ^10.12.0
   jsonc-parser: ^3.3.1
   knip: ^6.32.2
   lint-staged: ^17.2.0
@@ -50,9 +50,14 @@ catalog:
   typescript: ^6.0.3
   vitest: ^4.1.11
   wrangler: ^4.114.0
+  yaml: ^2.9.0
   yarn: ^1.22.22
 
 minimumReleaseAgeExclude:
+  - "@santi020k/og"
+  - "@santi020k/lumen-astro@1.4.0"
+  - "@santi020k/lumen-core@1.4.0"
+  - "@santi020k/lumen@1.4.0"
   - "@santi020k/eslint-config-typescript"
   - js-yaml@4.3.2
 

@@ -144,12 +144,12 @@ the repository installs the hook below.
 commitprompt setup project
 ```
 
-This idempotent command detects npm, pnpm, or Yarn; adds Commitprompt and Husky;
-sets the `commit` script; installs a `commit-msg` hook; adds guarded AGENTS.md
+This idempotent command detects npm, pnpm, or Yarn; adds Commitprompt; sets the
+`commit` script; writes a `commit-msg` step to `quality.yml`; adds guarded AGENTS.md
 and GitHub Copilot instructions; and installs reusable agent skills. It reports
 obsolete Commitizen, Czg, and custom prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
-lockfile and activate Husky.
+lockfile, then run `quality hooks install` once.
 
 Use `--dry-run` to preview, `--check` as a non-writing CI drift gate, `--json`
 for machine-readable output, and `--only` to select actions. The canonical hook

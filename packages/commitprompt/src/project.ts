@@ -1,10 +1,11 @@
 import {
   access,
-  chmod,
   readFile
 } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { isMap, isSeq, parseDocument } from 'yaml'
 
 import {
   AGENT_SKILL_TEMPLATE,
@@ -15,25 +16,18 @@ import {
 import { writeSettings } from './settings.js'
 
 const PACKAGE_NAME = '@santi020k/commitprompt'
-const HUSKY_VERSION = '^9.1.7'
 const COMMIT_SCRIPT = 'commitprompt'
-const HOOK_COMMAND = 'commitprompt validate --input "$1"'
-const HOOK_START_MARKER = '# commitprompt:start'
-const HOOK_END_MARKER = '# commitprompt:end'
+const HOOK_STEP_NAME = 'Validate commit message with Commitprompt'
 
 const DEFAULT_ACTIONS: readonly ProjectSetupActionId[] = [
   'dependency',
   'commit-script',
-  'husky-hook',
+  'quality-hook',
   'agents-instructions',
   'copilot-instructions',
   'agent-skill',
   'claude-skill'
 ]
-
-const HOOK_SECTION = `${HOOK_START_MARKER}
-${HOOK_COMMAND}
-${HOOK_END_MARKER}`
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn'
 
@@ -44,7 +38,7 @@ export type ProjectSetupActionId =
   'commit-script' |
   'copilot-instructions' |
   'dependency' |
-  'husky-hook'
+  'quality-hook'
 
 export interface ProjectSetupAction {
   changed: boolean
@@ -81,14 +75,12 @@ interface PackageManifest {
 }
 
 interface PendingFile {
-  executable?: boolean
   path: string
   source: string
 }
 
 interface ManifestConfiguration {
   actions: ProjectSetupAction[]
-  hookChanged: boolean
 }
 
 interface PnpmCatalogConfiguration {
@@ -242,24 +234,6 @@ const setScript = (
   return true
 }
 
-const ensurePrepareScript = (manifest: PackageManifest): boolean => {
-  const existing = manifest.scripts?.prepare
-
-  if (existing !== undefined) {
-    const updated = existing.replace(
-      /(^|&&)(\s*)husky install(?=\s*(?:&&|$))/gu, '$1$2husky'
-    )
-
-    if (updated !== existing) return setScript(manifest, 'prepare', updated)
-
-    if (/(^|&&)\s*husky(?:\s|$)/u.test(existing)) return false
-  }
-
-  return setScript(
-    manifest, 'prepare', existing === undefined ? 'husky' : `${existing} && husky`
-  )
-}
-
 const replaceGuardedSection = (
   source: string | undefined,
   section: string,
@@ -282,19 +256,6 @@ const replaceGuardedSection = (
   }
 
   return `${source.trimEnd()}\n\n${section}\n`
-}
-
-const KNOWN_COMMITLINT_INVOCATION =
-  /(?:(?:pnpm\s+exec|npx|yarn)\s+)?commitlint\s+--edit\s+(?:"\$1"|'\$1'|\$1)/gu
-
-const updateHook = (source: string | undefined): string => {
-  // Replace only the obsolete validator command. Using `true` preserves any
-  // surrounding `&&`, `if`, or multiline shell structure in an existing hook.
-  const withoutKnownValidator = source?.replace(KNOWN_COMMITLINT_INVOCATION, 'true')
-
-  return replaceGuardedSection(
-    withoutKnownValidator, HOOK_SECTION, HOOK_START_MARKER, HOOK_END_MARKER
-  )
 }
 
 const isObsoleteDependency = (name: string): boolean => name === 'commitizen' ||
@@ -462,19 +423,7 @@ const configureManifest = (
     })
   }
 
-  if (selectedActions.has('husky-hook')) {
-    const huskyDependencyChanged =
-      setDependency(manifest, 'husky', HUSKY_VERSION)
-
-    const prepareScriptChanged = ensurePrepareScript(manifest)
-
-    return {
-      actions,
-      hookChanged: huskyDependencyChanged || prepareScriptChanged
-    }
-  }
-
-  return { actions, hookChanged: false }
+  return { actions }
 }
 
 const analyzeInstructionFiles = async (
@@ -545,8 +494,6 @@ const writeProjectFiles = async (
 
   for (const file of files) {
     await writeSettings(file.path, file.source)
-
-    if (file.executable) await chmod(file.path, 0o755)
   }
 }
 
@@ -564,19 +511,49 @@ const getSelectedActions = (
 
 const analyzeHook = async (
   cwd: string,
-  manifestChanged: boolean,
+  packageManager: PackageManager,
   selectedActions: ReadonlySet<ProjectSetupActionId>
 ): Promise<HookConfiguration> => {
-  if (!selectedActions.has('husky-hook')) return {}
+  if (!selectedActions.has('quality-hook')) return {}
 
-  const hookPath = join(cwd, '.husky', 'commit-msg')
+  const hookPath = join(cwd, 'quality.yml')
   const originalHook = await readOptionalFile(hookPath)
-  const updatedHook = updateHook(originalHook)
-  const changed = manifestChanged || updatedHook !== originalHook
+  const document = parseDocument(originalHook ?? 'version: 1\n')
+
+  if (document.errors.length > 0) {
+    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
+  }
+
+  const desiredStep = {
+    args: packageManager === 'npm' ?
+      ['--no-install', 'commitprompt', 'validate', '--input'] :
+      ['exec', 'commitprompt', 'validate', '--input'],
+    command: packageManager === 'npm' ? 'npx' : packageManager,
+    name: HOOK_STEP_NAME,
+    pass_hook_args: true
+  }
+
+  const steps = document.getIn(['hooks', 'commit-msg', 'steps'], true)
+
+  if (isSeq(steps)) {
+    const existingIndex = steps.items.findIndex(item => {
+      if (!isMap(item)) return false
+
+      return item.get('name') === HOOK_STEP_NAME
+    })
+
+    if (existingIndex === -1) steps.add(desiredStep)
+    else steps.set(existingIndex, desiredStep)
+  } else {
+    document.setIn(['hooks', 'commit-msg', 'steps'], [desiredStep])
+  }
+
+  const updatedHook = document.toString()
+  const changed = updatedHook !== originalHook
 
   const action: ProjectSetupAction = {
     changed,
-    id: 'husky-hook',
+    id: 'quality-hook',
     path: hookPath
   }
 
@@ -585,7 +562,6 @@ const analyzeHook = async (
   return {
     action,
     file: {
-      executable: true,
       path: hookPath,
       source: updatedHook
     }
@@ -657,7 +633,7 @@ export const setupProject = async ({
     await analyzeInstructionFiles(cwd, selectedActions)
 
   const hookConfiguration = await analyzeHook(
-    cwd, manifestConfiguration.hookChanged, selectedActions
+    cwd, packageManager, selectedActions
   )
 
   const actions = [...manifestConfiguration.actions]

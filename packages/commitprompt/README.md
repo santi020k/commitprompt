@@ -35,16 +35,16 @@ commitprompt setup project
 ```
 
 Project setup detects the repository's package manager, updates `package.json`,
-installs a package-manager-neutral Husky `commit-msg` hook, and adds guarded
+adds a Commitprompt `commit-msg` step to `quality.yml`, and adds guarded
 Commitprompt sections to `AGENTS.md` and `.github/copilot-instructions.md`. It
 reports obsolete Commitizen, Czg, and prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
-lockfile and activate Husky.
+lockfile, then run `quality hooks install` once to install the managed launcher.
 
 Use `--dry-run` to preview changes. Use `--check` as a non-writing CI drift gate;
 it exits with status 1 when setup is required. Both modes support `--json` and
 `--cwd <path>`. Select independent actions with `--only dependency`,
-`--only commit-script`, `--only husky-hook`, `--only agents-instructions`, or
+`--only commit-script`, `--only quality-hook`, `--only agents-instructions`, or
 `--only copilot-instructions`. Reusable agent skill files can be selected with
 `--only agent-skill` or `--only claude-skill`; pass a comma-separated list to
 combine actions.
@@ -152,7 +152,7 @@ binary works through `pnpm commit`, `npm run commit`, and `yarn commit`.
 
 ## Git hooks
 
-`commitprompt setup project` installs the canonical Husky hook:
+`commitprompt setup project` writes the canonical quality hook step:
 
 ```sh
 commitprompt validate --input "$1"
@@ -163,8 +163,8 @@ the commit when repository rules fail. Existing unrelated hook commands are
 preserved. A `pre-commit` hook runs before the message exists and is better
 suited to staged-file checks.
 
-The neutral command is preferred because Husky places `node_modules/.bin` on
-`PATH`. Equivalent explicit commands are:
+The generated step invokes Commitprompt through the detected package manager.
+Equivalent explicit commands are:
 
 ```sh
 npx --no-install commitprompt validate --input "$1"

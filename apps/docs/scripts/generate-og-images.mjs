@@ -1,58 +1,54 @@
-import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import {
-  createOgCardSvg,
-  renderOgCard,
-  renderOgCardPng
-} from './render-og-card.js'
+import { createPathCards } from '@santi020k/og'
+import { definePresetConfig } from '@santi020k/og/presets'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(directory, '..')
-const outputDirectory = path.join(root, 'public', 'og', 'pages')
 
-const cards = [
+const pages = [
   {
-    description: 'A focused, package-manager-neutral Conventional Commits prompt.',
-    pathname: '/',
-    titleLines: ['Write the', 'commit.', 'Not the', 'syntax.'],
-    type: 'Home'
+    data: {
+      badge: 'Home',
+      description: 'A focused, package-manager-neutral Conventional Commits prompt.',
+      title: 'Write the commit. Not the syntax.',
+      variant: 'product'
+    },
+    pathname: '/'
   },
   {
-    description: 'Install, configure, and use Commitprompt in any Git repository.',
-    pathname: '/docs',
-    titleLines: ['Commit with', 'your repository’s', 'rules.'],
-    type: 'Docs'
+    data: {
+      badge: 'Docs',
+      description: 'Install, configure, and use Commitprompt in any Git repository.',
+      title: 'Commit with your repository’s rules.',
+      variant: 'docs'
+    },
+    pathname: '/docs'
   },
   {
-    description: 'Return to the documentation and keep the commit focused.',
-    pathname: '/404',
-    titleLines: ['This page was', 'not staged.'],
-    type: 'Not found'
+    data: {
+      badge: 'Not found',
+      description: 'Return to the documentation and keep the commit focused.',
+      title: 'This page was not staged.'
+    },
+    pathname: '/404'
   }
 ]
 
-const getSlug = pathname => pathname.replaceAll(/^\/+|\/+$/g, '').replaceAll('/', '--') || 'index'
+const home = pages[0].data
 
-await mkdir(outputDirectory, { recursive: true })
-
-await Promise.all(cards.map(async card => {
-  const outputPath = path.join(outputDirectory, `${getSlug(card.pathname)}.webp`)
-  const image = await renderOgCard(card)
-
-  await writeFile(outputPath, image)
-
-  process.stdout.write(`  write ${path.relative(root, outputPath)}\n`)
-}))
-
-const homeCard = cards[0]
-
-const [homePng] = await Promise.all([
-  renderOgCardPng(homeCard),
-  writeFile(path.join(root, 'public', 'og.svg'), `${createOgCardSvg(homeCard)}\n`)
-])
-
-await writeFile(path.join(root, 'public', 'og.png'), homePng)
-
-process.stdout.write(`Generated ${cards.length} Commitprompt Open Graph images (1200×630).\n`)
+export default definePresetConfig({
+  cards: [
+    ...createPathCards(pages, { directory: 'og/pages' }),
+    { data: home, output: 'og.png' },
+    { data: home, output: 'og.svg' }
+  ],
+  clean: true,
+  outputDirectory: 'public',
+  preset: {
+    brand: { domain: 'commitprompt.santi020k.com', name: 'Commitprompt' },
+    theme: { accent: '#945df4', background: '#100b18', panel: '#20162d' }
+  },
+  root
+})
