@@ -1,10 +1,18 @@
 <p align="center">
-  <a href="https://github.com/santi020k/commitprompt/blob/main/README.md"><img src="https://raw.githubusercontent.com/santi020k/commitprompt/main/apps/docs/public/logo.svg" alt="Commitprompt" width="300"></a>
+  <a href="../../README.md">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../docs/assets/readme/workspace-dark.svg">
+      <img src="../../docs/assets/readme/workspace-light.svg" alt="Commitprompt — Write the commit. Not the syntax." width="1200" height="220">
+    </picture>
+  </a>
 </p>
 
-<p align="center"><a href="https://github.com/santi020k/commitprompt/blob/main/README.md">Commitprompt</a></p>
-
 <h1 align="center">CLI and API</h1>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@santi020k/commitprompt"><img src="https://img.shields.io/npm/v/@santi020k/commitprompt?style=flat-square&amp;color=877006" alt="Published npm version"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-13967e?style=flat-square" alt="License: MIT"></a>
+</p>
 
 <p align="center">
   <a href="https://github.com/santi020k/commitprompt/blob/main/README.md">Project overview</a> ·
