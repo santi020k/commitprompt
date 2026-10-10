@@ -845,6 +845,31 @@ catalogs:
   })
 
   test.each([
+    { indent: '\t', newline: '' },
+    { indent: '\t', newline: '\n' },
+    { indent: '    ', newline: '' },
+    { indent: '    ', newline: '\n' }
+  ])('preserves indentation and trailing newline when updating a manifest: %j', async ({ indent, newline }) => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const source = `{\n${indent}"name": "consumer"\n}${newline}`
+
+    await writeFile(manifestPath, source, 'utf8')
+
+    const result = await setupProject({
+      actions: ['commit-script'], cwd: directory, packageVersion: '1.2.3'
+    })
+    const updated = await readFile(manifestPath, 'utf8')
+    const manifest: unknown = JSON.parse(updated)
+
+    expect(result.changed).toBe(true)
+    expect(manifest).toEqual({ name: 'consumer', scripts: { commit: 'commitprompt' } })
+    expect(updated).toContain(`\n${indent}"name": "consumer"`)
+    expect(updated).toContain(`\n${indent}"scripts": {\n${indent}${indent}"commit": "commitprompt"`)
+    expect(updated.endsWith('\n')).toBe(newline === '\n')
+  })
+
+  test.each([
     ['quality-hook'],
     ['agents-instructions'],
     ['dependency', 'commit-script']
