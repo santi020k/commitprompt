@@ -9,7 +9,13 @@ import type { Prompt } from '../src/types.js'
 
 const createPrompt = (answers: string[]): Prompt => ({
   close: vi.fn(),
-  question: vi.fn(() => Promise.resolve(answers.shift() ?? ''))
+  question: vi.fn(() => {
+    const answer = answers.shift()
+
+    if (answer === undefined) throw new Error('No prompt answers remaining.')
+
+    return Promise.resolve(answer)
+  })
 })
 
 describe('collectCommitAnswers', () => {
@@ -103,6 +109,37 @@ describe('collectCommitAnswers', () => {
     expect(error).toHaveBeenCalledWith(
       'Choose 1-2, enter a listed scope, or leave it empty.'
     )
+  })
+
+  test.each(['2024', '0', '-1', '1e3'])(
+    'accepts numeric-looking configured types and scopes by name: %s', async value => {
+      const prompt = createPrompt([value, value, 'update project', '', 'n', ''])
+      const error = vi.fn()
+      const answers = await collectCommitAnswers(
+        prompt,
+        [{ description: 'A feature', value: 'feat' }, { description: 'Custom type', value }],
+        vi.fn(),
+        error,
+        ['cli', value]
+      )
+
+      expect(answers.type).toBe(value)
+      expect(answers.scope).toBe(value)
+      expect(error).not.toHaveBeenCalled()
+    }
+  )
+
+  test('keeps numbered selections ahead of ambiguous numeric names', async () => {
+    const answers = await collectCommitAnswers(
+      createPrompt(['1', '1', 'update project', '', 'n', '']),
+      [{ description: 'A feature', value: 'feat' }, { description: 'Custom type', value: '1' }],
+      vi.fn(),
+      vi.fn(),
+      ['cli', '1']
+    )
+
+    expect(answers.type).toBe('feat')
+    expect(answers.scope).toBe('cli')
   })
 
   test('rejects an empty type list', async () => {

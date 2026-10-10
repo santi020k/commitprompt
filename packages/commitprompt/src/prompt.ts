@@ -76,9 +76,11 @@ const selectType = async (
     const answer = (await prompt.question('Type: ')).trim().toLowerCase()
     const numericSelection = Number(answer)
 
-    const selected = Number.isInteger(numericSelection) ?
+    const numberedType = Number.isInteger(numericSelection) ?
       types[numericSelection - 1] :
-      types.find(type => type.value === answer)
+      undefined
+
+    const selected = numberedType ?? types.find(type => type.value === answer)
 
     if (selected) return selected.value
 
@@ -109,8 +111,11 @@ const selectScope = async (
 
     const numericSelection = Number(answer)
 
-    const selected = Number.isInteger(numericSelection) ?
+    const numberedScope = Number.isInteger(numericSelection) ?
       scopes[numericSelection - 1] :
+      undefined
+
+    const selected = numberedScope ??
       scopes.find(scope => scope.toLowerCase() === answer.toLowerCase())
 
     if (selected) return selected
