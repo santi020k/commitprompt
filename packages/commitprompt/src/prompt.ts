@@ -80,7 +80,7 @@ const selectType = async (
       types[numericSelection - 1] :
       undefined
 
-    const selected = numberedType ?? types.find(type => type.value === answer)
+    const selected = numberedType ?? types.find(type => type.value.toLowerCase() === answer)
 
     if (selected) return selected.value
 

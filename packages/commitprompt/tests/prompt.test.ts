@@ -142,6 +142,21 @@ describe('collectCommitAnswers', () => {
     expect(answers.scope).toBe('cli')
   })
 
+  test.each(['FEATURE', 'feature', 'Feature'])(
+    'selects configured type names case-insensitively and preserves their case: %s', async selection => {
+      const error = vi.fn()
+      const answers = await collectCommitAnswers(
+        createPrompt([selection, '', 'update project', '', 'n', '']),
+        [{ description: 'A configured feature', value: 'FEATURE' }],
+        vi.fn(),
+        error
+      )
+
+      expect(answers.type).toBe('FEATURE')
+      expect(error).not.toHaveBeenCalled()
+    }
+  )
+
   test('rejects an empty type list', async () => {
     await expect(collectCommitAnswers(
       createPrompt([]), [], vi.fn(), vi.fn()
