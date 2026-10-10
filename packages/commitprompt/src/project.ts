@@ -631,6 +631,21 @@ const isAppliedChange = (
   drift: boolean
 ): boolean => !check && !dryRun && drift
 
+const reportCatalogChange = (
+  actions: ProjectSetupAction[],
+  configuration: PnpmCatalogConfiguration
+): void => {
+  if (configuration.source === undefined || configuration.path === undefined) return
+
+  const dependencyAction = actions.find(action => action.id === 'dependency')
+
+  if (dependencyAction === undefined) return
+
+  if (!dependencyAction.changed) dependencyAction.path = configuration.path
+
+  dependencyAction.changed = true
+}
+
 export const setupProject = async ({
   actions: selectedActionIds,
   check = false,
@@ -656,13 +671,7 @@ export const setupProject = async ({
 
   const manifestChanged = manifestConfiguration.actions.some(action => action.changed)
 
-  if (catalogConfiguration.source !== undefined) {
-    const dependencyAction = manifestConfiguration.actions.find(
-      action => action.id === 'dependency'
-    )
-
-    if (dependencyAction) dependencyAction.changed = true
-  }
+  reportCatalogChange(manifestConfiguration.actions, catalogConfiguration)
 
   const instructionConfiguration =
     await analyzeInstructionFiles(cwd, selectedActions)

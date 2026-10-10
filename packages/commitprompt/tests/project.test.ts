@@ -480,6 +480,11 @@ catalog:
     const workspace = await readFile(workspacePath, 'utf8')
 
     expect(first.drift).toBe(true)
+    expect(first.actions).toEqual([{
+      changed: true,
+      id: 'dependency',
+      path: join(directory, 'package.json')
+    }])
     expect(manifest.devDependencies['@santi020k/commitprompt'])
       .toBe('catalog:')
     expect(workspace).toContain(
@@ -523,7 +528,7 @@ catalogs:
     expect(result.actions).toEqual([{
       changed: true,
       id: 'dependency',
-      path: manifestPath
+      path: workspacePath
     }])
     expect(configuration).toEqual({
       catalog: { '@santi020k/commitprompt': '^1.2.3' },
@@ -538,6 +543,74 @@ catalogs:
       cwd: directory,
       packageVersion: '1.2.3'
     })).resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+  })
+
+  test.each([
+    { check: true },
+    { dryRun: true }
+  ])('reports catalog-only drift without writing files with %j', async mode => {
+    const directory = await createProject({
+      devDependencies: { '@santi020k/commitprompt': 'catalog:' },
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = await readFile(manifestPath, 'utf8')
+    const workspacePath = join(directory, 'pnpm-workspace.yaml')
+    const originalWorkspace = 'catalog:\n  typescript: ^6.0.3\n'
+
+    await writeFile(workspacePath, originalWorkspace, 'utf8')
+
+    const result = await setupProject({
+      ...mode,
+      actions: ['dependency'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(result).toEqual({
+      actions: [{ changed: true, id: 'dependency', path: workspacePath }],
+      changed: false,
+      drift: true,
+      obsolete: [],
+      packageManager: 'pnpm'
+    })
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(originalManifest)
+    await expect(readFile(workspacePath, 'utf8')).resolves.toBe(originalWorkspace)
+  })
+
+  test('reports the manifest when moving a catalog dependency into development dependencies', async () => {
+    const directory = await createProject({
+      dependencies: { '@santi020k/commitprompt': 'catalog:' },
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const manifestPath = join(directory, 'package.json')
+    const workspacePath = join(directory, 'pnpm-workspace.yaml')
+
+    await writeFile(workspacePath, 'catalog:\n  typescript: ^6.0.3\n', 'utf8')
+
+    const result = await setupProject({
+      actions: ['dependency'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(result.actions).toEqual([{
+      changed: true,
+      id: 'dependency',
+      path: manifestPath
+    }])
+    const manifest: unknown = JSON.parse(await readFile(manifestPath, 'utf8'))
+
+    expect(manifest).toEqual({
+      dependencies: {},
+      devDependencies: { '@santi020k/commitprompt': 'catalog:' },
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    await expect(readFile(workspacePath, 'utf8'))
+      .resolves.toContain('"@santi020k/commitprompt": ^1.2.3')
   })
 
   test('keeps a workspace without a default catalog unchanged', async () => {
