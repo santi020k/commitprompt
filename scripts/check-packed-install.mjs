@@ -11,6 +11,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { delimiter, isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
@@ -22,6 +23,7 @@ import {
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
+const { parse } = createRequire(join(packageDirectory, 'package.json'))('yaml')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'commitprompt-pack-'))
 
 const executeBinarySync = (binary, arguments_, options) => {
@@ -761,24 +763,59 @@ writeFileSync(validMessagePath, 'fix: verify generated hook\n')
 
 writeFileSync(invalidMessagePath, 'feat: reject configured type\n')
 
-const hookPath = join(integrationConsumer, '.husky', 'commit-msg')
+const hookConfiguration = parse(readFileSync(
+  join(integrationConsumer, 'quality.yml'), 'utf8'
+))
+
+const hookSteps = hookConfiguration?.hooks?.['commit-msg']?.steps
+
+if (!Array.isArray(hookSteps)) {
+  throw new Error('Generated Quality configuration omitted commit-msg steps.')
+}
+
+const hookStep = hookSteps.find(
+  step => step?.name === 'Validate commit message with Commitprompt'
+)
+
+if (
+  typeof hookStep?.command !== 'string'
+  || !Array.isArray(hookStep.args)
+  || !hookStep.args.every(argument => typeof argument === 'string')
+  || hookStep.pass_hook_args !== true
+) {
+  throw new Error('Generated Quality commit-msg step has an invalid contract.')
+}
 
 const hookEnvironment = {
-  ...process.env,
+  ...cleanPackageManagerEnvironment,
   PATH: `${join(integrationConsumer, 'node_modules/.bin')}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`
 }
 
-execFileSync('sh', [hookPath, validMessagePath], {
-  cwd: integrationConsumer,
-  env: hookEnvironment,
-  stdio: 'inherit'
-})
+executeBinarySync(
+  resolveWindowsCommand(hookStep.command),
+  [...hookStep.args, validMessagePath],
+  {
+    cwd: integrationConsumer,
+    env: hookEnvironment,
+    stdio: 'inherit'
+  }
+)
 
-const invalidHook = spawnSync('sh', [hookPath, invalidMessagePath], {
-  cwd: integrationConsumer,
-  encoding: 'utf8',
-  env: hookEnvironment
-})
+const invalidHookInvocation = getBinaryInvocation(
+  resolveWindowsCommand(hookStep.command),
+  [...hookStep.args, invalidMessagePath]
+)
+
+const invalidHook = spawnSync(
+  invalidHookInvocation.command, invalidHookInvocation.arguments_, {
+    cwd: integrationConsumer,
+    encoding: 'utf8',
+    env: hookEnvironment,
+    windowsVerbatimArguments: invalidHookInvocation.windowsVerbatimArguments
+  }
+)
+
+if (invalidHook.error !== undefined) throw invalidHook.error
 
 if (invalidHook.status === 0) {
   throw new Error('Generated consumer hook accepted an invalid message.')
