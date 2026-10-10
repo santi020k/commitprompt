@@ -613,6 +613,100 @@ catalogs:
       .resolves.toContain('"@santi020k/commitprompt": ^1.2.3')
   })
 
+  test.each([
+    'catalog: {} # Shared dependencies\n',
+    'catalog: { typescript: ^6.0.3 } # Shared dependencies\n',
+    'catalog: { typescript: ^6.0.3, } # Shared dependencies\n',
+    '"catalog": {\n  # Shared dependencies\n  typescript: ^6.0.3\n}\n',
+    '"catalog":\n  # Shared dependencies\n  typescript: ^6.0.3\n',
+    'catalog: # Shared dependencies\n',
+    'catalog: # Shared dependencies\r\n',
+    'catalog:\r\n  typescript: ^6.0.3 # Shared dependencies\r\n'
+  ])('repairs supported catalog syntax without changing unrelated YAML: %j', async catalogSource => {
+    const directory = await createProject({
+      devDependencies: { '@santi020k/commitprompt': 'catalog:' },
+      packageManager: 'pnpm@10.32.1'
+    })
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = await readFile(manifestPath, 'utf8')
+    const workspacePath = join(directory, 'pnpm-workspace.yaml')
+    const newline = catalogSource.includes('\r\n') ? '\r\n' : '\n'
+    const namedCatalogs = `catalogs:${newline}  previous: { "@santi020k/commitprompt": ^0.9.0 }${newline}`
+    const originalWorkspace = `${catalogSource}${namedCatalogs}`
+
+    await writeFile(workspacePath, originalWorkspace, 'utf8')
+
+    for (const mode of [{ check: true }, { dryRun: true }]) {
+      const result = await setupProject({
+        ...mode,
+        actions: ['dependency'],
+        cwd: directory,
+        packageVersion: '1.2.3'
+      })
+
+      expect(result.actions).toEqual([{
+        changed: true, id: 'dependency', path: workspacePath
+      }])
+      expect(result.changed).toBe(false)
+      expect(result.drift).toBe(true)
+      await expect(readFile(workspacePath, 'utf8')).resolves.toBe(originalWorkspace)
+    }
+
+    await setupProject({ actions: ['dependency'], cwd: directory, packageVersion: '1.2.3' })
+
+    const updatedWorkspace = await readFile(workspacePath, 'utf8')
+    const expectedCatalog: Record<string, string> = { '@santi020k/commitprompt': '^1.2.3' }
+
+    if (catalogSource.includes('typescript')) expectedCatalog.typescript = '^6.0.3'
+
+    expect(parseDocument(updatedWorkspace).toJS()).toEqual(expect.objectContaining({ catalog: expectedCatalog }))
+    expect(updatedWorkspace).toContain('# Shared dependencies')
+    expect(updatedWorkspace).toContain(namedCatalogs)
+    expect(updatedWorkspace.replaceAll(newline, '')).not.toContain('\n')
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(originalManifest)
+    await expect(setupProject({ actions: ['dependency'], check: true, cwd: directory }))
+      .resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+  })
+
+  test.each([
+    'catalog: { typescript: [ }\n',
+    'catalog: {}\ncatalog: {}\n',
+    '- catalog\n',
+    'catalog: []\n',
+    'catalog: null\n',
+    'catalog: invalid\n',
+    'catalog: { typescript: 123 }\n',
+    'catalog: &shared { typescript: ^6.0.3 }\ncatalogs: { previous: *shared }\n',
+    'catalogs: { previous: &shared { typescript: ^6.0.3 } }\ncatalog: *shared\n'
+  ])('rejects invalid or shared catalog repairs before writing: %j', async workspace => {
+    const directory = await createProject({ packageManager: 'pnpm@10.32.1' })
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = await readFile(manifestPath, 'utf8')
+    const workspacePath = join(directory, 'pnpm-workspace.yaml')
+
+    await writeFile(workspacePath, workspace, 'utf8')
+    await expect(setupProject({ cwd: directory, packageVersion: '1.2.3' }))
+      .rejects.toThrow(/pnpm (?:workspace configuration|catalog)/u)
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(originalManifest)
+    await expect(readFile(workspacePath, 'utf8')).resolves.toBe(workspace)
+    await expect(pathExists(join(directory, 'AGENTS.md'))).resolves.toBe(false)
+    await expect(pathExists(join(directory, 'quality.yml'))).resolves.toBe(false)
+  })
+
+  test('preserves an existing catalog entry shared through an alias', async () => {
+    const directory = await createProject({
+      devDependencies: { '@santi020k/commitprompt': 'catalog:' },
+      packageManager: 'pnpm@10.32.1'
+    })
+    const workspacePath = join(directory, 'pnpm-workspace.yaml')
+    const workspace = 'catalogs: { previous: &shared { "@santi020k/commitprompt": ^0.9.0 } }\ncatalog: *shared\n'
+
+    await writeFile(workspacePath, workspace, 'utf8')
+    await expect(setupProject({ actions: ['dependency'], cwd: directory }))
+      .resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+    await expect(readFile(workspacePath, 'utf8')).resolves.toBe(workspace)
+  })
+
   test('keeps a workspace without a default catalog unchanged', async () => {
     const directory = await createProject({
       name: 'consumer',

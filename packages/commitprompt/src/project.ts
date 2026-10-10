@@ -5,7 +5,7 @@ import {
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { isMap, isSeq, parseDocument } from 'yaml'
+import { isAlias, isMap, isScalar, isSeq, type Pair, parseDocument, type Scalar, type YAMLMap } from 'yaml'
 
 import {
   AGENT_SKILL_TEMPLATE,
@@ -87,11 +87,6 @@ interface PnpmCatalogConfiguration {
   path?: string
   source?: string
   specifier: string
-}
-
-interface CatalogRange {
-  source: string
-  start: number
 }
 
 interface HookConfiguration {
@@ -361,33 +356,103 @@ const shouldConfigurePnpmCatalog = (
     )
 }
 
-const getCatalogRange = (source: string): CatalogRange | undefined => {
-  const header = /^catalog:\s*(?:#.*)?$/mu.exec(source)
+const insertCatalogEntry = (
+  source: string,
+  range: readonly [number, number, number],
+  specifier: string,
+  flow: boolean,
+  empty: boolean
+): string => {
+  const entry = `"${PACKAGE_NAME}": ${specifier}`
 
-  if (header === null) return undefined
+  if (flow) {
+    const position = range[0] + 1
+    const separator = empty ? '' : ', '
 
-  const start = header.index + header[0].length
-  const remaining = source.slice(start)
-  const nextTopLevel = /^\S.*$/mu.exec(remaining.slice(1))
+    return `${source.slice(0, position)}${entry}${separator}${source.slice(position)}`
+  }
 
-  const end = nextTopLevel?.index === undefined ?
-    source.length :
-    start + 1 + nextTopLevel.index
+  const position = empty ? range[2] : source.lastIndexOf('\n', range[0] - 1) + 1
+  const indentation = empty ? '  ' : source.slice(position, range[0])
+  const newline = source.includes('\r\n') ? '\r\n' : '\n'
+  const leadingNewline = position > 0 && source[position - 1] !== '\n' ? newline : ''
 
-  return {
-    source: source.slice(start, end),
-    start
+  return `${source.slice(0, position)}${leadingNewline}${indentation}${entry}${newline}${source.slice(position)}`
+}
+
+const assertCatalogEntries = (entries: Pair[], path: string): void => {
+  for (const { key, value } of entries) {
+    if (!isScalar(key) || typeof key.value !== 'string' ||
+      !isScalar(value) || typeof value.value !== 'string') {
+      throw new Error(`Invalid pnpm catalog: expected dependency names and versions as strings: ${path}`)
+    }
   }
 }
 
-const catalogContainsPackage = (catalogSource: string): boolean => {
-  const escapedName = PACKAGE_NAME.replaceAll('/', String.raw`\/`)
+const isEmptyCatalog = (catalog: unknown): catalog is Scalar<null> => isScalar(catalog) && catalog.value === null &&
+  catalog.range?.[0] === catalog.range?.[1]
 
-  const packagePattern = new RegExp(
-    String.raw`^\s*["']?${escapedName}["']?\s*:`, 'mu'
-  )
+const readPnpmCatalog = (source: string, path: string): YAMLMap | Scalar<null> | undefined => {
+  const document = parseDocument(source)
 
-  return packagePattern.test(catalogSource)
+  if (document.errors.length > 0 || !isMap(document.contents)) {
+    throw new Error(`Cannot update invalid pnpm workspace configuration: ${path}`)
+  }
+
+  const catalog = document.get('catalog', true)
+
+  if (catalog === undefined) return undefined
+
+  if (isAlias(catalog)) {
+    const resolved = catalog.resolve(document)
+
+    if (isMap(resolved) && resolved.has(PACKAGE_NAME)) {
+      assertCatalogEntries(resolved.items, path)
+
+      return resolved
+    }
+
+    throw new Error(`Cannot repair an aliased pnpm catalog; define a separate default catalog: ${path}`)
+  }
+
+  if (isMap(catalog)) {
+    assertCatalogEntries(catalog.items, path)
+
+    return catalog
+  }
+
+  if (isEmptyCatalog(catalog)) return catalog
+
+  throw new Error(`Invalid pnpm catalog: expected a dependency mapping: ${path}`)
+}
+
+const analyzePnpmCatalog = (
+  source: string,
+  path: string,
+  specifier: string
+): PnpmCatalogConfiguration => {
+  const catalog = readPnpmCatalog(source, path)
+
+  if (catalog === undefined) return { specifier }
+
+  if (isMap(catalog) && catalog.has(PACKAGE_NAME)) return { specifier: 'catalog:' }
+
+  if (catalog.anchor !== undefined) {
+    throw new Error(`Cannot repair an anchored pnpm catalog; define a separate default catalog: ${path}`)
+  }
+
+  if (catalog.range === undefined || catalog.range === null) {
+    throw new Error(`Cannot locate pnpm catalog in workspace configuration: ${path}`)
+  }
+
+  const flow = isMap(catalog) && catalog.flow === true
+  const empty = isMap(catalog) ? catalog.items.length === 0 : true
+
+  return {
+    path,
+    source: insertCatalogEntry(source, catalog.range, specifier, flow, empty),
+    specifier: 'catalog:'
+  }
 }
 
 const configurePnpmCatalog = async (
@@ -407,23 +472,7 @@ const configurePnpmCatalog = async (
 
   if (source === undefined) return { specifier: defaultSpecifier }
 
-  const catalog = getCatalogRange(source)
-
-  if (catalog === undefined) return { specifier: defaultSpecifier }
-
-  if (catalogContainsPackage(catalog.source)) return { specifier: 'catalog:' }
-
-  const indentation = /^([ \t]+)\S/mu.exec(catalog.source)?.[1] ?? '  '
-  const entry = `\n${indentation}"${PACKAGE_NAME}": ${defaultSpecifier}`
-
-  const updatedSource =
-    `${source.slice(0, catalog.start)}${entry}${source.slice(catalog.start)}`
-
-  return {
-    path: workspacePath,
-    source: updatedSource,
-    specifier: 'catalog:'
-  }
+  return analyzePnpmCatalog(source, workspacePath, defaultSpecifier)
 }
 
 const configureManifest = (
