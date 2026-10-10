@@ -125,6 +125,31 @@ const readOptionalFile = async (path: string): Promise<string | undefined> => {
   }
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const assertPackageManifest: (
+  value: Record<string, unknown>,
+  path: string
+) => asserts value is PackageManifest = (value, path) => {
+  for (const field of ['dependencies', 'devDependencies', 'scripts']) {
+    const entry = value[field]
+
+    if (entry === undefined) continue
+
+    if (!isRecord(entry) || Object.values(entry).some(item => typeof item !== 'string')) {
+      throw new TypeError(`Invalid package manifest field "${field}": expected an object of strings: ${path}`)
+    }
+  }
+
+  if (value.packageManager !== undefined && typeof value.packageManager !== 'string') {
+    throw new TypeError(`Invalid package manifest field "packageManager": expected a string: ${path}`)
+  }
+
+  if (value.config !== undefined && !isRecord(value.config)) {
+    throw new TypeError(`Invalid package manifest field "config": expected an object: ${path}`)
+  }
+}
+
 const parseManifest = (source: string, path: string): PackageManifest => {
   let value: unknown
 
@@ -134,11 +159,13 @@ const parseManifest = (source: string, path: string): PackageManifest => {
     throw new Error(`Cannot update invalid package manifest: ${path}`)
   }
 
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new TypeError(`Package manifest must contain an object: ${path}`)
   }
 
-  return value as PackageManifest
+  assertPackageManifest(value, path)
+
+  return value
 }
 
 const detectPackageManager = async (
@@ -184,6 +211,12 @@ const formatManifest = (
   return originalSource.endsWith('\n') ? `${formatted}\n` : formatted
 }
 
+const getUpdatedManifestSource = (
+  manifest: PackageManifest,
+  originalSource: string,
+  changed: boolean
+): string => changed ? formatManifest(manifest, originalSource) : originalSource
+
 const setDependency = (
   manifest: PackageManifest,
   name: string,
@@ -224,6 +257,11 @@ const setScript = (
   return true
 }
 
+const hasRepeatedMarker = (
+  source: string,
+  marker: string
+): boolean => source.indexOf(marker) !== source.lastIndexOf(marker)
+
 const replaceGuardedSection = (
   source: string | undefined,
   section: string,
@@ -233,9 +271,14 @@ const replaceGuardedSection = (
   if (source === undefined || source.trim().length === 0) return `${section}\n`
 
   const start = source.indexOf(startMarker)
-  const end = source.indexOf(endMarker, start + startMarker.length)
+  const end = source.indexOf(endMarker)
 
-  if ((start === -1) !== (end === -1)) {
+  if (
+    (start === -1) !== (end === -1) ||
+    end < start ||
+    hasRepeatedMarker(source, startMarker) ||
+    hasRepeatedMarker(source, endMarker)
+  ) {
     throw new Error(`Cannot update an incomplete guarded section: ${startMarker}`)
   }
 
@@ -611,6 +654,8 @@ export const setupProject = async ({
     manifest, catalogConfiguration.specifier, manifestPath, selectedActions
   )
 
+  const manifestChanged = manifestConfiguration.actions.some(action => action.changed)
+
   if (catalogConfiguration.source !== undefined) {
     const dependencyAction = manifestConfiguration.actions.find(
       action => action.id === 'dependency'
@@ -640,8 +685,8 @@ export const setupProject = async ({
 
   actions.push(...instructionConfiguration.actions)
 
-  const updatedManifestSource = formatManifest(
-    manifest, originalManifestSource
+  const updatedManifestSource = getUpdatedManifestSource(
+    manifest, originalManifestSource, manifestChanged
   )
 
   await applyProjectSetup(

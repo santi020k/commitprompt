@@ -86,7 +86,10 @@ it exits with status 1 when setup is required. Both modes support `--json` and
 `--only commit-script`, `--only quality-hook`, `--only agents-instructions`, or
 `--only copilot-instructions`. Reusable agent skill files can be selected with
 `--only agent-skill` or `--only claude-skill`; pass a comma-separated list to
-combine actions.
+combine actions. Setup preserves the original `package.json` formatting when
+its dependency and commit script already match or those actions are not selected.
+Malformed manifest fields and incomplete, reversed, or duplicate instruction
+markers are rejected before setup writes files.
 
 The package also ships the generated templates under `templates/`, and project
 setup writes the skill to both `.agents/skills/commitprompt/SKILL.md` and

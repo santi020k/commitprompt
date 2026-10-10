@@ -771,6 +771,73 @@ catalogs:
     }))
   })
 
+  test.each([
+    ['quality-hook'],
+    ['agents-instructions'],
+    ['dependency', 'commit-script']
+  ] as const)('preserves manifest formatting for unchanged manifest actions %j', async (...actions) => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const source = '{"name":"consumer","devDependencies":{"@santi020k/commitprompt":"^1.2.3"},"scripts":{"commit":"commitprompt"}}'
+
+    await writeFile(manifestPath, source, 'utf8')
+    await setupProject({ actions, cwd: directory, packageVersion: '1.2.3' })
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(source)
+
+    await expect(setupProject({
+      actions, cwd: directory, packageVersion: '1.2.3'
+    })).resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(source)
+  })
+
+  test.each([
+    { scripts: { test: 1 } },
+    { scripts: null },
+    { scripts: [] },
+    { dependencies: 'invalid' },
+    { dependencies: { example: false } },
+    { devDependencies: ['example'] },
+    { devDependencies: { example: null } },
+    { packageManager: 42 },
+    { config: [] },
+    { config: null }
+  ])('rejects malformed manifest fields before writing: %j', async fields => {
+    const directory = await createProject({ name: 'consumer', ...fields })
+    const manifestPath = join(directory, 'package.json')
+    const source = await readFile(manifestPath, 'utf8')
+    const agentsPath = join(directory, 'AGENTS.md')
+    const guidance = '# Preserve project guidance\n'
+
+    await writeFile(agentsPath, guidance, 'utf8')
+    await expect(setupProject({
+      cwd: directory, packageVersion: '1.2.3'
+    })).rejects.toThrow('Invalid package manifest field')
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(source)
+    await expect(readFile(agentsPath, 'utf8')).resolves.toBe(guidance)
+    await expect(pathExists(join(directory, 'quality.yml'))).resolves.toBe(false)
+    await expect(pathExists(join(directory, '.github'))).resolves.toBe(false)
+  })
+
+  test.each([
+    '<!-- commitprompt:end -->\nProject guidance\n',
+    '<!-- commitprompt:end -->\n<!-- commitprompt:start -->\n',
+    '<!-- commitprompt:start -->\n<!-- commitprompt:start -->\n<!-- commitprompt:end -->\n',
+    '<!-- commitprompt:start -->\n<!-- commitprompt:end -->\n<!-- commitprompt:end -->\n'
+  ])('refuses malformed guarded instructions without writing: %j', async source => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const manifestSource = await readFile(manifestPath, 'utf8')
+    const agentsPath = join(directory, 'AGENTS.md')
+
+    await writeFile(agentsPath, source, 'utf8')
+    await expect(setupProject({
+      cwd: directory, packageVersion: '1.2.3'
+    })).rejects.toThrow('Cannot update an incomplete guarded section')
+    await expect(readFile(agentsPath, 'utf8')).resolves.toBe(source)
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(manifestSource)
+    await expect(pathExists(join(directory, 'quality.yml'))).resolves.toBe(false)
+  })
+
   test('rejects an invalid package manifest without writing', async () => {
     const directory = await createProject({ name: 'consumer' })
     const manifestPath = join(directory, 'package.json')
