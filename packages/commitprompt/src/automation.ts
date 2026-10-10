@@ -155,8 +155,9 @@ const runValidation = async ({
   json,
   log
 }: NormalizedAutomationOptions): Promise<number> => {
+  const message = requireInput(input).trimEnd()
   const validator = createCommitlintValidator(cwd)
-  const validation = await validator.validate(requireInput(input).trimEnd())
+  const validation = await validator.validate(message)
 
   printValidation(validation, json, log, error)
 

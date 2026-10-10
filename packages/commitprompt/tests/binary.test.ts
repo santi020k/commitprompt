@@ -132,6 +132,25 @@ describe('commitprompt executable', () => {
     expect(result.stderr).toBe('')
   })
 
+  test.each(['', ' \n\t'])('reports missing validation input without loading invalid configuration: %j', input => {
+    const directory = createProject()
+
+    writeFileSync(
+      join(directory, 'commitlint.config.mjs'),
+      'export default { rules: false }\n'
+    )
+
+    const result = runBinary(['validate', '--json', '--cwd', directory], {
+      input
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toBe(`${JSON.stringify({
+      error: 'This command requires input from stdin or --input <path>.'
+    })}\n`)
+  })
+
   test('reports project setup drift without writing', () => {
     const directory = createProject()
     const manifestPath = join(directory, 'package.json')
