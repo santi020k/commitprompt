@@ -54,40 +54,72 @@ export const resolveZedSettingsPath = ({
   return posix.join(homeDirectory, '.config', 'zed', 'settings.json')
 }
 
-const getExistingInstructions = (source: string): unknown => {
+const COMMIT_MESSAGE_INSTRUCTIONS_SETTING = 'agent.commit_message_instructions'
+
+const getExistingInstructions = (source: string): string | undefined => {
   const settings = parseSettings(source, 'Zed', {
     allowTrailingComma: true
   })
 
-  if (!isSettingsRecord(settings)) return undefined
+  if (settings === undefined) return undefined
+
+  if (!isSettingsRecord(settings)) {
+    throw new TypeError('Zed settings must be a JSON object.')
+  }
 
   const agent = settings.agent
 
-  if (!isSettingsRecord(agent)) return undefined
+  if (agent === undefined) return undefined
 
-  return agent.commit_message_instructions
+  if (!isSettingsRecord(agent)) {
+    throw new TypeError('agent must be an object in Zed settings.')
+  }
+
+  const existingInstructions = agent.commit_message_instructions
+
+  if (existingInstructions === undefined) return undefined
+
+  if (typeof existingInstructions !== 'string') {
+    throw new TypeError(
+      `${COMMIT_MESSAGE_INSTRUCTIONS_SETTING} must be a string in Zed settings.`
+    )
+  }
+
+  return existingInstructions
 }
 
 const WORKSPACE_START_MARKER = '[commitprompt:start]'
 const WORKSPACE_END_MARKER = '[commitprompt:end]'
 
+const hasRepeatedMarker = (
+  source: string,
+  marker: string
+): boolean => source.indexOf(marker) !== source.lastIndexOf(marker)
+
+const assertWellFormedMarkers = (existingInstructions: string): void => {
+  const start = existingInstructions.indexOf(WORKSPACE_START_MARKER)
+  const end = existingInstructions.indexOf(WORKSPACE_END_MARKER)
+
+  if (
+    (start === -1) !== (end === -1) ||
+    end < start ||
+    hasRepeatedMarker(existingInstructions, WORKSPACE_START_MARKER) ||
+    hasRepeatedMarker(existingInstructions, WORKSPACE_END_MARKER)
+  ) {
+    throw new Error(
+      'Cannot update an incomplete guarded section in Zed settings.'
+    )
+  }
+}
+
 const combineInstructions = (
-  existingInstructions: unknown,
+  existingInstructions: string,
   instructions: string
 ): string => {
-  if (typeof existingInstructions !== 'string' || !existingInstructions.trim()) {
-    return instructions
-  }
+  if (!existingInstructions.trim()) return instructions
 
   const start = existingInstructions.indexOf(WORKSPACE_START_MARKER)
-
-  const end = existingInstructions.indexOf(
-    WORKSPACE_END_MARKER, start + WORKSPACE_START_MARKER.length
-  )
-
-  if ((start === -1) !== (end === -1)) {
-    throw new Error('Cannot update incomplete Commitprompt instructions in Zed settings.')
-  }
+  const end = existingInstructions.indexOf(WORKSPACE_END_MARKER)
 
   if (start !== -1 && end !== -1 && instructions.includes(WORKSPACE_START_MARKER)) {
     return `${existingInstructions.slice(0, start)}${instructions}${existingInstructions.slice(
@@ -108,15 +140,20 @@ export const setupZed = async (
   const existingInstructions = getExistingInstructions(source)
   const instructions = options.instructions ?? COMMIT_MESSAGE_INSTRUCTIONS
 
-  if (
-    typeof existingInstructions === 'string' &&
-    existingInstructions.includes(instructions)
-  ) {
+  if (existingInstructions !== undefined) {
+    assertWellFormedMarkers(existingInstructions)
+  }
+
+  if (existingInstructions?.includes(instructions)) {
     return { changed: false, settingsPath }
   }
 
+  const combined = existingInstructions === undefined ?
+    instructions :
+    combineInstructions(existingInstructions, instructions)
+
   const edits = modify(
-    source, ['agent', 'commit_message_instructions'], combineInstructions(existingInstructions, instructions), {
+    source, ['agent', 'commit_message_instructions'], combined, {
       formattingOptions: {
         eol: source.includes('\r\n') ? '\r\n' : '\n',
         insertSpaces: true,

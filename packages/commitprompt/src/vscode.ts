@@ -62,6 +62,18 @@ export const resolveVSCodeSettingsPath = ({
   )
 }
 
+const isValidVSCodeInstruction = (
+  value: unknown
+): value is VSCodeInstruction => {
+  if (!isSettingsRecord(value)) return false
+
+  if ('text' in value && typeof value.text !== 'string') return false
+
+  if ('file' in value && typeof value.file !== 'string') return false
+
+  return true
+}
+
 const getExistingInstructions = (
   source: string
 ): VSCodeInstruction[] | undefined => {
@@ -81,7 +93,19 @@ const getExistingInstructions = (
     )
   }
 
-  return existingInstructions as VSCodeInstruction[]
+  const validatedInstructions: VSCodeInstruction[] = []
+
+  existingInstructions.forEach((entry: unknown, index: number) => {
+    if (!isValidVSCodeInstruction(entry)) {
+      throw new TypeError(
+        `${COMMIT_INSTRUCTIONS_SETTING}[${index}] must be an object whose "text" and "file" properties are strings when present in VS Code settings.`
+      )
+    }
+
+    validatedInstructions.push(entry)
+  })
+
+  return validatedInstructions
 }
 
 const isRepositoryInstruction = (

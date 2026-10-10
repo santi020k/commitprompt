@@ -230,4 +230,98 @@ describe('setupZed', () => {
       .rejects.toThrow('Cannot update invalid Zed settings')
     await expect(readFile(settingsPath, 'utf8')).resolves.toBe('{ invalid')
   })
+
+  test.each(['null', '[]', '"zed"', '42'])(
+    'rejects a non-object settings root %s without writing', async source => {
+      const directory = await createTemporaryDirectory()
+      const settingsPath = join(directory, 'settings.json')
+
+      await writeFile(settingsPath, source, 'utf8')
+
+      await expect(setupZed({ settingsPath }))
+        .rejects.toThrow('Zed settings must be a JSON object')
+      await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+    }
+  )
+
+  test.each([
+    JSON.stringify({ agent: 'oops' }),
+    JSON.stringify({ agent: [] }),
+    JSON.stringify({ agent: 5 }),
+    JSON.stringify({ agent: null })
+  ])('rejects a non-object agent field %s without writing', async source => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+
+    await writeFile(settingsPath, source, 'utf8')
+
+    await expect(setupZed({ settingsPath }))
+      .rejects.toThrow('agent must be an object in Zed settings')
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+  })
+
+  test.each([
+    JSON.stringify({ agent: { commit_message_instructions: 5 } }),
+    JSON.stringify({ agent: { commit_message_instructions: ['a'] } }),
+    JSON.stringify({ agent: { commit_message_instructions: null } }),
+    JSON.stringify({ agent: { commit_message_instructions: {} } })
+  ])(
+    'rejects a non-string commit_message_instructions field %s without writing',
+    async source => {
+      const directory = await createTemporaryDirectory()
+      const settingsPath = join(directory, 'settings.json')
+
+      await writeFile(settingsPath, source, 'utf8')
+
+      await expect(setupZed({ settingsPath }))
+        .rejects.toThrow('agent.commit_message_instructions must be a string in Zed settings')
+      await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+    }
+  )
+
+  test.each([
+    '[commitprompt:end]\nSome notes',
+    '[commitprompt:end]\n[commitprompt:start]',
+    '[commitprompt:start]\n[commitprompt:start]\n[commitprompt:end]',
+    '[commitprompt:start]\n[commitprompt:end]\n[commitprompt:end]'
+  ])(
+    'refuses malformed guarded instructions without writing: %j', async instructions => {
+      const directory = await createTemporaryDirectory()
+      const settingsPath = join(directory, 'settings.json')
+      const source = JSON.stringify({
+        agent: { commit_message_instructions: instructions }
+      })
+
+      await writeFile(settingsPath, source, 'utf8')
+
+      await expect(setupZed({ settingsPath }))
+        .rejects.toThrow('Cannot update an incomplete guarded section in Zed settings')
+      await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+    }
+  )
+
+  test('detects a duplicated marker even when the new instructions already match', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const instructions = [
+      '[commitprompt:start]',
+      'Commitprompt repository rules: use release.',
+      '[commitprompt:end]'
+    ].join('\n')
+    const existingInstructions = [
+      instructions,
+      '[commitprompt:start]',
+      'stray duplicate block',
+      '[commitprompt:end]'
+    ].join('\n\n')
+    const source = JSON.stringify({
+      agent: { commit_message_instructions: existingInstructions }
+    })
+
+    await writeFile(settingsPath, source, 'utf8')
+
+    await expect(setupZed({ instructions, settingsPath }))
+      .rejects.toThrow('Cannot update an incomplete guarded section in Zed settings')
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+  })
 })
