@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import {
   mkdir,
   mkdtemp,
@@ -6,6 +7,7 @@ import {
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import process from 'node:process'
 
 import { afterEach, describe, expect, test } from 'vitest'
 
@@ -16,6 +18,17 @@ import {
 import { createCommitlintValidator } from '../src/validator.js'
 
 const temporaryDirectories: string[] = []
+
+const runNativeConfiguration = (directory: string) => spawnSync(
+  process.execPath,
+  ['--input-type=module',
+    '--eval',
+    `const { loadCommitlintConfiguration } = await import(${JSON.stringify(new URL('../src/configuration.ts', import.meta.url).href)});
+const loaded = await loadCommitlintConfiguration(process.cwd());
+process.stdout.write(JSON.stringify(loaded.rules));`
+  ],
+  { cwd: directory, encoding: 'utf8', timeout: 5000 }
+)
 
 const createProject = async (
   resolveWorkspacePackages = false
@@ -167,6 +180,99 @@ module.exports = {
 
     expect(configuration.rules['type-enum'])
       .toEqual([2, 'always', ['fix', 'release']])
+  })
+
+  test.each([
+    ['./config.mjs'],
+    [null, './config.mjs'],
+    [[null], ['./config.mjs']],
+    [42, './config.mjs'],
+    ['invalid-target', './config.mjs'],
+    ['./../outside.mjs', './config.mjs'],
+    ['./node_modules/other.mjs', './config.mjs'],
+    ['./%2e%2e/outside.mjs', './config.mjs'],
+    ['./node_modules/other.mjs'.replace('n', '%6e'), './config.mjs']
+  ])('loads consumer import-only array exports like native Node: %j', async (...targets) => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-array')
+    const rules = { 'type-enum': [2, 'always', ['fix', 'release']] }
+
+    await mkdir(configurationDirectory, { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: { '.': { import: targets } },
+      main: './wrong.mjs',
+      name: 'commitlint-config-array',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(join(configurationDirectory, 'config.mjs'), `export default ${JSON.stringify({ rules })}\n`, 'utf8')
+    await writeFile(join(configurationDirectory, 'wrong.mjs'), 'export default { rules: {} }\n', 'utf8')
+    await writeFile(join(directory, 'commitlint.config.mjs'), 'export default { extends: ["array"] }\n', 'utf8')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      'const loaded = await import("commitlint-config-array"); process.stdout.write(JSON.stringify(loaded.default))'
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(0)
+    expect(native.stderr).toBe('')
+    const nativeConfiguration: unknown = JSON.parse(native.stdout)
+
+    expect(nativeConfiguration).toEqual({ rules })
+    const loaded = runNativeConfiguration(directory)
+
+    expect(loaded.status).toBe(0)
+    expect(loaded.stderr).toBe('')
+    const loadedRules: unknown = JSON.parse(loaded.stdout)
+
+    expect(loadedRules).toEqual(rules)
+  })
+
+  test('does not skip a valid array target because its file is missing', async () => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-missing-array')
+
+    await mkdir(configurationDirectory, { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: { '.': { import: ['./missing.mjs', './config.mjs'] } },
+      main: './config.mjs',
+      name: 'commitlint-config-missing-array',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(join(configurationDirectory, 'config.mjs'), 'export default { rules: {} }\n', 'utf8')
+    await writeFile(join(directory, 'commitlint.config.mjs'), 'export default { extends: ["missing-array"] }\n', 'utf8')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      'await import("commitlint-config-missing-array")'
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(1)
+    expect(native.stderr).toContain('ERR_MODULE_NOT_FOUND')
+    expect(runNativeConfiguration(directory).status).toBe(1)
+  })
+
+  test.each([
+    { output: '', status: 1, subpath: 'missing' },
+    { output: JSON.stringify({ 'type-enum': [2, 'always', ['fix']] }), status: 0, subpath: 'feature.mjs' }
+  ])('resolves legacy package subpath without using the root entry: $subpath', async ({ output, status, subpath }) => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-legacy')
+    const rules = { 'type-enum': [2, 'always', ['fix']] }
+
+    await mkdir(configurationDirectory, { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      main: './index.mjs',
+      name: 'commitlint-config-legacy',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(join(configurationDirectory, 'index.mjs'), 'export default { rules: {} }\n', 'utf8')
+    await writeFile(join(configurationDirectory, 'feature.mjs'), `export default ${JSON.stringify({ rules })}\n`, 'utf8')
+    await writeFile(join(directory, 'commitlint.config.mjs'), `export default { extends: ["legacy/${subpath}"] }\n`, 'utf8')
+
+    const loaded = runNativeConfiguration(directory)
+
+    expect(loaded.status).toBe(status)
+    expect(loaded.stdout).toBe(output)
   })
 
   test('loads inline plugins and executes asynchronous rules', async () => {
@@ -386,6 +492,73 @@ describe('configuration internals', () => {
     expect(configurationInternals.resolvePackageEntry(
       invalidManifestPath, directory, ''
     )).toBeUndefined()
+  })
+
+  test('does not fall back to the legacy entry for an unresolved exports subpath', async () => {
+    const directory = await createProject()
+    const packageDirectory = join(directory, 'node_modules', 'scoped-only')
+
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(
+      join(packageDirectory, 'package.json'), '{"name":"scoped-only","type":"module","exports":{".":{"import":"./index.js"}}}\n', 'utf8'
+    )
+    await writeFile(
+      join(packageDirectory, 'index.js'), 'export default {}\n', 'utf8'
+    )
+
+    const manifestPath = join(packageDirectory, 'package.json')
+
+    expect(configurationInternals.resolvePackageEntry(
+      manifestPath, packageDirectory, 'missing'
+    )).toBeUndefined()
+    expect(configurationInternals.resolveEsmPackage(
+      'scoped-only/missing', directory
+    )).toBeUndefined()
+    expect(configurationInternals.resolvePackageEntry(
+      manifestPath, packageDirectory, ''
+    )).toBe(join(packageDirectory, 'index.js'))
+  })
+
+  test('still falls back to the legacy entry point without an exports map', async () => {
+    const directory = await createProject()
+    const packageDirectory = join(directory, 'node_modules', 'legacy-pkg')
+
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(
+      join(packageDirectory, 'package.json'), '{"name":"legacy-pkg","main":"./lib/index.js"}\n', 'utf8'
+    )
+    await mkdir(join(packageDirectory, 'lib'), { recursive: true })
+    await writeFile(
+      join(packageDirectory, 'lib', 'index.js'), 'module.exports = {}\n', 'utf8'
+    )
+
+    expect(configurationInternals.resolvePackageEntry(
+      join(packageDirectory, 'package.json'), packageDirectory, ''
+    )).toBe(join(packageDirectory, 'lib', 'index.js'))
+  })
+
+  test('resolves an existing exports subpath instead of the root entry', async () => {
+    const directory = await createProject()
+    const packageDirectory = join(directory, 'node_modules', 'multi-export')
+
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(
+      join(packageDirectory, 'package.json'), '{"name":"multi-export","type":"module","exports":{".":"./index.js","./feature":"./feature.js"},"main":"./index.js"}\n', 'utf8'
+    )
+    await writeFile(join(packageDirectory, 'index.js'), 'export default {}\n', 'utf8')
+    await writeFile(join(packageDirectory, 'feature.js'), 'export default {}\n', 'utf8')
+
+    expect(configurationInternals.resolvePackageEntry(
+      join(packageDirectory, 'package.json'), packageDirectory, 'feature'
+    )).toBe(join(packageDirectory, 'feature.js'))
+  })
+
+  test('selects the first resolvable array export target', () => {
+    expect(configurationInternals.getConditionalExport([
+      './a.mjs', './b.mjs'
+    ])).toBe('./a.mjs')
+    expect(configurationInternals.getConditionalExport([null, [], 42]))
+      .toBeUndefined()
   })
 
   test('merges configuration records with plugin concatenation', () => {

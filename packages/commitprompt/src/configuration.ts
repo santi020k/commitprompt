@@ -160,8 +160,37 @@ const normalizeExtendedConfigurationName = (name: string): string => {
   return `commitlint-config-${name}`
 }
 
+const isValidExportTarget = (target: string): boolean => {
+  if (!target.startsWith('./')) return false
+
+  return !target.slice(2).split(/[\\/]/u).some(segment => {
+    const decodedSegment = segment.replace(
+      /%([0-9a-f]{2})/giu,
+      (_match: string, hexadecimal: string) => String.fromCharCode(
+        Number.parseInt(hexadecimal, 16)
+      )
+    ).toLowerCase()
+
+    return decodedSegment === '.' ||
+      decodedSegment === '..' ||
+      decodedSegment === 'node_modules'
+  })
+}
+
 const getConditionalExport = (value: unknown): string | undefined => {
-  if (typeof value === 'string') return value
+  if (typeof value === 'string') {
+    return isValidExportTarget(value) ? value : undefined
+  }
+
+  if (isUnknownArray(value)) {
+    for (const target of value) {
+      const resolved = getConditionalExport(target)
+
+      if (resolved !== undefined) return resolved
+    }
+
+    return undefined
+  }
 
   if (!isRecord(value)) return undefined
 
@@ -224,6 +253,13 @@ const resolvePackageEntry = (
   const exportedPath = getConditionalExport(
     getPackageExport(parsed, subpath)
   )
+
+  if (
+    exportedPath === undefined &&
+    (parsed.exports !== undefined || subpath.length > 0)
+  ) {
+    return undefined
+  }
 
   const resolved = join(
     packageDirectory, exportedPath ?? getPackageFallback(parsed)
