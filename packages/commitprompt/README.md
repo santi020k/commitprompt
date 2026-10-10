@@ -80,6 +80,13 @@ reports obsolete Commitizen, Czg, and prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
 lockfile, then run `quality hooks install` once to install the managed launcher.
 
+For pnpm workspaces with a default catalog, setup adds missing Commitprompt
+entries in block or flow syntax and preserves comments and named catalogs.
+Catalog-only repairs report `pnpm-workspace.yaml`. Invalid workspace YAML and
+repairs to anchored or aliased catalogs are rejected before any files change;
+define a separate default catalog to repair those entries. Existing entries
+shared through aliases remain unchanged.
+
 Use `--dry-run` to preview changes. Use `--check` as a non-writing CI drift gate;
 it exits with status 1 when setup is required. Both modes support `--json` and
 `--cwd <path>`. Select independent actions with `--only dependency`,
@@ -136,7 +143,9 @@ This reads `type-enum` and `scope-enum`, updates only the Commitprompt guidance
 in `.vscode/settings.json` and `.zed/settings.json`, and preserves custom
 instructions. Use `--editor vscode` or `--editor zed` to target one editor.
 `--dry-run`, `--check`, `--json`, and `--cwd <path>` provide the same preview
-and CI drift behavior as project setup.
+and CI drift behavior as project setup. All selected editor settings are checked
+before either file is written. Malformed supported settings values or managed
+instruction markers stop setup and preserve the existing files.
 
 ## Requirements
 
@@ -164,11 +173,15 @@ export default {
 
 Commitprompt passes repository parser presets, plugins, ignores, default
 ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
-rules also change the choices shown by the prompt. Without `scope-enum`, the
+rules also change the choices shown by the prompt. Enter type or scope names
+without regard to case; Commitprompt preserves the configured spelling. Valid
+menu numbers take precedence over numeric names. Without `scope-enum`, the
 optional scope remains free-form. Repository rules and `extends` entries take
 precedence over the built-in fallback, and undeclared rules are not enforced.
 JavaScript, JSON, YAML, and erasable TypeScript configuration files are
 supported through Node.js without adding TypeScript to consumer dependencies.
+Package configurations respect declared exports, including array targets; an
+unavailable subpath fails instead of silently loading the package root.
 When a resolved configuration has no `extends`, parser preset, or declared
 rules, Commitprompt retains its other settings and supplies the included
 Conventional Commits rules so validation never uses an empty rule set by
