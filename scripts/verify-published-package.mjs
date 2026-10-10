@@ -4,6 +4,11 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { setTimeout as delay } from 'node:timers/promises'
 
+import {
+  resolveVerificationAttempts,
+  resolveVerificationInitialDelayMs
+} from './release-verification-settings.mjs'
+
 const repositoryRoot = resolve(import.meta.dirname, '..')
 
 const metadata = JSON.parse(readFileSync(
@@ -13,12 +18,16 @@ const metadata = JSON.parse(readFileSync(
 
 const packageName = process.env.PACKAGE_NAME ?? metadata.name
 const expectedVersion = process.env.PACKAGE_VERSION ?? metadata.version
-const attempts = Number(process.env.NPM_VERIFY_ATTEMPTS ?? 6)
-const initialDelay = Number(process.env.NPM_VERIFY_DELAY_MS ?? 2_000)
 
 if (!packageName || !expectedVersion) {
   throw new Error('A package name and version are required for verification.')
 }
+
+const attempts = resolveVerificationAttempts(process.env.NPM_VERIFY_ATTEMPTS)
+
+const initialDelay = resolveVerificationInitialDelayMs(
+  process.env.NPM_VERIFY_DELAY_MS
+)
 
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
   try {
