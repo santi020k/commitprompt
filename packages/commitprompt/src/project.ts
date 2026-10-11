@@ -5,7 +5,7 @@ import {
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { isAlias, isMap, isScalar, isSeq, type Pair, parseDocument, type Scalar, type YAMLMap } from 'yaml'
+import { type Document, isAlias, isMap, isScalar, isSeq, type Pair, parseDocument, Scalar, type YAMLMap, type YAMLSeq } from 'yaml'
 
 import {
   AGENT_SKILL_TEMPLATE,
@@ -201,9 +201,12 @@ const formatManifest = (
   manifest: PackageManifest,
   originalSource: string
 ): string => {
-  const formatted = JSON.stringify(manifest, undefined, getIndent(originalSource))
+  const newline = originalSource.includes('\r\n') ? '\r\n' : '\n'
 
-  return originalSource.endsWith('\n') ? `${formatted}\n` : formatted
+  const formatted = JSON.stringify(manifest, undefined, getIndent(originalSource))
+    .replaceAll('\n', newline)
+
+  return originalSource.endsWith('\n') ? `${formatted}${newline}` : formatted
 }
 
 const getUpdatedManifestSource = (
@@ -591,6 +594,136 @@ const getSelectedActions = (
   return selectedActions
 }
 
+interface DesiredHookStep {
+  args: string[]
+  command: string
+  name: string
+  pass_hook_args: boolean
+}
+
+const normalizeHookStepName = (value: unknown): string | undefined => typeof value === 'string' ? value.trim() : undefined
+
+const findExistingStepIndex = (
+  steps: YAMLSeq,
+  name: string
+): number => steps.items.findIndex(item => {
+  if (!isMap(item)) return false
+
+  return normalizeHookStepName(item.get('name')) === name
+})
+
+const stepArgsMatch = (
+  existingArgs: unknown,
+  desiredArgs: readonly string[]
+): boolean => {
+  if (!isSeq(existingArgs)) return false
+
+  const values = existingArgs.items.map(item => isScalar(item) ? item.value : undefined)
+
+  return values.length === desiredArgs.length &&
+    values.every((value, index) => value === desiredArgs[index])
+}
+
+const updateExistingStep = (
+  step: YAMLMap,
+  desiredStep: DesiredHookStep
+): boolean => {
+  let mutated = false
+
+  if (step.get('command') !== desiredStep.command) {
+    step.set('command', desiredStep.command)
+
+    mutated = true
+  }
+
+  const existingArgs = step.get('args', true)
+
+  if (!stepArgsMatch(existingArgs, desiredStep.args)) {
+    if (isSeq(existingArgs)) {
+      existingArgs.items = desiredStep.args.map(argument => new Scalar(argument))
+    } else {
+      step.set('args', desiredStep.args)
+    }
+
+    mutated = true
+  }
+
+  if (step.get('pass_hook_args') !== desiredStep.pass_hook_args) {
+    step.set('pass_hook_args', desiredStep.pass_hook_args)
+
+    mutated = true
+  }
+
+  return mutated
+}
+
+const assertHookNodeShape = (
+  node: unknown,
+  isValid: (value: unknown) => boolean,
+  hookPath: string
+): void => {
+  if (node !== undefined && !isValid(node)) {
+    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
+  }
+}
+
+const getHookSteps = (
+  document: Document.Parsed,
+  hookPath: string
+): YAMLSeq | undefined => {
+  if (document.errors.length > 0 ||
+    (document.contents !== null && !isMap(document.contents))) {
+    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
+  }
+
+  const hooksNode = document.get('hooks', true)
+
+  assertHookNodeShape(hooksNode, isMap, hookPath)
+
+  const commitMsgNode = isMap(hooksNode) ? hooksNode.get('commit-msg', true) : undefined
+
+  assertHookNodeShape(commitMsgNode, isMap, hookPath)
+
+  const steps = isMap(commitMsgNode) ? commitMsgNode.get('steps', true) : undefined
+
+  assertHookNodeShape(steps, isSeq, hookPath)
+
+  return isSeq(steps) ? steps : undefined
+}
+
+const configureHookSteps = (
+  document: Document.Parsed,
+  steps: YAMLSeq | undefined,
+  desiredStep: DesiredHookStep
+): boolean => {
+  if (steps === undefined) {
+    document.setIn(['hooks', 'commit-msg', 'steps'], [desiredStep])
+
+    return true
+  }
+
+  const existingIndex = findExistingStepIndex(steps, HOOK_STEP_NAME)
+
+  if (existingIndex === -1) {
+    steps.add(desiredStep)
+
+    return true
+  }
+
+  const existingStep = steps.get(existingIndex, true)
+
+  return isMap(existingStep) && updateExistingStep(existingStep, desiredStep)
+}
+
+const createDesiredHookStep = (packageManager: PackageManager): DesiredHookStep => ({
+  args: packageManager === 'npm' ?
+    ['--no-install', 'commitprompt', 'validate', '--input'] :
+    ['exec', ...(packageManager === 'yarn' ? ['--'] : []), 'commitprompt', 'validate', '--input'],
+  command: packageManager === 'npm' ? 'npx' : packageManager,
+  name: HOOK_STEP_NAME,
+  pass_hook_args: true
+})
+
 const analyzeHook = async (
   cwd: string,
   packageManager: PackageManager,
@@ -601,36 +734,15 @@ const analyzeHook = async (
   const hookPath = join(cwd, 'quality.yml')
   const originalHook = await readOptionalFile(hookPath)
   const document = parseDocument(originalHook ?? 'version: 1\n')
+  const steps = getHookSteps(document, hookPath)
+  const desiredStep = createDesiredHookStep(packageManager)
+  const mutated = configureHookSteps(document, steps, desiredStep)
+  const serializedHook = mutated ? document.toString() : originalHook ?? 'version: 1\n'
 
-  if (document.errors.length > 0) {
-    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
-  }
+  const updatedHook = mutated && originalHook?.includes('\r\n') ?
+    serializedHook.replaceAll('\n', '\r\n') :
+    serializedHook
 
-  const desiredStep = {
-    args: packageManager === 'npm' ?
-      ['--no-install', 'commitprompt', 'validate', '--input'] :
-      ['exec', ...(packageManager === 'yarn' ? ['--'] : []), 'commitprompt', 'validate', '--input'],
-    command: packageManager === 'npm' ? 'npx' : packageManager,
-    name: HOOK_STEP_NAME,
-    pass_hook_args: true
-  }
-
-  const steps = document.getIn(['hooks', 'commit-msg', 'steps'], true)
-
-  if (isSeq(steps)) {
-    const existingIndex = steps.items.findIndex(item => {
-      if (!isMap(item)) return false
-
-      return item.get('name') === HOOK_STEP_NAME
-    })
-
-    if (existingIndex === -1) steps.add(desiredStep)
-    else steps.set(existingIndex, desiredStep)
-  } else {
-    document.setIn(['hooks', 'commit-msg', 'steps'], [desiredStep])
-  }
-
-  const updatedHook = document.toString()
   const changed = updatedHook !== originalHook
 
   const action: ProjectSetupAction = {
@@ -639,7 +751,7 @@ const analyzeHook = async (
     path: hookPath
   }
 
-  if (updatedHook === originalHook) return { action }
+  if (!changed) return { action }
 
   return {
     action,

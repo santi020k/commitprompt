@@ -942,11 +942,15 @@ catalogs:
     { indent: '\t', newline: '' },
     { indent: '\t', newline: '\n' },
     { indent: '    ', newline: '' },
-    { indent: '    ', newline: '\n' }
-  ])('preserves indentation and trailing newline when updating a manifest: %j', async ({ indent, newline }) => {
+    { indent: '    ', newline: '\n' },
+    { indent: '\t', newline: '', lineEnding: '\r\n' },
+    { indent: '\t', newline: '\r\n', lineEnding: '\r\n' },
+    { indent: '    ', newline: '', lineEnding: '\r\n' },
+    { indent: '    ', newline: '\r\n', lineEnding: '\r\n' }
+  ])('preserves indentation and trailing newline when updating a manifest: %j', async ({ indent, newline, lineEnding = '\n' }) => {
     const directory = await createProject({ name: 'consumer' })
     const manifestPath = join(directory, 'package.json')
-    const source = `{\n${indent}"name": "consumer"\n}${newline}`
+    const source = `{${lineEnding}${indent}"name": "consumer"${lineEnding}}${newline}`
 
     await writeFile(manifestPath, source, 'utf8')
 
@@ -958,9 +962,10 @@ catalogs:
 
     expect(result.changed).toBe(true)
     expect(manifest).toEqual({ name: 'consumer', scripts: { commit: 'commitprompt' } })
-    expect(updated).toContain(`\n${indent}"name": "consumer"`)
-    expect(updated).toContain(`\n${indent}"scripts": {\n${indent}${indent}"commit": "commitprompt"`)
-    expect(updated.endsWith('\n')).toBe(newline === '\n')
+    expect(updated).toContain(`${lineEnding}${indent}"name": "consumer"`)
+    expect(updated).toContain(`${lineEnding}${indent}"scripts": {${lineEnding}${indent}${indent}"commit": "commitprompt"`)
+    expect(updated.endsWith('\n')).toBe(newline.length > 0)
+    expect(updated.replaceAll(lineEnding, '')).not.toContain('\n')
   })
 
   test.each([
@@ -1075,6 +1080,207 @@ catalogs:
     await expect(readFile(agentsPath, 'utf8')).resolves.toContain(
       'Incomplete instructions'
     )
+  })
+
+  test('leaves an already-correct hand-authored hook step untouched', async () => {
+    const directory = await createProject({
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const hookPath = join(directory, 'quality.yml')
+    const source = `version: 1
+hooks:
+  commit-msg:
+    steps:
+      # keep retries low
+      - name: Validate commit message with Commitprompt
+        command: pnpm
+        args: [exec, commitprompt, validate, --input]
+        pass_hook_args: true
+        timeout: 30
+`
+
+    await writeFile(hookPath, source, 'utf8')
+
+    const result = await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(result.actions).toEqual([{ changed: false, id: 'quality-hook', path: hookPath }])
+    expect(result.drift).toBe(false)
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+  })
+
+  test.each(['>', '|'])('matches a block name %s without adding a duplicate', async blockStyle => {
+    const directory = await createProject({
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const hookPath = join(directory, 'quality.yml')
+    const source = `version: 1
+hooks:
+  commit-msg:
+    steps:
+      - name: ${blockStyle}
+          Validate commit message with Commitprompt
+        command: pnpm
+        args: [exec, commitprompt, validate, --input]
+        pass_hook_args: true
+`
+
+    await writeFile(hookPath, source, 'utf8')
+
+    const result = await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(result.actions).toEqual([{ changed: false, id: 'quality-hook', path: hookPath }])
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+    expect(source.match(/Validate commit message with Commitprompt/gu)).toHaveLength(1)
+
+    await expect(setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })).resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+  })
+
+  test('updates a stale hook step in place while preserving its comment and unknown fields', async () => {
+    const directory = await createProject({
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const hookPath = join(directory, 'quality.yml')
+    const source = `version: 1
+hooks:
+  commit-msg:
+    steps:
+      # keep retries low
+      - name: Validate commit message with Commitprompt
+        command: npx
+        args: [commitprompt] # preserve arguments note
+        pass_hook_args: false
+        timeout: 30 # preserve timeout note
+`
+
+    await writeFile(hookPath, source, 'utf8')
+
+    const result = await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+    const updated = await readFile(hookPath, 'utf8')
+    const configuration: unknown = parseDocument(updated).toJS()
+
+    expect(result.actions).toEqual([{ changed: true, id: 'quality-hook', path: hookPath }])
+    expect(configuration).toEqual({
+      hooks: {
+        'commit-msg': {
+          steps: [{
+            args: ['exec', 'commitprompt', 'validate', '--input'],
+            command: 'pnpm',
+            name: 'Validate commit message with Commitprompt',
+            pass_hook_args: true,
+            timeout: 30
+          }]
+        }
+      },
+      version: 1
+    })
+    expect(updated).toContain('# keep retries low')
+    expect(updated).toContain('# preserve arguments note')
+    expect(updated).toContain('# preserve timeout note')
+    expect(updated.match(/Validate commit message with Commitprompt/gu)).toHaveLength(1)
+
+    await expect(setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })).resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(updated)
+  })
+
+  test('preserves CRLF line endings when writing a new quality hook step', async () => {
+    const directory = await createProject({
+      name: 'consumer',
+      packageManager: 'pnpm@10.32.1'
+    })
+    const hookPath = join(directory, 'quality.yml')
+
+    await writeFile(
+      hookPath,
+      'version: 1\r\nhooks:\r\n  commit-msg:\r\n    steps:\r\n' +
+      '      - name: Check ticket\r\n        command: node\r\n        args: [scripts/check-ticket.mjs]\r\n',
+      'utf8'
+    )
+
+    await setupProject({
+      actions: ['quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    const updated = await readFile(hookPath, 'utf8')
+
+    expect(updated).toContain('Validate commit message with Commitprompt')
+    expect(updated.replaceAll('\r\n', '')).not.toContain('\n')
+  })
+
+  test.each([
+    'disabled\n',
+    '[]\n',
+    'null\n',
+    'version: 1\nhooks: null\n',
+    'version: 1\nhooks:\n  commit-msg: null\n',
+    'version: 1\nhooks:\n  commit-msg:\n    steps: null\n',
+    'version: 1\nhooks:\n  commit-msg:\n    steps: disabled\n',
+    'version: 1\nhooks:\n  commit-msg:\n    steps:\n      foo: bar\n',
+    'version: 1\nhooks:\n  commit-msg: disabled\n',
+    'version: 1\nhooks: disabled\n'
+  ])('rejects a malformed quality hook shape without overwriting it: %j', async source => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = await readFile(manifestPath, 'utf8')
+    const hookPath = join(directory, 'quality.yml')
+
+    await writeFile(hookPath, source, 'utf8')
+    await expect(setupProject({
+      actions: ['commit-script', 'quality-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })).rejects.toThrow('Cannot update invalid quality configuration')
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(originalManifest)
+  })
+
+  test('preserves CRLF line endings when updating package.json', async () => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const source = '{\r\n  "name": "consumer"\r\n}\r\n'
+
+    await writeFile(manifestPath, source, 'utf8')
+
+    const result = await setupProject({
+      actions: ['commit-script'], cwd: directory, packageVersion: '1.2.3'
+    })
+    const updated = await readFile(manifestPath, 'utf8')
+    const manifest: unknown = JSON.parse(updated)
+
+    expect(result.changed).toBe(true)
+    expect(manifest).toEqual({ name: 'consumer', scripts: { commit: 'commitprompt' } })
+    expect(updated).toContain('\r\n  "scripts": {\r\n    "commit": "commitprompt"\r\n  }\r\n')
+    expect(updated.replaceAll('\r\n', '')).not.toContain('\n')
+
+    await expect(setupProject({
+      actions: ['commit-script'], cwd: directory, packageVersion: '1.2.3'
+    })).resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(updated)
   })
 
   test('writes an idempotent Commitprompt step into quality.yml', async () => {
