@@ -184,7 +184,12 @@ precedence over the built-in fallback, and undeclared rules are not enforced.
 JavaScript, JSON, YAML, and erasable TypeScript configuration files are
 supported through Node.js without adding TypeScript to consumer dependencies.
 Package configurations support array targets and wildcard subpath exports.
-An unavailable subpath fails instead of silently loading the package root.
+Export targets use file URL decoding, and active import conditions are checked
+in their declared order, including nested conditions and null exclusions.
+Use `import`, `node`, or `default` conditions instead of a `module`-only export
+condition; the legacy top-level `module` field remains supported for packages
+without an exports map. An unavailable subpath fails instead of silently
+loading the package root.
 When a resolved configuration has no `extends`, parser preset, or declared
 rules, Commitprompt retains its other settings and supplies the included
 Conventional Commits rules so validation never uses an empty rule set by

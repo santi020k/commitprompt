@@ -227,6 +227,82 @@ module.exports = {
     expect(loadedRules).toEqual(rules)
   })
 
+  test.each([
+    { target: './caf%C3%A9.mjs', filename: 'café.mjs', subpath: '' },
+    { target: './space%20name.mjs', filename: 'space name.mjs', subpath: '' },
+    { target: './percent%25.mjs', filename: 'percent%.mjs', subpath: '' },
+    { target: './hash%23.mjs', filename: 'hash#.mjs', subpath: '' },
+    { target: './query%3F.mjs', filename: 'query?.mjs', subpath: '' },
+    { target: './*.mjs', filename: 'café.mjs', subpath: 'caf%C3%A9' }
+  ])('loads URL-encoded exports like native Node: $target $subpath', async ({ target, filename, subpath }) => {
+    const directory = await createProject()
+    const packageDirectory = join(directory, 'node_modules', 'commitlint-config-encoded')
+    const rules = { 'type-enum': [2, 'always', ['release']] }
+    const specifier = `commitlint-config-encoded${subpath ? `/${subpath}` : ''}`
+
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(join(packageDirectory, 'package.json'), JSON.stringify({
+      exports: subpath ? { './*': { import: target } } : { import: target },
+      name: 'commitlint-config-encoded',
+      type: 'module'
+    }))
+    await writeFile(join(packageDirectory, filename), `export default ${JSON.stringify({ rules })}\n`)
+    await writeFile(join(directory, 'commitlint.config.mjs'), `export default { extends: [${JSON.stringify(specifier)}] }\n`)
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      `process.stdout.write(JSON.stringify((await import(${JSON.stringify(specifier)})).default.rules))`
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+    const loaded = runNativeConfiguration(directory)
+
+    expect(native.status).toBe(0)
+    expect(native.stderr).toBe('')
+    expect(loaded.status).toBe(0)
+    expect(loaded.stderr).toBe('')
+    expect(JSON.parse(loaded.stdout)).toEqual(JSON.parse(native.stdout))
+    expect(configurationInternals.resolvePackageEntry(
+      join(packageDirectory, 'package.json'), packageDirectory, subpath
+    )).toBe(join(packageDirectory, filename))
+  })
+
+  test.each([
+    { name: 'node before import', conditions: { node: './first.mjs', import: './second.mjs' }, expected: 'first.mjs' },
+    { name: 'default before import', conditions: { default: './first.mjs', import: './second.mjs' }, expected: 'first.mjs' },
+    { name: 'nested conditions', conditions: { node: { browser: './second.mjs', import: './first.mjs' }, import: './second.mjs' }, expected: 'first.mjs' },
+    { name: 'inactive module condition', conditions: { module: './second.mjs', import: './first.mjs' }, expected: 'first.mjs' },
+    { name: 'unmatched nested condition', conditions: { node: { browser: './second.mjs' }, import: './first.mjs' }, expected: 'first.mjs' },
+    { name: 'inactive array conditions', conditions: { node: [{ browser: './second.mjs' }], import: './first.mjs' }, expected: 'first.mjs' },
+    { name: 'nested inactive arrays', conditions: { node: [[{ browser: './second.mjs' }]], import: './first.mjs' }, expected: 'first.mjs' },
+    { name: 'null in inactive array blocks siblings', conditions: { node: [null, { browser: './first.mjs' }], import: './second.mjs' }, expected: undefined },
+    { name: 'null blocks siblings', conditions: { node: null, import: './second.mjs' }, expected: undefined },
+    { name: 'empty array blocks siblings', conditions: { node: [], import: './second.mjs' }, expected: undefined },
+    { name: 'invalid target blocks siblings', conditions: { node: 'invalid', import: './second.mjs' }, expected: undefined },
+    { name: 'module-only condition', conditions: { module: './second.mjs' }, expected: undefined }
+  ])('selects conditional exports like native Node: $name', async ({ conditions, expected }) => {
+    const directory = await createProject()
+    const packageDirectory = join(directory, 'node_modules', 'condition-order')
+
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(join(packageDirectory, 'package.json'), JSON.stringify({
+      exports: conditions,
+      name: 'condition-order',
+      type: 'module'
+    }))
+    await writeFile(join(packageDirectory, 'first.mjs'), 'export default "first.mjs"')
+    await writeFile(join(packageDirectory, 'second.mjs'), 'export default "second.mjs"')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      'process.stdout.write((await import("condition-order")).default)'
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(expected === undefined ? 1 : 0)
+    expect(configurationInternals.resolvePackageEntry(
+      join(packageDirectory, 'package.json'), packageDirectory, ''
+    )).toBe(expected === undefined ? undefined : join(packageDirectory, native.stdout))
+    expect(native.stdout).toBe(expected ?? '')
+  })
+
   test('does not skip a valid array target because its file is missing', async () => {
     const directory = await createProject()
     const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-missing-array')
@@ -640,7 +716,7 @@ describe('configuration internals', () => {
     })).toBe('./import.js')
     expect(configurationInternals.getConditionalExport({
       module: './module.js'
-    })).toBe('./module.js')
+    })).toBeUndefined()
     expect(configurationInternals.getConditionalExport({
       default: './default.js'
     })).toBe('./default.js')
@@ -770,7 +846,7 @@ describe('configuration internals', () => {
       './a.mjs', './b.mjs'
     ])).toBe('./a.mjs')
     expect(configurationInternals.getConditionalExport([null, [], 42]))
-      .toBeUndefined()
+      .toBeNull()
   })
 
   test('merges configuration records with plugin concatenation', () => {

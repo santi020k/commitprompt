@@ -177,25 +177,38 @@ const isValidExportTarget = (target: string): boolean => {
   })
 }
 
-const getConditionalExport = (value: unknown): string | undefined => {
+const getArrayExport = (
+  targets: unknown[],
+  resolveTarget: (target: unknown) => string | null | undefined
+): string | null | undefined => {
+  let result: null | undefined = targets.length === 0 ? null : undefined
+
+  for (const target of targets) {
+    const resolved = resolveTarget(target)
+
+    if (typeof resolved === 'string') return resolved
+
+    if (resolved === null) result = null
+  }
+
+  return result
+}
+
+const getConditionalExport = (value: unknown): string | null | undefined => {
   if (typeof value === 'string') {
-    return isValidExportTarget(value) ? value : undefined
+    return isValidExportTarget(value) ? value : null
   }
 
-  if (isUnknownArray(value)) {
-    for (const target of value) {
-      const resolved = getConditionalExport(target)
+  if (isUnknownArray(value)) return getArrayExport(value, getConditionalExport)
 
-      if (resolved !== undefined) return resolved
-    }
+  if (value === null) return null
 
-    return undefined
-  }
+  if (!isRecord(value)) return value === undefined ? undefined : null
 
-  if (!isRecord(value)) return undefined
+  for (const [condition, target] of Object.entries(value)) {
+    if (!['import', 'node', 'default'].includes(condition)) continue
 
-  for (const condition of ['import', 'module', 'node', 'default']) {
-    const resolved = getConditionalExport(value[condition])
+    const resolved = getConditionalExport(target)
 
     if (resolved !== undefined) return resolved
   }
@@ -362,15 +375,15 @@ const resolvePackageEntry = (
   )
 
   if (
-    exportedPath === undefined &&
+    typeof exportedPath !== 'string' &&
     (parsed.exports !== undefined || subpath.length > 0)
   ) {
     return undefined
   }
 
-  const resolved = join(
-    packageDirectory, exportedPath ?? getPackageFallback(parsed)
-  )
+  const resolved = typeof exportedPath === 'string' ?
+    fileURLToPath(new URL(exportedPath, pathToFileURL(`${packageDirectory}/`))) :
+    join(packageDirectory, getPackageFallback(parsed))
 
   return existsSync(resolved) ? resolved : undefined
 }
