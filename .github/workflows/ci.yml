@@ -173,6 +173,25 @@ jobs:
             --commit-hash="$GITHUB_SHA" \
             --commit-dirty=true
 
+      - name: Verify deployed documentation
+        env:
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || 'https://commitprompt.santi020k.com' }}
+        run: |
+          for path in / /docs/ /sitemap-index.xml; do
+            echo "Checking deployed documentation: $path"
+            response="$(mktemp)"
+            curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 30 \
+              --retry 5 --retry-delay 2 --retry-all-errors \
+              "${PUBLIC_SITE_URL%/}${path}" --output "$response"
+            if [[ "$path" == /sitemap-index.xml ]]; then
+              grep -q '<sitemapindex' "$response"
+            else
+              grep -q '<title>[^<]*Commitprompt' "$response"
+            fi
+            rm "$response"
+          done
+
   gate:
     name: Required checks
     if: always()

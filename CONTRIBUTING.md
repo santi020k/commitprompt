@@ -16,6 +16,22 @@ The CLI lives in `packages/commitprompt`; the website lives in `apps/docs`.
 Keep Git operations, validation, message formatting, and terminal interaction
 separated and covered by tests.
 
+### Git hooks
+
+The `quality` command is a native CLI installed separately from pnpm dependencies.
+Install it using the [Quality installation guide](https://github.com/santi020k/quality#install-for-development),
+then verify that it is available on your `PATH` and install this repository's hooks:
+
+```sh
+quality --version
+pnpm run hooks:install
+quality hooks status
+```
+
+The managed hooks run staged-file checks, Commitprompt message validation, and
+the full pre-push gate defined in `quality.yml`. Re-run `pnpm run hooks:install`
+after changing that configuration. Do not bypass a failing hook.
+
 ## Documentation design
 
 The documentation uses Lumen v4 and preserves Commitprompt’s yellow/gold and
@@ -44,3 +60,16 @@ retry must stay at or below 2147483647 milliseconds, Node's timer limit.
 Fractional milliseconds follow Node's timer behavior: delays are truncated to
 whole milliseconds, with a minimum timer delay of 1 millisecond. Invalid retry
 settings fail before invoking npm.
+
+## Documentation deployment
+
+The CI workflow deploys documentation from `main` only after the required
+validation jobs succeed. A manual dispatch from another branch validates it
+without deploying. Production credentials are fetched through the existing
+Infisical OIDC identity in the protected `docs-production` environment.
+
+After deploying, CI checks the home page, documentation page, and sitemap over
+HTTP. Failed smoke checks fail the deployment job and required checks; inspect
+the deployment and restore service through a corrective pull request and CI run.
+The smoke checks confirm availability and expected content, not the deployed
+commit identity.
