@@ -45,6 +45,8 @@ describe('resolveVerificationInitialDelayMs', () => {
     assert.equal(resolveVerificationInitialDelayMs('0'), 0)
 
     assert.equal(resolveVerificationInitialDelayMs('1500'), 1_500)
+
+    assert.equal(resolveVerificationInitialDelayMs('0.5'), 0.5)
   })
 
   for (const invalidValue of ['-1', 'abc', 'NaN', 'Infinity']) {
@@ -55,6 +57,37 @@ describe('resolveVerificationInitialDelayMs', () => {
       )
     })
   }
+
+  it('accepts the timer limit for the final scheduled retry', () => {
+    assert.equal(resolveVerificationInitialDelayMs('2147483647', 2), 2_147_483_647)
+
+    assert.equal(resolveVerificationInitialDelayMs('1073741823.5', 3), 1_073_741_823.5)
+  })
+
+  it('rejects a delay above the timer limit even without retries', () => {
+    assert.throws(
+      () => resolveVerificationInitialDelayMs('2147483648', 1),
+      /keep every retry delay at or below 2147483647ms/u
+    )
+  })
+
+  it('rejects overflow caused by retry multiplication', () => {
+    assert.throws(
+      () => resolveVerificationInitialDelayMs('1073741824', 3),
+      /keep every retry delay at or below 2147483647ms/u
+    )
+  })
+
+  it('validates the default delay against the configured attempts', () => {
+    assert.throws(
+      () => resolveVerificationInitialDelayMs(undefined, 1_073_743),
+      /keep every retry delay at or below 2147483647ms/u
+    )
+  })
+
+  it('accepts zero delay for every valid attempt count', () => {
+    assert.equal(resolveVerificationInitialDelayMs('0', Number.MAX_SAFE_INTEGER), 0)
+  })
 
   it('treats an empty string as zero, a valid nonnegative delay', () => {
     assert.equal(resolveVerificationInitialDelayMs(''), 0)
@@ -136,6 +169,22 @@ describe('verify-published-package.mjs CLI behavior', () => {
         assert.doesNotMatch(result.stderr, /retrying in/u)
       }
     )
+  }
+
+  for (const retrySettings of [
+    { NPM_VERIFY_DELAY_MS: '2147483648' },
+    { NPM_VERIFY_ATTEMPTS: '3', NPM_VERIFY_DELAY_MS: '1073741824' },
+    { NPM_VERIFY_ATTEMPTS: '1073743', NPM_VERIFY_DELAY_MS: undefined }
+  ]) {
+    it(`rejects timer overflow before invoking npm: ${JSON.stringify(retrySettings)}`, () => {
+      const result = runScript(retrySettings)
+
+      assert.notEqual(result.status, 0)
+
+      assert.match(result.stderr, /keep every retry delay at or below 2147483647ms/u)
+
+      assert.doesNotMatch(result.stderr, /ENOENT|retrying in|TimeoutOverflowWarning/u)
+    })
   }
 
   it('treats an empty NPM_VERIFY_DELAY_MS as a valid zero-millisecond delay', () => {

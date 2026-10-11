@@ -38,5 +38,9 @@ Release CI runs `pnpm run verify:published` after publication to verify the
 package version, latest tag, and installed consumer workflows.
 `NPM_VERIFY_ATTEMPTS` accepts a positive integer and defaults to 6.
 `NPM_VERIFY_DELAY_MS` accepts a finite nonnegative delay in milliseconds and
-defaults to 2000; zero allows immediate retries. Invalid retry settings fail
-before invoking npm.
+defaults to 2000; zero allows immediate retries. Each retry multiplies the
+initial delay by its attempt number. The initial delay and every scheduled
+retry must stay at or below 2147483647 milliseconds, Node's timer limit.
+Fractional milliseconds follow Node's timer behavior: delays are truncated to
+whole milliseconds, with a minimum timer delay of 1 millisecond. Invalid retry
+settings fail before invoking npm.

@@ -26,7 +26,8 @@ if (!packageName || !expectedVersion) {
 const attempts = resolveVerificationAttempts(process.env.NPM_VERIFY_ATTEMPTS)
 
 const initialDelay = resolveVerificationInitialDelayMs(
-  process.env.NPM_VERIFY_DELAY_MS
+  process.env.NPM_VERIFY_DELAY_MS,
+  attempts
 )
 
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
