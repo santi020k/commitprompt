@@ -16,7 +16,7 @@ export const createGitClient = (
   { silent = false }: CreateGitClientOptions = {}
 ): GitClient => ({
   commit: message => {
-    const result = spawnSync('git', ['commit', '--file=-'], {
+    const result = spawnSync('git', ['commit', '--cleanup=verbatim', '--file=-'], {
       cwd,
       encoding: 'utf8',
       input: message,
