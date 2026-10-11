@@ -95,6 +95,9 @@ it exits with status 1 when setup is required. Both modes support `--json` and
 `--only agent-skill` or `--only claude-skill`; pass a comma-separated list to
 combine actions. Setup preserves the original `package.json` formatting when
 its dependency and commit script already match or those actions are not selected.
+When an update is needed, setup retains the manifest’s indentation, line endings,
+and trailing newline convention. An already-correct Quality hook is left
+byte-for-byte unchanged; updates preserve unrelated step options.
 Malformed manifest fields and incomplete, reversed, or duplicate instruction
 markers are rejected before setup writes files.
 
@@ -180,8 +183,8 @@ optional scope remains free-form. Repository rules and `extends` entries take
 precedence over the built-in fallback, and undeclared rules are not enforced.
 JavaScript, JSON, YAML, and erasable TypeScript configuration files are
 supported through Node.js without adding TypeScript to consumer dependencies.
-Package configurations respect declared exports, including array targets; an
-unavailable subpath fails instead of silently loading the package root.
+Package configurations support array targets and wildcard subpath exports.
+An unavailable subpath fails instead of silently loading the package root.
 When a resolved configuration has no `extends`, parser preset, or declared
 rules, Commitprompt retains its other settings and supplies the included
 Conventional Commits rules so validation never uses an empty rule set by
@@ -280,7 +283,8 @@ commitprompt commit --yes --json < commit.json
 ```
 
 The explicit `--yes` flag is required for non-interactive commits. Git hooks
-continue to run. Use `--input <path>` to read a file instead of stdin and
+continue to run. Git cleanup preferences do not strip comments, scissors
+sections, or other content from the validated message. Use `--input <path>` to read a file instead of stdin and
 `--cwd <path>` to load another repository's Commitlint configuration.
 
 The package includes a complete [AI agent guide](AI.md) with its input, output,
