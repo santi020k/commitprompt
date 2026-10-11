@@ -218,6 +218,109 @@ const getPackageParts = (
   }
 }
 
+const isValidPatternMatch = (match: string): boolean => {
+  if (/%(?:2f|5c)/iu.test(match)) return false
+
+  const decoded = match.replace(
+    /%([0-9a-f]{2})/giu,
+    (_match: string, hexadecimal: string) => String.fromCharCode(
+      Number.parseInt(hexadecimal, 16)
+    )
+  )
+
+  return !decoded.split(/[\\/]/u).some(segment => {
+    const lowered = segment.toLowerCase()
+
+    return lowered === '.' || lowered === '..' || lowered === 'node_modules'
+  })
+}
+
+const substitutePatternMatch = (value: unknown, match: string): unknown => {
+  if (typeof value === 'string') return value.replaceAll('*', () => match)
+
+  if (isUnknownArray(value)) {
+    return value.map(entry => substitutePatternMatch(entry, match))
+  }
+
+  if (!isRecord(value)) return value
+
+  return Object.fromEntries(
+    Object.entries(value).map(
+      ([condition, target]) => [condition, substitutePatternMatch(target, match)]
+    )
+  )
+}
+
+interface ExportPatternMatch {
+  baseLength: number
+  keyLength: number
+  match: string
+  value: unknown
+}
+
+const matchExportPattern = (
+  key: string,
+  value: unknown,
+  requested: string
+): ExportPatternMatch | undefined => {
+  const asteriskIndex = key.indexOf('*')
+
+  if (
+    !key.startsWith('./') ||
+    asteriskIndex === -1 ||
+    key.includes('*', asteriskIndex + 1)
+  ) {
+    return undefined
+  }
+
+  const prefix = key.slice(0, asteriskIndex)
+  const trailer = key.slice(asteriskIndex + 1)
+
+  if (
+    !requested.startsWith(prefix) ||
+    !requested.endsWith(trailer) ||
+    requested.length <= prefix.length + trailer.length
+  ) {
+    return undefined
+  }
+
+  const match = requested.slice(prefix.length, requested.length - trailer.length)
+
+  return isValidPatternMatch(match) ?
+    {
+      baseLength: asteriskIndex + 1,
+      keyLength: key.length,
+      match,
+      value
+    } :
+    undefined
+}
+
+const getPatternExport = (
+  exports: Record<string, unknown>,
+  requested: string
+): unknown => {
+  let best: ExportPatternMatch | undefined
+
+  for (const [key, value] of Object.entries(exports)) {
+    const candidate = matchExportPattern(key, value, requested)
+
+    if (
+      candidate !== undefined &&
+      (best === undefined ||
+        candidate.baseLength > best.baseLength ||
+        (candidate.baseLength === best.baseLength &&
+          candidate.keyLength > best.keyLength))
+    ) {
+      best = candidate
+    }
+  }
+
+  return best === undefined ?
+    undefined :
+    substitutePatternMatch(best.value, best.match)
+}
+
 const getPackageExport = (
   manifest: Record<string, unknown>,
   subpath: string
@@ -228,9 +331,13 @@ const getPackageExport = (
       manifest.exports
   }
 
-  return isRecord(manifest.exports) ?
-    manifest.exports[`./${subpath}`] :
-    undefined
+  if (!isRecord(manifest.exports)) return undefined
+
+  const requested = `./${subpath}`
+
+  return requested in manifest.exports ?
+    manifest.exports[requested] :
+    getPatternExport(manifest.exports, requested)
 }
 
 const getPackageFallback = (
@@ -668,6 +775,7 @@ export const configurationInternals = {
   getPackageExport,
   getPackageFallback,
   getPackageParts,
+  getPatternExport,
   getPluginKey,
   loadParserOptions,
   mergeRecords,

@@ -251,6 +251,218 @@ module.exports = {
     expect(runNativeConfiguration(directory).status).toBe(1)
   })
 
+  test('resolves an import-only wildcard subpath export like native Node', async () => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-wild')
+    const rules = { 'type-enum': [2, 'always', ['wild']] }
+
+    await mkdir(join(configurationDirectory, 'configs'), { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: { './presets/*': { import: './configs/*.mjs' } },
+      name: 'commitlint-config-wild',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(
+      join(configurationDirectory, 'configs', 'node.mjs'), `export default ${JSON.stringify({ rules })}\n`, 'utf8'
+    )
+    await writeFile(
+      join(directory, 'commitlint.config.mjs'), 'export default { extends: ["wild/presets/node"] }\n', 'utf8'
+    )
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      'const loaded = await import("commitlint-config-wild/presets/node"); process.stdout.write(JSON.stringify(loaded.default))'
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(0)
+    expect(native.stderr).toBe('')
+    expect(JSON.parse(native.stdout)).toEqual({ rules })
+
+    const loaded = runNativeConfiguration(directory)
+
+    expect(loaded.status).toBe(0)
+    expect(loaded.stderr).toBe('')
+    expect(JSON.parse(loaded.stdout)).toEqual(rules)
+  })
+
+  test.each([
+    { name: 'literal dollar match', subpath: '$&', target: { import: './configs/*.mjs' } },
+    { name: 'nested array targets', subpath: 'nested', target: { import: [[null, './configs/*.mjs']] } }
+  ])('resolves wildcard exports with $name like native Node', async ({ subpath, target }) => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-pattern-edge')
+    const rules = { 'type-enum': [2, 'always', ['pattern']] }
+
+    await mkdir(join(configurationDirectory, 'configs'), { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: { './presets/*': target },
+      name: 'commitlint-config-pattern-edge',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(join(configurationDirectory, 'configs', `${subpath}.mjs`), `export default ${JSON.stringify({ rules })}\n`, 'utf8')
+    await writeFile(join(directory, 'commitlint.config.mjs'), `export default { extends: [${JSON.stringify(`pattern-edge/presets/${subpath}`)}] }\n`, 'utf8')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      `const loaded = await import(${JSON.stringify(`commitlint-config-pattern-edge/presets/${subpath}`)}); process.stdout.write(JSON.stringify(loaded.default.rules))`
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+    const loaded = runNativeConfiguration(directory)
+
+    expect(native.status).toBe(0)
+    expect(native.stderr).toBe('')
+    expect(loaded.status).toBe(0)
+    expect(loaded.stderr).toBe('')
+    expect(JSON.parse(loaded.stdout)).toEqual(JSON.parse(native.stdout))
+  })
+
+  test.each([
+    { excluded: false, subpath: '', filename: '.mjs', code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' },
+    { excluded: false, subpath: 'a%2fb', filename: 'a%2fb.mjs', code: 'ERR_INVALID_MODULE_SPECIFIER' },
+    { excluded: false, subpath: 'a%5cb', filename: 'a%5cb.mjs', code: 'ERR_INVALID_MODULE_SPECIFIER' },
+    { excluded: true, subpath: 'private', filename: 'private.mjs', code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' }
+  ])('rejects wildcard edge $subpath like native Node', async ({ excluded, subpath, filename, code }) => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-pattern-edge')
+
+    await mkdir(join(configurationDirectory, 'configs'), { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: {
+        './presets/*': { import: './configs/*.mjs' },
+        ...(excluded ? { './presets/private': null } : {})
+      },
+      name: 'commitlint-config-pattern-edge',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(join(configurationDirectory, 'configs', filename), 'export default { rules: {} }\n', 'utf8')
+    await writeFile(join(directory, 'commitlint.config.mjs'), `export default { extends: [${JSON.stringify(`pattern-edge/presets/${subpath}`)}] }\n`, 'utf8')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      `await import(${JSON.stringify(`commitlint-config-pattern-edge/presets/${subpath}`)})`
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(1)
+    expect(native.stderr).toContain(code)
+    expect(runNativeConfiguration(directory).status).toBe(1)
+  })
+
+  test.each(['$&', '$$', '$\'', '$`'])(
+    'substitutes wildcard match %s literally', match => {
+      expect(configurationInternals.getPatternExport({
+        './presets/*': './configs/*.mjs'
+      }, `./presets/${match}`)).toBe(`./configs/${match}.mjs`)
+    }
+  )
+
+  test('prefers the most specific overlapping wildcard pattern like native Node', async () => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-overlap')
+    const rules = { 'type-enum': [2, 'always', ['specific']] }
+
+    await mkdir(join(configurationDirectory, 'configs'), { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: {
+        './presets/*': { import: './configs/*.mjs' },
+        './presets/node/*': { import: './configs/special-*.mjs' }
+      },
+      name: 'commitlint-config-overlap',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(
+      join(configurationDirectory, 'configs', 'special-foo.mjs'), `export default ${JSON.stringify({ rules })}\n`, 'utf8'
+    )
+    await writeFile(
+      join(directory, 'commitlint.config.mjs'), 'export default { extends: ["overlap/presets/node/foo"] }\n', 'utf8'
+    )
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      'const loaded = await import("commitlint-config-overlap/presets/node/foo"); process.stdout.write(JSON.stringify(loaded.default))'
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(0)
+    expect(JSON.parse(native.stdout)).toEqual({ rules })
+
+    const loaded = runNativeConfiguration(directory)
+
+    expect(loaded.status).toBe(0)
+    expect(JSON.parse(loaded.stdout)).toEqual(rules)
+  })
+
+  test.each([
+    'wild/presets/../../etc/passwd',
+    'wild/presets/%2e%2e/escape',
+    'wild/other/missing'
+  ])('rejects a wildcard subpath that native Node cannot match: %s', async specifier => {
+    const directory = await createProject()
+    const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-wild')
+
+    await mkdir(join(configurationDirectory, 'configs'), { recursive: true })
+    await writeFile(join(configurationDirectory, 'package.json'), JSON.stringify({
+      exports: { './presets/*': { import: './configs/*.mjs' } },
+      name: 'commitlint-config-wild',
+      type: 'module'
+    }), 'utf8')
+    await writeFile(
+      join(configurationDirectory, 'configs', 'node.mjs'), 'export default { rules: {} }\n', 'utf8'
+    )
+    await writeFile(
+      join(directory, 'commitlint.config.mjs'), `export default { extends: [${JSON.stringify(specifier)}] }\n`, 'utf8'
+    )
+
+    const importSpecifier = specifier.replace('wild/', 'commitlint-config-wild/')
+
+    const native = spawnSync(process.execPath, ['--input-type=module',
+      '--eval',
+      `await import(${JSON.stringify(importSpecifier)})`
+    ], { cwd: directory, encoding: 'utf8', timeout: 5000 })
+
+    expect(native.status).toBe(1)
+    expect(native.stderr).toMatch(/ERR_INVALID_MODULE_SPECIFIER|ERR_PACKAGE_PATH_NOT_EXPORTED/u)
+    expect(runNativeConfiguration(directory).status).toBe(1)
+  })
+
+  test('matches and substitutes wildcard export patterns without allowing traversal', () => {
+    expect(configurationInternals.getPatternExport({
+      './presets/*': { import: './configs/*.mjs' },
+      './presets/node/*': { import: './configs/special-*.mjs' }
+    }, './presets/node/foo')).toEqual({ import: './configs/special-foo.mjs' })
+
+    expect(configurationInternals.getPatternExport({
+      './presets/*': { import: './configs/*.mjs' }
+    }, './presets/foo')).toEqual({ import: './configs/foo.mjs' })
+
+    expect(configurationInternals.getPatternExport({
+      './presets/*': './configs/*.mjs'
+    }, './other/foo')).toBeUndefined()
+
+    expect(configurationInternals.getPatternExport({
+      './presets/*': './configs/*.mjs'
+    }, './presets/../../etc/passwd')).toBeUndefined()
+
+    expect(configurationInternals.getPatternExport({
+      './presets/*': './configs/*.mjs'
+    }, './presets/%2e%2e/escape')).toBeUndefined()
+
+    expect(configurationInternals.getPatternExport({
+      './presets/*.mjs': './configs/*.mjs'
+    }, './presets/node.mjs')).toBe('./configs/node.mjs')
+
+    expect(configurationInternals.getPackageExport({
+      exports: {
+        '.': './index.js',
+        './presets/*': './configs/*.mjs'
+      }
+    }, '')).toBe('./index.js')
+
+    expect(configurationInternals.getPackageExport({
+      exports: {
+        './presets/node': './configs/exact.mjs',
+        './presets/*': './configs/*.mjs'
+      }
+    }, 'presets/node')).toBe('./configs/exact.mjs')
+  })
+
   test.each([
     { output: '', status: 1, subpath: 'missing' },
     { output: JSON.stringify({ 'type-enum': [2, 'always', ['fix']] }), status: 0, subpath: 'feature.mjs' }
