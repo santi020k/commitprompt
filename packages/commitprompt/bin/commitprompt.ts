@@ -3,6 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import process from 'node:process'
+import { TextDecoder } from 'node:util'
 
 import { runAutomation } from '../src/automation.js'
 import { runCli } from '../src/cli.js'
@@ -160,11 +161,18 @@ const parseAutomationArguments = (values: string[]): AutomationArguments => {
 }
 
 const readStandardInput = async (): Promise<string> => {
+  const decoder = new TextDecoder('utf-8', { ignoreBOM: true })
   let input = ''
 
   for await (const chunk of process.stdin) {
-    input += String(chunk)
+    if (!Buffer.isBuffer(chunk)) {
+      throw new TypeError('Standard input must provide Buffer chunks.')
+    }
+
+    input += decoder.decode(chunk, { stream: true })
   }
+
+  input += decoder.decode()
 
   return input
 }

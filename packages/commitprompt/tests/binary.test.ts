@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import {
   chmodSync,
   existsSync,
@@ -26,13 +26,163 @@ const runBinary = (
     input
   }: {
     cwd?: string
-    input?: string
+    input?: Buffer | string
   } = {}
 ) => spawnSync(process.execPath, [binaryPath, ...arguments_], {
   cwd,
   encoding: 'utf8',
   input
 })
+
+const COORDINATED_WRITE_TIMEOUT_MS = 5000
+
+interface CoordinatedWriteResult {
+  status: number | null
+  stderr: string
+  stdout: string
+}
+
+const splitInsideUnicodeCharacter = (payload: string): [Buffer, Buffer] => {
+  const encoded = Buffer.from(payload, 'utf8')
+  let splitIndex = -1
+
+  for (let index = 1; index < encoded.length; index += 1) {
+    const byte = encoded.at(index)
+
+    if (byte !== undefined && (byte & 0xc0) === 0x80) {
+      splitIndex = index
+
+      break
+    }
+  }
+
+  if (splitIndex === -1) {
+    throw new Error('Payload does not contain a UTF-8 character to split.')
+  }
+
+  return [encoded.subarray(0, splitIndex), encoded.subarray(splitIndex)]
+}
+
+/**
+ * Patches `process.stdin`'s async iterator so the child reports, over the IPC
+ * channel, exactly when it is ready to read and exactly when it has pulled
+ * each chunk out of the stream. The parent uses those signals to serialize
+ * its writes so the two buffers are observed as two distinct stdin chunks
+ * instead of risking a kernel-level coalesce into one read.
+ */
+const STDIN_HANDSHAKE_PRELOAD_SOURCE = `
+const stdin = process.stdin;
+const originalAsyncIterator = stdin[Symbol.asyncIterator].bind(stdin);
+
+stdin[Symbol.asyncIterator] = () => {
+  const iterator = originalAsyncIterator();
+
+  if (process.send) process.send('ready');
+
+  return {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    async next() {
+      const result = await iterator.next();
+
+      if (process.send) process.send(result.done ? 'end' : 'consumed');
+
+      return result;
+    }
+  };
+};
+`
+
+const STDIN_HANDSHAKE_PRELOAD_URL = `data:text/javascript;base64,${
+  Buffer.from(STDIN_HANDSHAKE_PRELOAD_SOURCE, 'utf8').toString('base64')
+}`
+
+const runBinaryWithCoordinatedWrites = async (
+  arguments_: string[],
+  [chunkA, chunkB]: readonly [Buffer, Buffer],
+  { cwd }: { cwd?: string } = {}
+): Promise<CoordinatedWriteResult> => {
+  const child = spawn(
+    process.execPath,
+    ['--import', STDIN_HANDSHAKE_PRELOAD_URL, binaryPath, ...arguments_],
+    { cwd, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] }
+  )
+
+  if (!child.stdin || !child.stdout || !child.stderr) {
+    child.kill()
+
+    throw new Error('Expected the Commitprompt binary to expose standard streams.')
+  }
+
+  const { stdin, stdout: childStdout, stderr: childStderr } = child
+
+  let stdout = ''
+  let stderr = ''
+
+  childStdout.setEncoding('utf8')
+  childStderr.setEncoding('utf8')
+  childStdout.on('data', (chunk: string) => {
+    stdout += chunk
+  })
+  childStderr.on('data', (chunk: string) => {
+    stderr += chunk
+  })
+
+  return await new Promise<CoordinatedWriteResult>((resolve, reject) => {
+    const timeoutHandle = setTimeout(() => {
+      fail(new Error('Timed out waiting for the Commitprompt binary to exit.'))
+    }, COORDINATED_WRITE_TIMEOUT_MS)
+
+    let settled = false
+    let phase: 'waiting' | 'head-sent' | 'tail-sent' = 'waiting'
+
+    const settle = (action: () => void): void => {
+      if (settled) return
+
+      settled = true
+      clearTimeout(timeoutHandle)
+      action()
+    }
+
+    const fail = (error: Error): void => {
+      settle(() => {
+        stdin.destroy()
+        childStdout.destroy()
+        childStderr.destroy()
+        child.kill()
+        reject(error)
+      })
+    }
+
+    child.on('error', fail)
+    stdin.on('error', fail)
+    childStdout.on('error', fail)
+    childStderr.on('error', fail)
+
+    child.on('message', (message: unknown) => {
+      if (settled) return
+
+      if (message === 'ready' && phase === 'waiting') {
+        phase = 'head-sent'
+        stdin.write(chunkA)
+
+        return
+      }
+
+      if (message === 'consumed' && phase === 'head-sent') {
+        phase = 'tail-sent'
+        stdin.end(chunkB)
+      }
+    })
+
+    child.on('close', code => {
+      settle(() => {
+        resolve({ status: code, stderr, stdout })
+      })
+    })
+  })
+}
 
 const createRepository = (): string => {
   const directory = mkdtempSync(join(tmpdir(), 'commitprompt-binary-'))
@@ -303,4 +453,69 @@ describe('commitprompt executable', () => {
 
     expect(logResult.stdout.trim()).toBe('test(cli): exercise executable')
   }, 15_000)
+
+  test('decodes a UTF-8 subject split across coordinated stdin writes', async () => {
+    const payload = JSON.stringify({
+      body: '',
+      breaking: '',
+      issues: '',
+      scope: 'cli',
+      subject: 'ship 🎉 café confetti 测试',
+      type: 'feat'
+    })
+    const [chunkA, chunkB] = splitInsideUnicodeCharacter(payload)
+
+    const result = await runBinaryWithCoordinatedWrites(
+      ['format', '--json'], [chunkA, chunkB]
+    )
+
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout)).toEqual({
+      message: 'feat(cli): ship 🎉 café confetti 测试'
+    })
+    expect(result.stderr).toBe('')
+  }, COORDINATED_WRITE_TIMEOUT_MS + 1000)
+
+  test('preserves a leading UTF-8 BOM on stdin to match --input file parsing', () => {
+    const directory = createProject()
+    const utf8Bom = Buffer.from([0xef, 0xbb, 0xbf])
+    const json = Buffer.from(JSON.stringify({
+      body: '',
+      breaking: '',
+      issues: '',
+      scope: 'cli',
+      subject: 'exercise executable',
+      type: 'test'
+    }), 'utf8')
+    const payload = Buffer.concat([utf8Bom, json])
+    const inputPath = join(directory, 'answers.json')
+
+    writeFileSync(inputPath, payload)
+
+    const fileResult = runBinary(['format', '--json', '--input', inputPath])
+    const stdinResult = runBinary(['format', '--json'], { input: payload })
+
+    expect(fileResult.status).toBe(1)
+    expect(JSON.parse(fileResult.stderr)).toEqual({
+      error: 'Input must be a valid JSON object.'
+    })
+    expect(stdinResult.status).toBe(fileResult.status)
+    expect(stdinResult.stderr).toBe(fileResult.stderr)
+    expect(stdinResult.stdout).toBe(fileResult.stdout)
+  })
+
+  test('decodes stdin that ends mid UTF-8 character without throwing', () => {
+    const truncated = Buffer.concat([
+      Buffer.from('feat(cli): broken ', 'utf8'),
+      Buffer.from([0xf0])
+    ])
+
+    const result = runBinary(['validate', '--json'], { input: truncated })
+
+    expect(result.status === 0 || result.status === 1).toBe(true)
+    expect(() => {
+      JSON.parse(result.stdout)
+    }).not.toThrow()
+    expect(result.stderr).toBe('')
+  })
 })
