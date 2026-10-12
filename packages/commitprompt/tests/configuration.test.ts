@@ -232,7 +232,8 @@ module.exports = {
     { target: './space%20name.mjs', filename: 'space name.mjs', subpath: '' },
     { target: './percent%25.mjs', filename: 'percent%.mjs', subpath: '' },
     { target: './hash%23.mjs', filename: 'hash#.mjs', subpath: '' },
-    { target: './query%3F.mjs', filename: 'query?.mjs', subpath: '' },
+    // Windows does not permit question marks in filenames.
+    ...(process.platform === 'win32' ? [] : [{ target: './query%3F.mjs', filename: 'query?.mjs', subpath: '' }]),
     { target: './*.mjs', filename: 'café.mjs', subpath: 'caf%C3%A9' }
   ])('loads URL-encoded exports like native Node: $target $subpath', async ({ target, filename, subpath }) => {
     const directory = await createProject()

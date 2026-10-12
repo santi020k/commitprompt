@@ -772,7 +772,7 @@ const configureHookSteps = (
 const createDesiredHookStep = (packageManager: PackageManager): DesiredHookStep => ({
   args: packageManager === 'npm' ?
     ['--no-install', 'commitprompt', 'validate', '--input'] :
-    ['exec', ...(packageManager === 'yarn' ? ['--'] : []), 'commitprompt', 'validate', '--input'],
+    [packageManager === 'yarn' ? 'run' : 'exec', 'commitprompt', 'validate', '--input'],
   command: packageManager === 'npm' ? 'npx' : packageManager,
   name: HOOK_STEP_NAME,
   pass_hook_args: true

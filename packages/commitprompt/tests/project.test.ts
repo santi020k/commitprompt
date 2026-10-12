@@ -439,7 +439,7 @@ hooks:
   test.each([
     { args: ['--no-install', 'commitprompt', 'validate', '--input'], command: 'npx', manager: 'npm' },
     { args: ['exec', 'commitprompt', 'validate', '--input'], command: 'pnpm', manager: 'pnpm' },
-    { args: ['exec', '--', 'commitprompt', 'validate', '--input'], command: 'yarn', manager: 'yarn' }
+    { args: ['run', 'commitprompt', 'validate', '--input'], command: 'yarn', manager: 'yarn' }
   ])('uses the declared $manager executable for its quality hook', async ({ args, command, manager }) => {
     const directory = await createProject({
       name: 'consumer',
@@ -539,7 +539,7 @@ writeFileSync(join(__dirname, 'received-arguments.json'), JSON.stringify(process
     })
 
     expect(result.error).toBeUndefined()
-    expect(result.status).toBe(0)
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
 
     const received: unknown = JSON.parse(
       await readFile(join(binDirectory, 'received-arguments.json'), 'utf8')
