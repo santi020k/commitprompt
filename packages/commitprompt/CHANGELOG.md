@@ -1,5 +1,65 @@
 # @santi020k/commitprompt
 
+## 1.1.1
+
+### Patch Changes
+
+- Recognize configured commit type names regardless of input case while preserving the configured spelling in the generated message.
+
+- Report the pnpm workspace file for dependency setup actions that only repair a missing catalog entry, including check and dry-run results.
+
+- Improve the package README with project identity, section navigation, and resource links while preserving its command and API examples. Add full-width light and dark banners and a centered badge row to the root, app, and package guides.
+
+- Decode stdin incrementally with a streaming UTF-8 decoder so Unicode characters split across Buffer chunks no longer corrupt `format`, `validate`, and `commit` input.
+
+- Forward validation flags and commit-message paths correctly through Yarn Classic when generating Quality hooks. Preserve unrelated configuration and keep repeated setup idempotent.
+
+- Detect orphaned, reversed, or duplicated Commitprompt markers in Zed's `commit_message_instructions` before reusing the managed section, preventing a corrupted guarded block from being silently merged or overwritten.
+
+- Repair missing dependencies in flow-style pnpm catalogs while preserving workspace comments and named catalogs. Validate workspace YAML before writing and reject repairs that would change shared catalog aliases.
+
+- Configure commit-message validation as an idempotent `quality.yml` hook step
+  instead of installing Husky. Preserve unrelated quality hook steps and select
+  the repository's npm, pnpm, or Yarn invocation automatically.
+
+- Decode file URL export targets when loading consumer configurations, including
+  encoded Unicode, spaces, and wildcard matches. Resolve conditional exports in
+  declaration order and respect blocked targets instead of loading a later sibling.
+  
+  Configurations with only a `module` export condition must use `import` or
+  `default`, matching Node's standard import conditions. Legacy top-level `module`
+  metadata remains supported when no exports map is present.
+
+- Allow numeric-looking configured types and scopes to be selected by name when the input does not match a menu number. Existing numbered selections keep their precedence.
+
+- Validate every selected workspace editor before writing any of their settings, so a malformed Zed configuration no longer leaves VS Code settings partially modified.
+
+- Commit with `--cleanup=verbatim` so a validated commit message is stored exactly as generated, even when the consumer's Git configuration sets `commit.cleanup` to `strip` or `scissors`.
+
+- Preserve manifest indentation, CRLF line endings, and trailing newline choices
+  when setup changes package.json. Leave semantically correct Quality hooks
+  untouched, including authored flow sequences, block names, comments, and metadata.
+  Update stale Commitprompt steps in place while preserving unrelated fields and
+  comments, and reject malformed hook structures before writing project files.
+
+- Refresh configuration loading and Conventional Commits dependencies with their latest compatible stable releases and updated security fixes. Preserve the Node.js 22.18 minimum and native TypeScript configuration support.
+
+- Preserve unchanged package manifests during project setup and reject malformed manifest fields or instruction markers before writing configuration files.
+
+- Reject missing validation input before loading repository configuration, preventing unhandled configuration errors and preserving machine-readable CLI diagnostics.
+
+- Stop silently loading a package's root entry point when an extended configuration, parser preset, or plugin specifier requests a missing subpath, including packages without an `exports` map. Preserve valid legacy subpath imports and resolve consumer-local import-only array exports without falling back to unrelated legacy entry points. Skip invalid array targets consistently with Node, including traversal and reserved node_modules paths.
+
+- Reject malformed VS Code commit-instruction entries and malformed Zed `agent`/`commit_message_instructions` fields with a clear error instead of crashing on null entries or silently overwriting existing settings.
+
+- Resolve `extends` and parser preset specifiers through import-only packages that
+  declare wildcard subpath exports (for example `"./presets/*": { "import":
+  "./configs/*.mjs" }`), matching Node's own precedence: exact keys first, then the
+  most specific overlapping pattern, with substituted matches rejected if they
+  would traverse outside the package. Preserve dollar characters literally during
+  substitution, reject empty matches and encoded path separators, and honor exact
+  null exclusions and conditional array targets.
+
 ## 1.1.0
 
 ### Minor Changes
