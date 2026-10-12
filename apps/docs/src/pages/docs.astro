@@ -129,15 +129,19 @@ const scopes = await validator.getScopes()
 const types = await validator.getTypes()
 const prompt = createInterface({ input: stdin, output: stdout })
 
-process.exitCode = await runCommitFlow({
-  error: console.error,
-  git: createGitClient(process.cwd()),
-  log: console.log,
-  prompt,
-  scopes,
-  types,
-  validator
-})`
+try {
+  process.exitCode = await runCommitFlow({
+    error: console.error,
+    git: createGitClient(process.cwd()),
+    log: console.log,
+    prompt,
+    scopes,
+    types,
+    validator
+  })
+} finally {
+  prompt.close()
+}`
 
 const structuredData = {
   '@context': 'https://schema.org',

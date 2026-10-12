@@ -794,6 +794,14 @@ const createDesiredHookStep = (packageManager: PackageManager): DesiredHookStep 
   pass_hook_args: true
 })
 
+const seedQualityVersion = (document: Document.Parsed): boolean => {
+  if (document.has('version')) return false
+
+  document.set('version', 1)
+
+  return true
+}
+
 const analyzeHook = async (
   cwd: string,
   packageManager: PackageManager,
@@ -805,11 +813,9 @@ const analyzeHook = async (
   const originalHook = await readOptionalFile(hookPath)
   const document = parseDocument(originalHook ?? 'version: 1\n')
   const steps = getHookSteps(document, hookPath)
-
-  if (document.contents === null) document.set('version', 1)
-
+  const versionMissing = seedQualityVersion(document)
   const desiredStep = createDesiredHookStep(packageManager)
-  const mutated = configureHookSteps(document, steps, desiredStep)
+  const mutated = configureHookSteps(document, steps, desiredStep) || versionMissing
   const serializedHook = mutated ? document.toString() : originalHook ?? 'version: 1\n'
 
   const updatedHook = mutated && originalHook?.includes('\r\n') ?

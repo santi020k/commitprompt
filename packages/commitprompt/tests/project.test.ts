@@ -57,6 +57,48 @@ afterEach(async () => {
 })
 
 describe('setupProject', () => {
+  test.each([false, true])('seeds missing versions while preserving existing Quality hooks: managed=%j', async managed => {
+    const directory = await createProject({ name: 'consumer', packageManager: 'pnpm@10.32.1' })
+    const hookPath = join(directory, 'quality.yml')
+    const source = `# Preserve existing hooks
+hooks:
+  pre-push:
+    steps:
+      - command: pnpm
+        args: [test]
+${managed ?
+  `  commit-msg:
+    steps:
+      - name: Validate commit message with Commitprompt
+        command: pnpm
+        args: [exec, commitprompt, validate, --input]
+        pass_hook_args: true
+` :
+  ''}`
+
+    await writeFile(hookPath, source)
+
+    for (const mode of [{ check: true }, { dryRun: true }]) {
+      const result = await setupProject({ ...mode, actions: ['quality-hook'], cwd: directory })
+
+      expect(result.changed).toBe(false)
+      expect(result.drift).toBe(true)
+      await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+    }
+
+    await setupProject({ actions: ['quality-hook'], cwd: directory })
+
+    const updated = await readFile(hookPath, 'utf8')
+    const document = parseDocument(updated)
+
+    expect(document.get('version')).toBe(1)
+    expect(updated).toContain('# Preserve existing hooks')
+    expect(document.getIn(['hooks', 'pre-push', 'steps', 0, 'command'])).toBe('pnpm')
+    expect(updated.match(/Validate commit message with Commitprompt/gu)).toHaveLength(1)
+    await expect(setupProject({ actions: ['quality-hook'], check: true, cwd: directory }))
+      .resolves.toEqual(expect.objectContaining({ changed: false, drift: false }))
+  })
+
   test.each(['', '\n', '# Preserve this note\n'])('seeds version 1 for an empty Quality document: %j', async source => {
     const directory = await createProject({ name: 'consumer' })
     const hookPath = join(directory, 'quality.yml')
