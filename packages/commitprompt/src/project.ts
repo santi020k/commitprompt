@@ -1,5 +1,6 @@
 import {
   access,
+  chmod,
   readFile
 } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -17,12 +18,17 @@ import { writeSettings } from './settings.js'
 
 const PACKAGE_NAME = '@santi020k/commitprompt'
 const COMMIT_SCRIPT = 'commitprompt'
+const HUSKY_VERSION = '^9.1.7'
+const HOOK_COMMAND = 'commitprompt validate --input "$1"'
+const HOOK_START_MARKER = '# commitprompt:start'
+const HOOK_END_MARKER = '# commitprompt:end'
+const HOOK_SECTION = `${HOOK_START_MARKER}\n${HOOK_COMMAND}\n${HOOK_END_MARKER}`
 const HOOK_STEP_NAME = 'Validate commit message with Commitprompt'
 
 const DEFAULT_ACTIONS: readonly ProjectSetupActionId[] = [
   'dependency',
   'commit-script',
-  'quality-hook',
+  'husky-hook',
   'agents-instructions',
   'copilot-instructions',
   'agent-skill',
@@ -38,6 +44,7 @@ export type ProjectSetupActionId =
   'commit-script' |
   'copilot-instructions' |
   'dependency' |
+  'husky-hook' |
   'quality-hook'
 
 export interface ProjectSetupAction {
@@ -75,12 +82,14 @@ interface PackageManifest {
 }
 
 interface PendingFile {
+  executable?: boolean
   path: string
   source: string
 }
 
 interface ManifestConfiguration {
   actions: ProjectSetupAction[]
+  hookChanged: boolean
 }
 
 interface PnpmCatalogConfiguration {
@@ -478,6 +487,37 @@ const configurePnpmCatalog = async (
   return analyzePnpmCatalog(source, workspacePath, defaultSpecifier)
 }
 
+const ensurePrepareScript = (manifest: PackageManifest): boolean => {
+  const existing = manifest.scripts?.prepare
+
+  if (existing !== undefined) {
+    const updated = existing.replace(
+      /(^|&&)(\s*)husky install(?=\s*(?:&&|$))/gu, '$1$2husky'
+    )
+
+    if (updated !== existing) return setScript(manifest, 'prepare', updated)
+
+    if (/(^|&&)\s*husky(?:\s|$)/u.test(existing)) return false
+  }
+
+  return setScript(
+    manifest, 'prepare', existing === undefined ? 'husky' : `${existing} && husky`
+  )
+}
+
+const KNOWN_COMMITLINT_INVOCATION =
+  /(?:(?:pnpm\s+exec|npx|yarn)\s+)?commitlint\s+--edit\s+(?:"\$1"|'\$1'|\$1)/gu
+
+const updateHook = (source: string | undefined): string => {
+  // Replace only the obsolete validator command. Using `true` preserves any
+  // surrounding `&&`, `if`, or multiline shell structure in an existing hook.
+  const withoutKnownValidator = source?.replace(KNOWN_COMMITLINT_INVOCATION, 'true')
+
+  return replaceGuardedSection(
+    withoutKnownValidator, HOOK_SECTION, HOOK_START_MARKER, HOOK_END_MARKER
+  )
+}
+
 const configureManifest = (
   manifest: PackageManifest,
   dependencySpecifier: string,
@@ -508,7 +548,19 @@ const configureManifest = (
     })
   }
 
-  return { actions }
+  if (selectedActions.has('husky-hook')) {
+    const huskyDependencyChanged =
+      setDependency(manifest, 'husky', HUSKY_VERSION)
+
+    const prepareScriptChanged = ensurePrepareScript(manifest)
+
+    return {
+      actions,
+      hookChanged: huskyDependencyChanged || prepareScriptChanged
+    }
+  }
+
+  return { actions, hookChanged: false }
 }
 
 const analyzeInstructionFiles = async (
@@ -579,6 +631,8 @@ const writeProjectFiles = async (
 
   for (const file of files) {
     await writeSettings(file.path, file.source)
+
+    if (file.executable) await chmod(file.path, 0o755)
   }
 }
 
@@ -762,6 +816,36 @@ const analyzeHook = async (
   }
 }
 
+const analyzeHuskyHook = async (
+  cwd: string,
+  manifestChanged: boolean,
+  selectedActions: ReadonlySet<ProjectSetupActionId>
+): Promise<HookConfiguration> => {
+  if (!selectedActions.has('husky-hook')) return {}
+
+  const hookPath = join(cwd, '.husky', 'commit-msg')
+  const originalHook = await readOptionalFile(hookPath)
+  const updatedHook = updateHook(originalHook)
+  const changed = manifestChanged || updatedHook !== originalHook
+
+  const action: ProjectSetupAction = {
+    changed,
+    id: 'husky-hook',
+    path: hookPath
+  }
+
+  if (updatedHook === originalHook) return { action }
+
+  return {
+    action,
+    file: {
+      executable: true,
+      path: hookPath,
+      source: updatedHook
+    }
+  }
+}
+
 const appendHookConfiguration = (
   actions: ProjectSetupAction[],
   files: PendingFile[],
@@ -830,7 +914,8 @@ export const setupProject = async ({
     manifest, catalogConfiguration.specifier, manifestPath, selectedActions
   )
 
-  const manifestChanged = manifestConfiguration.actions.some(action => action.changed)
+  const manifestChanged = manifestConfiguration.hookChanged ||
+    manifestConfiguration.actions.some(action => action.changed)
 
   reportCatalogChange(manifestConfiguration.actions, catalogConfiguration)
 
@@ -839,6 +924,10 @@ export const setupProject = async ({
 
   const hookConfiguration = await analyzeHook(
     cwd, packageManager, selectedActions
+  )
+
+  const huskyHookConfiguration = await analyzeHuskyHook(
+    cwd, manifestConfiguration.hookChanged, selectedActions
   )
 
   const actions = [...manifestConfiguration.actions]
@@ -852,6 +941,8 @@ export const setupProject = async ({
   }
 
   appendHookConfiguration(actions, pendingFiles, hookConfiguration)
+
+  appendHookConfiguration(actions, pendingFiles, huskyHookConfiguration)
 
   actions.push(...instructionConfiguration.actions)
 

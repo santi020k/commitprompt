@@ -1,6 +1,13 @@
 # @santi020k/commitprompt
 
-## 1.1.1
+## 1.2.0
+
+### Minor Changes
+
+- Configure commit-message validation as an idempotent `quality.yml` hook step
+  as an explicit opt-in action. Preserve the released Husky action and default
+  setup behavior. Preserve unrelated quality hook steps and select
+  the repository's npm, pnpm, or Yarn invocation automatically.
 
 ### Patch Changes
 
@@ -17,10 +24,6 @@
 - Detect orphaned, reversed, or duplicated Commitprompt markers in Zed's `commit_message_instructions` before reusing the managed section, preventing a corrupted guarded block from being silently merged or overwritten.
 
 - Repair missing dependencies in flow-style pnpm catalogs while preserving workspace comments and named catalogs. Validate workspace YAML before writing and reject repairs that would change shared catalog aliases.
-
-- Configure commit-message validation as an idempotent `quality.yml` hook step
-  instead of installing Husky. Preserve unrelated quality hook steps and select
-  the repository's npm, pnpm, or Yarn invocation automatically.
 
 - Decode file URL export targets when loading consumer configurations, including
   encoded Unicode, spaces, and wildcard matches. Resolve conditional exports in

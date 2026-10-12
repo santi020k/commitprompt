@@ -227,11 +227,12 @@ const structuredData = {
           <p>
             Setup detects npm, pnpm, or Yarn; adds Commitprompt as a development
             dependency; sets the neutral <Code>commit</Code> script; writes a
-            <Code>commit-msg</Code> validation step to <Code>quality.yml</Code>; and adds
+            Husky <Code>commit-msg</Code> validation hook by default; and adds
             guarded guidance to <Code>AGENTS.md</Code> and GitHub Copilot
             instructions plus reusable agent skills. Run the detected package
-            manager’s install command afterward to update the lockfile, then run
-            <Code>quality hooks install</Code> once.
+            manager’s install command afterward to update the lockfile and install Husky.
+            Quality-managed repositories can explicitly select <Code>--only quality-hook</Code>
+            and run <Code>quality hooks install</Code>.
           </p>
           <Callout>
             <p>
@@ -410,7 +411,7 @@ const structuredData = {
         <section id="git-hooks">
           <h2>Git hooks</h2>
           <p>
-            Project setup adds a <Code>commit-msg</Code> step to
+            Select <Code>--only quality-hook</Code> to add a <Code>commit-msg</Code> step to
             <Code>quality.yml</Code> that runs Commitprompt through the detected
             package manager. It preserves unrelated quality hook steps.
           </p>

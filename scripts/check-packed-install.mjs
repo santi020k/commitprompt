@@ -763,6 +763,17 @@ writeFileSync(validMessagePath, 'fix: verify generated hook\n')
 
 writeFileSync(invalidMessagePath, 'feat: reject configured type\n')
 
+const legacyHookPath = join(integrationConsumer, '.husky', 'commit-msg')
+
+if (!readFileSync(legacyHookPath, 'utf8').includes('commitprompt validate --input "$1"')) {
+  throw new Error('Default setup omitted the released Husky validation hook.')
+}
+
+executeBinarySync(integrationBinary, ['setup', 'project', '--only', 'quality-hook'], {
+  cwd: integrationConsumer,
+  encoding: 'utf8'
+})
+
 const hookConfiguration = parse(readFileSync(
   join(integrationConsumer, 'quality.yml'), 'utf8'
 ))

@@ -6,6 +6,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  stat,
   writeFile
 } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -17,6 +18,8 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { isScalar, isSeq, parseDocument } from 'yaml'
 
 import { setupProject } from '../src/project.js'
+
+const qualitySetupActions = ['dependency', 'commit-script', 'quality-hook', 'agents-instructions', 'copilot-instructions', 'agent-skill', 'claude-skill'] as const
 
 const temporaryDirectories: string[] = []
 
@@ -53,6 +56,162 @@ afterEach(async () => {
 })
 
 describe('setupProject', () => {
+  test('supports the released explicit Husky setup action', async () => {
+    const directory = await createProject({
+      devDependencies: {
+        husky: '^8.0.0'
+      },
+      name: 'consumer',
+      scripts: {
+        prepare: 'node scripts/prepare.mjs && husky install'
+      }
+    })
+
+    await setupProject({
+      actions: ['husky-hook'],
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    const manifest = JSON.parse(
+      await readFile(join(directory, 'package.json'), 'utf8')
+    ) as {
+      devDependencies: Record<string, string>
+      scripts: Record<string, string>
+    }
+
+    expect(manifest.devDependencies.husky).toBe('^8.0.0')
+    expect(manifest.scripts.prepare).toBe('node scripts/prepare.mjs && husky')
+  })
+
+  test('preserves default Husky setup and existing authored hook commands', async () => {
+    const directory = await createProject({
+      config: {
+        commitizen: {
+          path: 'cz-conventional-changelog'
+        }
+      },
+      devDependencies: {
+        commitizen: '^4.3.1',
+        czg: '^1.12.0'
+      },
+      name: 'consumer',
+      packageManager: 'npm@11.4.2',
+      scripts: {
+        legacyCommit: 'git-cz',
+        test: 'node --test'
+      }
+    })
+    const agentsPath = join(directory, 'AGENTS.md')
+    const hookPath = join(directory, '.husky', 'commit-msg')
+
+    await writeFile(agentsPath, '# Project guidance\n', 'utf8')
+    await mkdir(join(directory, '.husky'))
+    await writeFile(
+      hookPath, 'node scripts/check-ticket.mjs\npnpm exec commitlint --edit "$1"\n', 'utf8'
+    )
+
+    const firstResult = await setupProject({
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(firstResult).toEqual(expect.objectContaining({
+      changed: true,
+      drift: true,
+      obsolete: [
+        'dependency:commitizen',
+        'dependency:czg',
+        'package.json:config.commitizen',
+        'package.json:scripts.legacyCommit'
+      ],
+      packageManager: 'npm'
+    }))
+    expect(firstResult.actions.map(action => action.id)).toEqual([
+      'dependency',
+      'commit-script',
+      'husky-hook',
+      'agents-instructions',
+      'copilot-instructions',
+      'agent-skill',
+      'claude-skill'
+    ])
+
+    const manifest = JSON.parse(
+      await readFile(join(directory, 'package.json'), 'utf8')
+    ) as {
+      config: { commitizen: unknown }
+      devDependencies: Record<string, string>
+      scripts: Record<string, string>
+    }
+
+    expect(manifest.devDependencies).toEqual({
+      '@santi020k/commitprompt': '^1.2.3',
+      commitizen: '^4.3.1',
+      czg: '^1.12.0',
+      husky: '^9.1.7'
+    })
+    expect(manifest.scripts).toEqual({
+      commit: 'commitprompt',
+      legacyCommit: 'git-cz',
+      prepare: 'husky',
+      test: 'node --test'
+    })
+    expect(manifest.config.commitizen).toBeDefined()
+
+    const hook = await readFile(hookPath, 'utf8')
+
+    expect(hook).toContain('node scripts/check-ticket.mjs')
+    expect(hook).not.toContain('commitlint')
+    expect(hook).toContain('commitprompt validate --input "$1"')
+
+    const hookIsExecutable = ((await stat(hookPath)).mode & 0o111) !== 0
+
+    expect(process.platform === 'win32' || hookIsExecutable).toBe(true)
+
+    const agents = await readFile(agentsPath, 'utf8')
+    const copilot = await readFile(
+      join(directory, '.github', 'copilot-instructions.md'), 'utf8'
+    )
+    const agentSkillPath =
+      join(directory, '.agents', 'skills', 'commitprompt', 'SKILL.md')
+    const claudeSkillPath =
+      join(directory, '.claude', 'skills', 'commitprompt', 'SKILL.md')
+    const agentSkill = await readFile(agentSkillPath, 'utf8')
+    const claudeSkill = await readFile(claudeSkillPath, 'utf8')
+
+    expect(agents).toContain('# Project guidance')
+    expect(agents).toContain('<!-- commitprompt:start -->')
+    expect(copilot).toContain('<!-- commitprompt:start -->')
+    expect(agentSkill).toContain('name: commitprompt')
+    expect(claudeSkill).toBe(agentSkill)
+
+    const filesAfterFirstRun = await Promise.all([
+      readFile(join(directory, 'package.json'), 'utf8'),
+      readFile(agentsPath, 'utf8'),
+      readFile(hookPath, 'utf8'),
+      readFile(join(directory, '.github', 'copilot-instructions.md'), 'utf8'),
+      readFile(agentSkillPath, 'utf8'),
+      readFile(claudeSkillPath, 'utf8')
+    ])
+    const secondResult = await setupProject({
+      cwd: directory,
+      packageVersion: '1.2.3'
+    })
+
+    expect(secondResult.changed).toBe(false)
+    expect(secondResult.drift).toBe(false)
+    expect(secondResult.actions.every(action => !action.changed)).toBe(true)
+    await expect(Promise.all([
+      readFile(join(directory, 'package.json'), 'utf8'),
+      readFile(agentsPath, 'utf8'),
+      readFile(hookPath, 'utf8'),
+      readFile(join(directory, '.github', 'copilot-instructions.md'), 'utf8'),
+      readFile(agentSkillPath, 'utf8'),
+      readFile(claudeSkillPath, 'utf8')
+    ])).resolves.toEqual(filesAfterFirstRun)
+  })
+
   test('configures a repository and preserves obsolete prompt tooling', async () => {
     const directory = await createProject({
       config: {
@@ -80,6 +239,7 @@ describe('setupProject', () => {
     )
 
     const firstResult = await setupProject({
+      actions: qualitySetupActions,
       cwd: directory,
       packageVersion: '1.2.3'
     })
@@ -157,6 +317,7 @@ describe('setupProject', () => {
       readFile(claudeSkillPath, 'utf8')
     ])
     const secondResult = await setupProject({
+      actions: qualitySetupActions,
       cwd: directory,
       packageVersion: '1.2.3'
     })
@@ -399,6 +560,7 @@ writeFileSync(join(__dirname, 'received-arguments.json'), JSON.stringify(process
     await writeFile(agentsPath, '# Preserve repository guidance\n', 'utf8')
 
     await expect(setupProject({
+      actions: qualitySetupActions,
       cwd: directory,
       packageVersion: '1.2.3'
     })).rejects.toThrow('Cannot update invalid quality configuration')
@@ -418,6 +580,7 @@ writeFileSync(join(__dirname, 'received-arguments.json'), JSON.stringify(process
     await mkdir(join(directory, 'quality.yml'))
 
     await expect(setupProject({
+      actions: qualitySetupActions,
       cwd: directory,
       packageVersion: '1.2.3'
     })).rejects.toMatchObject({ code: 'EISDIR' })

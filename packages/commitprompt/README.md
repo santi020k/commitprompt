@@ -74,11 +74,14 @@ commitprompt setup project
 ```
 
 Project setup detects the repository's package manager, updates `package.json`,
-adds a Commitprompt `commit-msg` step to `quality.yml`, and adds guarded
+configures the existing Husky `commit-msg` hook by default, and adds guarded
 Commitprompt sections to `AGENTS.md` and `.github/copilot-instructions.md`. It
 reports obsolete Commitizen, Czg, and prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
-lockfile, then run `quality hooks install` once to install the managed launcher.
+lockfile and install Husky. For Quality-managed repositories, select
+`--only dependency,commit-script,quality-hook,agents-instructions,copilot-instructions,agent-skill,claude-skill`
+instead, then run `quality hooks install` to install its managed launcher.
+The released `--only husky-hook` action remains supported.
 
 For pnpm workspaces with a default catalog, setup adds missing Commitprompt
 entries in block or flow syntax and preserves comments and named catalogs.
@@ -90,7 +93,7 @@ shared through aliases remain unchanged.
 Use `--dry-run` to preview changes. Use `--check` as a non-writing CI drift gate;
 it exits with status 1 when setup is required. Both modes support `--json` and
 `--cwd <path>`. Select independent actions with `--only dependency`,
-`--only commit-script`, `--only quality-hook`, `--only agents-instructions`, or
+`--only commit-script`, `--only husky-hook`, `--only quality-hook`, `--only agents-instructions`, or
 `--only copilot-instructions`. Reusable agent skill files can be selected with
 `--only agent-skill` or `--only claude-skill`; pass a comma-separated list to
 combine actions. Setup preserves the original `package.json` formatting when

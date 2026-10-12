@@ -389,6 +389,18 @@ describe('commitprompt executable', () => {
     }
   )
 
+  test('accepts the released husky-hook action', () => {
+    const directory = createRepository()
+
+    writeFileSync(join(directory, 'package.json'), '{"name":"legacy-hook-consumer"}\n')
+
+    const result = runBinary(['setup', 'project', '--only', 'husky-hook', '--cwd', directory])
+
+    expect(result.status).toBe(0)
+    expect(readFileSync(join(directory, '.husky', 'commit-msg'), 'utf8'))
+      .toContain('commitprompt validate --input "$1"')
+  })
+
   test('configures Commitprompt validation through quality.yml', () => {
     const directory = createRepository()
 
