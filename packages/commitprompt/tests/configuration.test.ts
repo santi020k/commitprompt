@@ -191,7 +191,7 @@ module.exports = {
     ['./../outside.mjs', './config.mjs'],
     ['./node_modules/other.mjs', './config.mjs'],
     ['./%2e%2e/outside.mjs', './config.mjs'],
-    ['./node_modules/other.mjs'.replace('n', '%6e'), './config.mjs']
+    ['./node_modules/other.mjs'.replaceAll('n', '%6e'), './config.mjs']
   ])('loads consumer import-only array exports like native Node: %j', async (...targets) => {
     const directory = await createProject()
     const configurationDirectory = join(directory, 'node_modules', 'commitlint-config-array')
