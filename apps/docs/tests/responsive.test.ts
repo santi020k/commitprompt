@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
 
 const pages = ['/', '/docs/', '/404.html'] as const
+
 const screenSizes = [
   { height: 900, name: 'narrow mobile', width: 320 },
   { height: 1024, name: 'tablet', width: 768 },
-  { height: 768, name: 'small desktop', width: 1024 }
+  { height: 768, name: 'small desktop', width: 1024 },
+  { height: 1000, name: 'desktop', width: 1440 }
 ] as const
 
 for (const viewport of screenSizes) {
@@ -30,14 +32,19 @@ test('documentation navigation stays compact on narrow screens', async ({
   page
 }) => {
   await page.setViewportSize({ height: 900, width: 320 })
+
   await page.goto('/docs/')
 
   const sidebar = page.locator('.docs-sidebar')
   const navigation = sidebar.locator('nav')
 
   await expect(sidebar).toBeInViewport()
-  await expect(navigation).toHaveCSS('display', 'flex')
-  await expect(navigation.locator('p').first()).toBeHidden()
+
+  await expect(navigation.getByRole('link')).toHaveCount(11)
+
+  await expect(navigation).toHaveCSS('overflow-x', 'auto')
+
+  await expect(navigation.getByRole('link', { name: 'Installation', exact: true })).toBeVisible()
 
   const box = await sidebar.boundingBox()
 

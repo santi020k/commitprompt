@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = 'http://127.0.0.1:4322'
+const baseURL = 'http://127.0.0.1:47823'
 
 export default defineConfig({
   expect: {
@@ -24,10 +24,11 @@ export default defineConfig({
     trace: 'on-first-retry'
   },
   webServer: {
-    command: 'astro preview --host 127.0.0.1 --port 4322',
+    // Keep Astro in the foreground when an agent runs Playwright.
+    command: 'astro preview --host 127.0.0.1 --port 47823 --ignore-lock',
     reuseExistingServer: false,
     timeout: 30_000,
     url: baseURL
   },
-  workers: process.env.CI ? 2 : undefined
+  workers: 2
 })

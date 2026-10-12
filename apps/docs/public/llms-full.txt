@@ -144,12 +144,14 @@ the repository installs the hook below.
 commitprompt setup project
 ```
 
-This idempotent command detects npm, pnpm, or Yarn; adds Commitprompt and Husky;
-sets the `commit` script; installs a `commit-msg` hook; adds guarded AGENTS.md
+This idempotent command detects npm, pnpm, or Yarn; adds Commitprompt; sets the
+`commit` script; configures a Husky `commit-msg` hook by default; adds guarded AGENTS.md
 and GitHub Copilot instructions; and installs reusable agent skills. It reports
 obsolete Commitizen, Czg, and custom prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
-lockfile and activate Husky.
+lockfile and install Husky. Quality-managed repositories can select
+`--only quality-hook`, then run `quality hooks install`. The released
+`--only husky-hook` action remains supported.
 
 Use `--dry-run` to preview, `--check` as a non-writing CI drift gate, `--json`
 for machine-readable output, and `--only` to select actions. The canonical hook
@@ -162,9 +164,9 @@ commitprompt validate --input "$1"
 Equivalent explicit npm, pnpm, and Yarn commands are:
 
 ```sh
-npx --no-install commitprompt validate --input "$1"
+node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
-yarn exec commitprompt validate --input "$1"
+yarn run commitprompt validate --input "$1"
 ```
 
 ## Safety boundaries

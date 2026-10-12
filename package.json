@@ -2,6 +2,7 @@
   "name": "commitprompt-root",
   "version": "0.0.0",
   "private": true,
+  "description": "A focused, package-manager-neutral prompt for Conventional Commits.",
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter commitprompt-docs dev",
@@ -17,7 +18,7 @@
     "lint:spell": "cspell \"**\" --gitignore --cache --show-suggestions --show-context",
     "lint:knip": "knip",
     "check:exports": "turbo run check:exports",
-    "check:packed-install": "node --test scripts/binary-invocation.test.mjs && node scripts/check-packed-install.mjs",
+    "check:packed-install": "node --test scripts/binary-invocation.test.mjs scripts/verify-published-package.test.mjs && node scripts/check-packed-install.mjs",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
     "ok": "pnpm install --frozen-lockfile && pnpm run validate",
     "changeset": "changeset",
@@ -31,7 +32,7 @@
     "docs:preview": "pnpm --filter commitprompt-docs preview",
     "docs:deploy": "pnpm run docs:build && wrangler pages deploy apps/docs/dist --project-name=commitprompt --branch=main",
     "clean": "turbo run clean && rm -rf node_modules",
-    "prepare": "husky",
+    "hooks:install": "quality hooks install",
     "pre-commit": "lint-staged",
     "pre-push": "pnpm run validate",
     "commit": "commitprompt"
@@ -50,15 +51,12 @@
     "@santi020k/eslint-config-testing": "catalog:",
     "@santi020k/eslint-config-tools": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
     "cspell": "catalog:",
     "eslint": "catalog:",
-    "husky": "catalog:",
     "knip": "catalog:",
     "lint-staged": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:",
     "yarn": "catalog:"
   },
@@ -76,5 +74,6 @@
   "engines": {
     "node": ">=22.19.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "license": "MIT"
 }

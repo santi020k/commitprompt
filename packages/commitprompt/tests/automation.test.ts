@@ -242,17 +242,18 @@ describe('runAutomation', () => {
     expect(options.log).toHaveBeenCalledWith('Commit message is valid.')
   })
 
-  test('reports missing validation input', async () => {
+  test.each([undefined, '', ' \n\t'])('reports missing validation input without loading configuration: %j', async input => {
     const options = {
       ...createOptions(),
       command: 'validate' as const,
-      input: ''
+      input
     }
 
     await expect(runAutomation(options)).resolves.toBe(1)
     expect(options.error).toHaveBeenCalledWith(
       'This command requires input from stdin or --input <path>.'
     )
+    expect(mocks.createValidator).not.toHaveBeenCalled()
   })
 
   test('lists repository-aware commit types', async () => {

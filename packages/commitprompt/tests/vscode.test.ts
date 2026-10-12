@@ -247,4 +247,42 @@ describe('setupVSCode', () => {
       .rejects.toThrow('Cannot update invalid VS Code settings')
     await expect(readFile(settingsPath, 'utf8')).resolves.toBe('{ invalid')
   })
+
+  test.each([
+    JSON.stringify({ [instructionSetting]: [null] }),
+    JSON.stringify({ [instructionSetting]: ['invalid'] }),
+    JSON.stringify({ [instructionSetting]: [[]] }),
+    JSON.stringify({ [instructionSetting]: [{ text: 42 }] }),
+    JSON.stringify({ [instructionSetting]: [{ file: false }] })
+  ])(
+    'rejects a malformed instruction entry without writing: %j', async source => {
+      const directory = await createTemporaryDirectory()
+      const settingsPath = join(directory, 'settings.json')
+
+      await writeFile(settingsPath, source, 'utf8')
+
+      await expect(setupVSCode({ settingsPath })).rejects.toThrow(
+        `${instructionSetting}[0] must be an object whose "text" and "file" properties are strings when present`
+      )
+      await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+    }
+  )
+
+  test('reports the index of a malformed instruction after valid entries', async () => {
+    const directory = await createTemporaryDirectory()
+    const settingsPath = join(directory, 'settings.json')
+    const source = JSON.stringify({
+      [instructionSetting]: [
+        { text: 'Mention issue references.' },
+        null
+      ]
+    })
+
+    await writeFile(settingsPath, source, 'utf8')
+
+    await expect(setupVSCode({ settingsPath })).rejects.toThrow(
+      `${instructionSetting}[1] must be an object whose "text" and "file" properties are strings when present`
+    )
+    await expect(readFile(settingsPath, 'utf8')).resolves.toBe(source)
+  })
 })

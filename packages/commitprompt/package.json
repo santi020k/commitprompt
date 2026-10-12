@@ -1,6 +1,6 @@
 {
   "name": "@santi020k/commitprompt",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -47,7 +47,8 @@
     "@commitlint/execute-rule": "catalog:",
     "@commitlint/types": "catalog:",
     "cosmiconfig": "catalog:",
-    "jsonc-parser": "catalog:"
+    "jsonc-parser": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@commitlint/lint": "catalog:",

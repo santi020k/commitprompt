@@ -1,4 +1,5 @@
 import {
+  mkdir,
   mkdtemp,
   readFile,
   rm,
@@ -114,6 +115,20 @@ describe('setupWorkspaceEditors', () => {
     expect(zedAfter).toContain('Mention the ticket identifier.')
     expect(zedAfter).toContain('Use one of these scopes when')
     expect(zedAfter.match(/\[commitprompt:start\]/gu)).toHaveLength(1)
+  })
+
+  test('checks every editor before writing and writes none when one fails validation', async () => {
+    const directory = await createRepository()
+    const vscodePath = join(directory, '.vscode', 'settings.json')
+    const zedPath = join(directory, '.zed', 'settings.json')
+
+    await mkdir(join(directory, '.zed'), { recursive: true })
+    await writeFile(zedPath, '{ invalid', 'utf8')
+
+    await expect(setupWorkspaceEditors({ cwd: directory }))
+      .rejects.toThrow('Cannot update invalid Zed settings')
+    await expect(readFile(zedPath, 'utf8')).resolves.toBe('{ invalid')
+    await expect(readFile(vscodePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   test('can configure only one workspace editor', async () => {

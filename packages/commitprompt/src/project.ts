@@ -6,6 +6,8 @@ import {
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { type Document, isAlias, isMap, isScalar, isSeq, type Pair, parseDocument, Scalar, type YAMLMap, type YAMLSeq } from 'yaml'
+
 import {
   AGENT_SKILL_TEMPLATE,
   INSTRUCTION_END_MARKER,
@@ -15,11 +17,13 @@ import {
 import { writeSettings } from './settings.js'
 
 const PACKAGE_NAME = '@santi020k/commitprompt'
-const HUSKY_VERSION = '^9.1.7'
 const COMMIT_SCRIPT = 'commitprompt'
+const HUSKY_VERSION = '^9.1.7'
 const HOOK_COMMAND = 'commitprompt validate --input "$1"'
 const HOOK_START_MARKER = '# commitprompt:start'
 const HOOK_END_MARKER = '# commitprompt:end'
+const HOOK_SECTION = `${HOOK_START_MARKER}\n${HOOK_COMMAND}\n${HOOK_END_MARKER}`
+const HOOK_STEP_NAME = 'Validate commit message with Commitprompt'
 
 const DEFAULT_ACTIONS: readonly ProjectSetupActionId[] = [
   'dependency',
@@ -31,10 +35,6 @@ const DEFAULT_ACTIONS: readonly ProjectSetupActionId[] = [
   'claude-skill'
 ]
 
-const HOOK_SECTION = `${HOOK_START_MARKER}
-${HOOK_COMMAND}
-${HOOK_END_MARKER}`
-
 export type PackageManager = 'npm' | 'pnpm' | 'yarn'
 
 export type ProjectSetupActionId =
@@ -44,7 +44,8 @@ export type ProjectSetupActionId =
   'commit-script' |
   'copilot-instructions' |
   'dependency' |
-  'husky-hook'
+  'husky-hook' |
+  'quality-hook'
 
 export interface ProjectSetupAction {
   changed: boolean
@@ -97,11 +98,6 @@ interface PnpmCatalogConfiguration {
   specifier: string
 }
 
-interface CatalogRange {
-  source: string
-  start: number
-}
-
 interface HookConfiguration {
   action?: ProjectSetupAction
   file?: PendingFile
@@ -133,6 +129,31 @@ const readOptionalFile = async (path: string): Promise<string | undefined> => {
   }
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const assertPackageManifest: (
+  value: Record<string, unknown>,
+  path: string
+) => asserts value is PackageManifest = (value, path) => {
+  for (const field of ['dependencies', 'devDependencies', 'scripts']) {
+    const entry = value[field]
+
+    if (entry === undefined) continue
+
+    if (!isRecord(entry) || Object.values(entry).some(item => typeof item !== 'string')) {
+      throw new TypeError(`Invalid package manifest field "${field}": expected an object of strings: ${path}`)
+    }
+  }
+
+  if (value.packageManager !== undefined && typeof value.packageManager !== 'string') {
+    throw new TypeError(`Invalid package manifest field "packageManager": expected a string: ${path}`)
+  }
+
+  if (value.config !== undefined && !isRecord(value.config)) {
+    throw new TypeError(`Invalid package manifest field "config": expected an object: ${path}`)
+  }
+}
+
 const parseManifest = (source: string, path: string): PackageManifest => {
   let value: unknown
 
@@ -142,11 +163,13 @@ const parseManifest = (source: string, path: string): PackageManifest => {
     throw new Error(`Cannot update invalid package manifest: ${path}`)
   }
 
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new TypeError(`Package manifest must contain an object: ${path}`)
   }
 
-  return value as PackageManifest
+  assertPackageManifest(value, path)
+
+  return value
 }
 
 const detectPackageManager = async (
@@ -187,29 +210,28 @@ const formatManifest = (
   manifest: PackageManifest,
   originalSource: string
 ): string => {
-  const formatted = JSON.stringify(manifest, undefined, getIndent(originalSource))
+  const newline = originalSource.includes('\r\n') ? '\r\n' : '\n'
 
-  return originalSource.endsWith('\n') ? `${formatted}\n` : formatted
+  const formatted = JSON.stringify(manifest, undefined, getIndent(originalSource))
+    .replaceAll('\n', newline)
+
+  return originalSource.endsWith('\n') ? `${formatted}${newline}` : formatted
 }
+
+const getUpdatedManifestSource = (
+  manifest: PackageManifest,
+  originalSource: string,
+  changed: boolean
+): string => changed ? formatManifest(manifest, originalSource) : originalSource
 
 const setDependency = (
   manifest: PackageManifest,
   name: string,
-  version: string,
-  updateExisting = false
+  version: string
 ): boolean => {
   const developmentVersion = manifest.devDependencies?.[name]
 
-  if (developmentVersion !== undefined) {
-    if (!updateExisting || developmentVersion === version) return false
-
-    manifest.devDependencies = {
-      ...manifest.devDependencies,
-      [name]: version
-    }
-
-    return true
-  }
+  if (developmentVersion !== undefined) return false
 
   const existingVersion = manifest.dependencies?.[name]
 
@@ -242,23 +264,10 @@ const setScript = (
   return true
 }
 
-const ensurePrepareScript = (manifest: PackageManifest): boolean => {
-  const existing = manifest.scripts?.prepare
-
-  if (existing !== undefined) {
-    const updated = existing.replace(
-      /(^|&&)(\s*)husky install(?=\s*(?:&&|$))/gu, '$1$2husky'
-    )
-
-    if (updated !== existing) return setScript(manifest, 'prepare', updated)
-
-    if (/(^|&&)\s*husky(?:\s|$)/u.test(existing)) return false
-  }
-
-  return setScript(
-    manifest, 'prepare', existing === undefined ? 'husky' : `${existing} && husky`
-  )
-}
+const hasRepeatedMarker = (
+  source: string,
+  marker: string
+): boolean => source.indexOf(marker) !== source.lastIndexOf(marker)
 
 const replaceGuardedSection = (
   source: string | undefined,
@@ -269,9 +278,14 @@ const replaceGuardedSection = (
   if (source === undefined || source.trim().length === 0) return `${section}\n`
 
   const start = source.indexOf(startMarker)
-  const end = source.indexOf(endMarker, start + startMarker.length)
+  const end = source.indexOf(endMarker)
 
-  if ((start === -1) !== (end === -1)) {
+  if (
+    (start === -1) !== (end === -1) ||
+    end < start ||
+    hasRepeatedMarker(source, startMarker) ||
+    hasRepeatedMarker(source, endMarker)
+  ) {
     throw new Error(`Cannot update an incomplete guarded section: ${startMarker}`)
   }
 
@@ -282,19 +296,6 @@ const replaceGuardedSection = (
   }
 
   return `${source.trimEnd()}\n\n${section}\n`
-}
-
-const KNOWN_COMMITLINT_INVOCATION =
-  /(?:(?:pnpm\s+exec|npx|yarn)\s+)?commitlint\s+--edit\s+(?:"\$1"|'\$1'|\$1)/gu
-
-const updateHook = (source: string | undefined): string => {
-  // Replace only the obsolete validator command. Using `true` preserves any
-  // surrounding `&&`, `if`, or multiline shell structure in an existing hook.
-  const withoutKnownValidator = source?.replace(KNOWN_COMMITLINT_INVOCATION, 'true')
-
-  return replaceGuardedSection(
-    withoutKnownValidator, HOOK_SECTION, HOOK_START_MARKER, HOOK_END_MARKER
-  )
 }
 
 const isObsoleteDependency = (name: string): boolean => name === 'commitizen' ||
@@ -367,33 +368,103 @@ const shouldConfigurePnpmCatalog = (
     )
 }
 
-const getCatalogRange = (source: string): CatalogRange | undefined => {
-  const header = /^catalog:\s*(?:#.*)?$/mu.exec(source)
+const insertCatalogEntry = (
+  source: string,
+  range: readonly [number, number, number],
+  specifier: string,
+  flow: boolean,
+  empty: boolean
+): string => {
+  const entry = `"${PACKAGE_NAME}": ${specifier}`
 
-  if (header === null) return undefined
+  if (flow) {
+    const position = range[0] + 1
+    const separator = empty ? '' : ', '
 
-  const start = header.index + header[0].length
-  const remaining = source.slice(start)
-  const nextTopLevel = /^\S.*$/mu.exec(remaining.slice(1))
+    return `${source.slice(0, position)}${entry}${separator}${source.slice(position)}`
+  }
 
-  const end = nextTopLevel?.index === undefined ?
-    source.length :
-    start + 1 + nextTopLevel.index
+  const position = empty ? range[2] : source.lastIndexOf('\n', range[0] - 1) + 1
+  const indentation = empty ? '  ' : source.slice(position, range[0])
+  const newline = source.includes('\r\n') ? '\r\n' : '\n'
+  const leadingNewline = position > 0 && source[position - 1] !== '\n' ? newline : ''
 
-  return {
-    source: source.slice(start, end),
-    start
+  return `${source.slice(0, position)}${leadingNewline}${indentation}${entry}${newline}${source.slice(position)}`
+}
+
+const assertCatalogEntries = (entries: Pair[], path: string): void => {
+  for (const { key, value } of entries) {
+    if (!isScalar(key) || typeof key.value !== 'string' ||
+      !isScalar(value) || typeof value.value !== 'string') {
+      throw new Error(`Invalid pnpm catalog: expected dependency names and versions as strings: ${path}`)
+    }
   }
 }
 
-const catalogContainsPackage = (catalogSource: string): boolean => {
-  const escapedName = PACKAGE_NAME.replaceAll('/', String.raw`\/`)
+const isEmptyCatalog = (catalog: unknown): catalog is Scalar<null> => isScalar(catalog) && catalog.value === null &&
+  catalog.range?.[0] === catalog.range?.[1]
 
-  const packagePattern = new RegExp(
-    String.raw`^\s*["']?${escapedName}["']?\s*:`, 'mu'
-  )
+const readPnpmCatalog = (source: string, path: string): YAMLMap | Scalar<null> | undefined => {
+  const document = parseDocument(source)
 
-  return packagePattern.test(catalogSource)
+  if (document.errors.length > 0 || !isMap(document.contents)) {
+    throw new Error(`Cannot update invalid pnpm workspace configuration: ${path}`)
+  }
+
+  const catalog = document.get('catalog', true)
+
+  if (catalog === undefined) return undefined
+
+  if (isAlias(catalog)) {
+    const resolved = catalog.resolve(document)
+
+    if (isMap(resolved) && resolved.has(PACKAGE_NAME)) {
+      assertCatalogEntries(resolved.items, path)
+
+      return resolved
+    }
+
+    throw new Error(`Cannot repair an aliased pnpm catalog; define a separate default catalog: ${path}`)
+  }
+
+  if (isMap(catalog)) {
+    assertCatalogEntries(catalog.items, path)
+
+    return catalog
+  }
+
+  if (isEmptyCatalog(catalog)) return catalog
+
+  throw new Error(`Invalid pnpm catalog: expected a dependency mapping: ${path}`)
+}
+
+const analyzePnpmCatalog = (
+  source: string,
+  path: string,
+  specifier: string
+): PnpmCatalogConfiguration => {
+  const catalog = readPnpmCatalog(source, path)
+
+  if (catalog === undefined) return { specifier }
+
+  if (isMap(catalog) && catalog.has(PACKAGE_NAME)) return { specifier: 'catalog:' }
+
+  if (catalog.anchor !== undefined) {
+    throw new Error(`Cannot repair an anchored pnpm catalog; define a separate default catalog: ${path}`)
+  }
+
+  if (catalog.range === undefined || catalog.range === null) {
+    throw new Error(`Cannot locate pnpm catalog in workspace configuration: ${path}`)
+  }
+
+  const flow = isMap(catalog) && catalog.flow === true
+  const empty = isMap(catalog) ? catalog.items.length === 0 : true
+
+  return {
+    path,
+    source: insertCatalogEntry(source, catalog.range, specifier, flow, empty),
+    specifier: 'catalog:'
+  }
 }
 
 const configurePnpmCatalog = async (
@@ -413,23 +484,38 @@ const configurePnpmCatalog = async (
 
   if (source === undefined) return { specifier: defaultSpecifier }
 
-  const catalog = getCatalogRange(source)
+  return analyzePnpmCatalog(source, workspacePath, defaultSpecifier)
+}
 
-  if (catalog === undefined) return { specifier: defaultSpecifier }
+const ensurePrepareScript = (manifest: PackageManifest): boolean => {
+  const existing = manifest.scripts?.prepare
 
-  if (catalogContainsPackage(catalog.source)) return { specifier: 'catalog:' }
+  if (existing !== undefined) {
+    const updated = existing.replace(
+      /(^|&&)(\s*)husky install(?=\s*(?:&&|$))/gu, '$1$2husky'
+    )
 
-  const indentation = /^([ \t]+)\S/mu.exec(catalog.source)?.[1] ?? '  '
-  const entry = `\n${indentation}"${PACKAGE_NAME}": ${defaultSpecifier}`
+    if (updated !== existing) return setScript(manifest, 'prepare', updated)
 
-  const updatedSource =
-    `${source.slice(0, catalog.start)}${entry}${source.slice(catalog.start)}`
-
-  return {
-    path: workspacePath,
-    source: updatedSource,
-    specifier: 'catalog:'
+    if (/(^|&&)\s*husky(?:\s|$)/u.test(existing)) return false
   }
+
+  return setScript(
+    manifest, 'prepare', existing === undefined ? 'husky' : `${existing} && husky`
+  )
+}
+
+const KNOWN_COMMITLINT_INVOCATION =
+  /(?:(?:pnpm\s+exec|npx|yarn)\s+)?commitlint\s+--edit\s+(?:"\$1"|'\$1'|\$1)/gu
+
+const updateHook = (source: string | undefined): string => {
+  // Replace only the obsolete validator command. Using `true` preserves any
+  // surrounding `&&`, `if`, or multiline shell structure in an existing hook.
+  const withoutKnownValidator = source?.replace(KNOWN_COMMITLINT_INVOCATION, 'true')
+
+  return replaceGuardedSection(
+    withoutKnownValidator, HOOK_SECTION, HOOK_START_MARKER, HOOK_END_MARKER
+  )
 }
 
 const configureManifest = (
@@ -562,7 +648,200 @@ const getSelectedActions = (
   return selectedActions
 }
 
+interface DesiredHookStep {
+  args: string[]
+  command: string
+  name: string
+  pass_hook_args: boolean
+}
+
+const normalizeHookStepName = (value: unknown): string | undefined => typeof value === 'string' ? value.trim() : undefined
+
+const findExistingStepIndex = (
+  steps: YAMLSeq,
+  name: string
+): number => {
+  let existingIndex = -1
+
+  for (const [index, item] of steps.items.entries()) {
+    if (!isMap(item) || normalizeHookStepName(item.get('name')) !== name) continue
+
+    if (existingIndex !== -1) {
+      throw new Error('Cannot update duplicate managed Quality hook steps; keep one Commitprompt validation step.')
+    }
+
+    existingIndex = index
+  }
+
+  return existingIndex
+}
+
+const stepArgsMatch = (
+  existingArgs: unknown,
+  desiredArgs: readonly string[]
+): boolean => {
+  if (!isSeq(existingArgs)) return false
+
+  const values = existingArgs.items.map(item => isScalar(item) ? item.value : undefined)
+
+  return values.length === desiredArgs.length &&
+    values.every((value, index) => value === desiredArgs[index])
+}
+
+const updateExistingStep = (
+  step: YAMLMap,
+  desiredStep: DesiredHookStep
+): boolean => {
+  let mutated = false
+
+  if (step.get('command') !== desiredStep.command) {
+    step.set('command', desiredStep.command)
+
+    mutated = true
+  }
+
+  const existingArgs = step.get('args', true)
+
+  if (!stepArgsMatch(existingArgs, desiredStep.args)) {
+    if (isSeq(existingArgs)) {
+      existingArgs.items = desiredStep.args.map(argument => new Scalar(argument))
+    } else {
+      step.set('args', desiredStep.args)
+    }
+
+    mutated = true
+  }
+
+  if (step.get('pass_hook_args') !== desiredStep.pass_hook_args) {
+    step.set('pass_hook_args', desiredStep.pass_hook_args)
+
+    mutated = true
+  }
+
+  return mutated
+}
+
+const assertHookNodeShape = (
+  node: unknown,
+  isValid: (value: unknown) => boolean,
+  hookPath: string
+): void => {
+  if (node !== undefined && !isValid(node)) {
+    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
+  }
+}
+
+const getHookSteps = (
+  document: Document.Parsed,
+  hookPath: string
+): YAMLSeq | undefined => {
+  if (document.errors.length > 0 ||
+    (document.contents !== null && !isMap(document.contents))) {
+    throw new Error(`Cannot update invalid quality configuration: ${hookPath}`)
+  }
+
+  const hooksNode = document.get('hooks', true)
+
+  assertHookNodeShape(hooksNode, isMap, hookPath)
+
+  const commitMsgNode = isMap(hooksNode) ? hooksNode.get('commit-msg', true) : undefined
+
+  assertHookNodeShape(commitMsgNode, isMap, hookPath)
+
+  const steps = isMap(commitMsgNode) ? commitMsgNode.get('steps', true) : undefined
+
+  assertHookNodeShape(steps, isSeq, hookPath)
+
+  return isSeq(steps) ? steps : undefined
+}
+
+const configureHookSteps = (
+  document: Document.Parsed,
+  steps: YAMLSeq | undefined,
+  desiredStep: DesiredHookStep
+): boolean => {
+  if (steps === undefined) {
+    document.setIn(['hooks', 'commit-msg', 'steps'], [desiredStep])
+
+    return true
+  }
+
+  const existingIndex = findExistingStepIndex(steps, HOOK_STEP_NAME)
+
+  if (existingIndex === -1) {
+    steps.add(desiredStep)
+
+    return true
+  }
+
+  const existingStep = steps.get(existingIndex, true)
+
+  return isMap(existingStep) && updateExistingStep(existingStep, desiredStep)
+}
+
+const NPM_HOOK_SCRIPT = [
+  'import { readFile } from \'node:fs/promises\'',
+  'import { runAutomation } from \'@santi020k/commitprompt\'',
+  'process.exitCode = await runAutomation({ command: \'validate\', cwd: process.cwd(), input: await readFile(process.argv[1], \'utf8\'), log: console.log, error: console.error })'
+].join('; ')
+
+const createDesiredHookStep = (packageManager: PackageManager): DesiredHookStep => ({
+  args: packageManager === 'npm' ?
+    ['--input-type=module', '--eval', NPM_HOOK_SCRIPT, '--'] :
+    [packageManager === 'yarn' ? 'run' : 'exec', 'commitprompt', 'validate', '--input'],
+  command: packageManager === 'npm' ? 'node' : packageManager,
+  name: HOOK_STEP_NAME,
+  pass_hook_args: true
+})
+
+const seedQualityVersion = (document: Document.Parsed): boolean => {
+  if (document.has('version')) return false
+
+  document.set('version', 1)
+
+  return true
+}
+
 const analyzeHook = async (
+  cwd: string,
+  packageManager: PackageManager,
+  selectedActions: ReadonlySet<ProjectSetupActionId>
+): Promise<HookConfiguration> => {
+  if (!selectedActions.has('quality-hook')) return {}
+
+  const hookPath = join(cwd, 'quality.yml')
+  const originalHook = await readOptionalFile(hookPath)
+  const document = parseDocument(originalHook ?? 'version: 1\n')
+  const steps = getHookSteps(document, hookPath)
+  const versionMissing = seedQualityVersion(document)
+  const desiredStep = createDesiredHookStep(packageManager)
+  const mutated = configureHookSteps(document, steps, desiredStep) || versionMissing
+  const serializedHook = mutated ? document.toString() : originalHook ?? 'version: 1\n'
+
+  const updatedHook = mutated && originalHook?.includes('\r\n') ?
+    serializedHook.replaceAll('\n', '\r\n') :
+    serializedHook
+
+  const changed = updatedHook !== originalHook
+
+  const action: ProjectSetupAction = {
+    changed,
+    id: 'quality-hook',
+    path: hookPath
+  }
+
+  if (!changed) return { action }
+
+  return {
+    action,
+    file: {
+      path: hookPath,
+      source: updatedHook
+    }
+  }
+}
+
+const analyzeHuskyHook = async (
   cwd: string,
   manifestChanged: boolean,
   selectedActions: ReadonlySet<ProjectSetupActionId>
@@ -622,6 +901,21 @@ const isAppliedChange = (
   drift: boolean
 ): boolean => !check && !dryRun && drift
 
+const reportCatalogChange = (
+  actions: ProjectSetupAction[],
+  configuration: PnpmCatalogConfiguration
+): void => {
+  if (configuration.source === undefined || configuration.path === undefined) return
+
+  const dependencyAction = actions.find(action => action.id === 'dependency')
+
+  if (dependencyAction === undefined) return
+
+  if (!dependencyAction.changed) dependencyAction.path = configuration.path
+
+  dependencyAction.changed = true
+}
+
 export const setupProject = async ({
   actions: selectedActionIds,
   check = false,
@@ -645,18 +939,19 @@ export const setupProject = async ({
     manifest, catalogConfiguration.specifier, manifestPath, selectedActions
   )
 
-  if (catalogConfiguration.source !== undefined) {
-    const dependencyAction = manifestConfiguration.actions.find(
-      action => action.id === 'dependency'
-    )
+  const manifestChanged = manifestConfiguration.hookChanged ||
+    manifestConfiguration.actions.some(action => action.changed)
 
-    if (dependencyAction) dependencyAction.changed = true
-  }
+  reportCatalogChange(manifestConfiguration.actions, catalogConfiguration)
 
   const instructionConfiguration =
     await analyzeInstructionFiles(cwd, selectedActions)
 
   const hookConfiguration = await analyzeHook(
+    cwd, packageManager, selectedActions
+  )
+
+  const huskyHookConfiguration = await analyzeHuskyHook(
     cwd, manifestConfiguration.hookChanged, selectedActions
   )
 
@@ -672,10 +967,12 @@ export const setupProject = async ({
 
   appendHookConfiguration(actions, pendingFiles, hookConfiguration)
 
+  appendHookConfiguration(actions, pendingFiles, huskyHookConfiguration)
+
   actions.push(...instructionConfiguration.actions)
 
-  const updatedManifestSource = formatManifest(
-    manifest, originalManifestSource
+  const updatedManifestSource = getUpdatedManifestSource(
+    manifest, originalManifestSource, manifestChanged
   )
 
   await applyProjectSetup(

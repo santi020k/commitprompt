@@ -11,6 +11,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { delimiter, isAbsolute, join, resolve } from 'node:path'
 import process from 'node:process'
@@ -22,7 +23,21 @@ import {
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
+const { parse } = createRequire(join(packageDirectory, 'package.json'))('yaml')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'commitprompt-pack-'))
+
+const gitLocalEnvironmentNames = new Set(
+  execFileSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' }).trim().split('\n')
+)
+
+const consumerEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !gitLocalEnvironmentNames.has(key))
+)
+
+const executeGitSync = (arguments_, options) => execFileSync('git', arguments_, {
+  ...options,
+  env: consumerEnvironment
+})
 
 const executeBinarySync = (binary, arguments_, options) => {
   const invocation = getBinaryInvocation(binary, arguments_)
@@ -31,6 +46,7 @@ const executeBinarySync = (binary, arguments_, options) => {
     invocation.command,
     invocation.arguments_,
     {
+      env: consumerEnvironment,
       ...options,
       windowsVerbatimArguments: invocation.windowsVerbatimArguments
     }
@@ -44,6 +60,8 @@ const executePnpmSync = (arguments_, options) => {
 }
 
 const resolveWindowsCommand = command => {
+  if (command === 'node') return process.execPath
+
   if (process.platform !== 'win32') return command
 
   const resolvedCommands = (process.env.Path ?? process.env.PATH ?? '')
@@ -59,7 +77,7 @@ const resolveWindowsCommand = command => {
 }
 
 const cleanPackageManagerEnvironment = Object.fromEntries(
-  Object.entries(process.env).filter(
+  Object.entries(consumerEnvironment).filter(
     ([key]) => !/^npm_(?:config|package)_/iu.test(key)
   )
 )
@@ -80,7 +98,7 @@ const installPackage = packageManager => {
     cwd: packageManager.consumerDirectory,
     encoding: 'utf8',
     env: packageManager.name === 'pnpm' ?
-      process.env :
+      consumerEnvironment :
       cleanPackageManagerEnvironment,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments
   })
@@ -394,7 +412,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     throw new Error(`${name} did not install a working binary.`)
   }
 
-  execFileSync(
+  executeBinarySync(
     process.execPath,
     [
       '--input-type=module',
@@ -461,19 +479,19 @@ if (!integrationConsumer || !integrationBinary) {
   throw new Error('The npm integration consumer was not created.')
 }
 
-execFileSync('git', ['init', '--quiet'], { cwd: integrationConsumer })
+executeGitSync(['init', '--quiet'], { cwd: integrationConsumer })
 
-execFileSync('git', ['config', 'user.name', 'Commitprompt Tests'], {
+executeGitSync(['config', 'user.name', 'Commitprompt Tests'], {
   cwd: integrationConsumer
 })
 
-execFileSync('git', ['config', 'user.email', 'tests@commitprompt.dev'], {
+executeGitSync(['config', 'user.email', 'tests@commitprompt.dev'], {
   cwd: integrationConsumer
 })
 
 writeFileSync(join(integrationConsumer, 'example.txt'), 'integration\n')
 
-execFileSync('git', ['add', 'example.txt'], { cwd: integrationConsumer })
+executeGitSync(['add', 'example.txt'], { cwd: integrationConsumer })
 
 const interactions = [
   { answer: '1\n', prompt: 'Type: ' },
@@ -496,6 +514,7 @@ await new Promise((resolve, reject) => {
 
   const child = spawn(invocation.command, invocation.arguments_, {
     cwd: integrationConsumer,
+    env: consumerEnvironment,
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsVerbatimArguments: invocation.windowsVerbatimArguments
   })
@@ -544,8 +563,7 @@ await new Promise((resolve, reject) => {
   })
 })
 
-const subject = execFileSync(
-  'git',
+const subject = executeGitSync(
   ['log', '-1', '--pretty=%s'],
   { cwd: integrationConsumer, encoding: 'utf8' }
 ).trim()
@@ -556,7 +574,7 @@ if (subject !== 'feat: verify installed cli') {
 
 writeFileSync(join(integrationConsumer, 'automation.txt'), 'automation\n')
 
-execFileSync('git', ['add', 'automation.txt'], { cwd: integrationConsumer })
+executeGitSync(['add', 'automation.txt'], { cwd: integrationConsumer })
 
 const automationInput = JSON.stringify({
   body: '',
@@ -586,8 +604,7 @@ if (
   throw new Error('Installed CLI returned an unexpected automation result.')
 }
 
-const automationSubject = execFileSync(
-  'git',
+const automationSubject = executeGitSync(
   ['log', '-1', '--pretty=%s'],
   { cwd: integrationConsumer, encoding: 'utf8' }
 ).trim()
@@ -639,7 +656,7 @@ writeFileSync(
   ].join('\n')
 )
 
-execFileSync(
+executeBinarySync(
   process.execPath,
   [
     '--input-type=module',
@@ -761,24 +778,70 @@ writeFileSync(validMessagePath, 'fix: verify generated hook\n')
 
 writeFileSync(invalidMessagePath, 'feat: reject configured type\n')
 
-const hookPath = join(integrationConsumer, '.husky', 'commit-msg')
+const legacyHookPath = join(integrationConsumer, '.husky', 'commit-msg')
+
+if (!readFileSync(legacyHookPath, 'utf8').includes('commitprompt validate --input "$1"')) {
+  throw new Error('Default setup omitted the released Husky validation hook.')
+}
+
+executeBinarySync(integrationBinary, ['setup', 'project', '--only', 'quality-hook'], {
+  cwd: integrationConsumer,
+  encoding: 'utf8'
+})
+
+const hookConfiguration = parse(readFileSync(
+  join(integrationConsumer, 'quality.yml'), 'utf8'
+))
+
+const hookSteps = hookConfiguration?.hooks?.['commit-msg']?.steps
+
+if (!Array.isArray(hookSteps)) {
+  throw new Error('Generated Quality configuration omitted commit-msg steps.')
+}
+
+const hookStep = hookSteps.find(
+  step => step?.name === 'Validate commit message with Commitprompt'
+)
+
+if (
+  typeof hookStep?.command !== 'string'
+  || !Array.isArray(hookStep.args)
+  || !hookStep.args.every(argument => typeof argument === 'string')
+  || hookStep.pass_hook_args !== true
+) {
+  throw new Error('Generated Quality commit-msg step has an invalid contract.')
+}
 
 const hookEnvironment = {
-  ...process.env,
+  ...cleanPackageManagerEnvironment,
   PATH: `${join(integrationConsumer, 'node_modules/.bin')}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`
 }
 
-execFileSync('sh', [hookPath, validMessagePath], {
-  cwd: integrationConsumer,
-  env: hookEnvironment,
-  stdio: 'inherit'
-})
+executeBinarySync(
+  resolveWindowsCommand(hookStep.command),
+  [...hookStep.args, validMessagePath],
+  {
+    cwd: integrationConsumer,
+    env: hookEnvironment,
+    stdio: 'inherit'
+  }
+)
 
-const invalidHook = spawnSync('sh', [hookPath, invalidMessagePath], {
-  cwd: integrationConsumer,
-  encoding: 'utf8',
-  env: hookEnvironment
-})
+const invalidHookInvocation = getBinaryInvocation(
+  resolveWindowsCommand(hookStep.command),
+  [...hookStep.args, invalidMessagePath]
+)
+
+const invalidHook = spawnSync(
+  invalidHookInvocation.command, invalidHookInvocation.arguments_, {
+    cwd: integrationConsumer,
+    encoding: 'utf8',
+    env: hookEnvironment,
+    windowsVerbatimArguments: invalidHookInvocation.windowsVerbatimArguments
+  }
+)
+
+if (invalidHook.error !== undefined) throw invalidHook.error
 
 if (invalidHook.status === 0) {
   throw new Error('Generated consumer hook accepted an invalid message.')

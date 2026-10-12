@@ -1,13 +1,12 @@
 ---
 import {
-  Badge,
+  Anchor,
   Breadcrumb,
   ButtonLink,
   Callout,
   Card,
   Code,
   CodeTabs,
-  Eyebrow,
   Icon,
   Kbd,
   Prose,
@@ -15,6 +14,20 @@ import {
 } from '@santi020k/lumen-astro'
 
 import Base from '../layouts/Base.astro'
+
+const navigationItems = [
+  { href: '#installation', label: 'Installation' },
+  { href: '#project-setup', label: 'Project setup' },
+  { href: '#configuration', label: 'Configuration' },
+  { href: '#usage', label: 'Usage' },
+  { href: '#editor-ai', label: 'Editor AI' },
+  { href: '#commit-format', label: 'Commit format' },
+  { href: '#repository-rules', label: 'Repository rules' },
+  { href: '#git-hooks', label: 'Git hooks' },
+  { href: '#automation-ai', label: 'Automation and AI' },
+  { href: '#programmatic-api', label: 'Programmatic API' },
+  { href: '#requirements', label: 'Requirements' }
+]
 
 const installItems = [
   {
@@ -66,7 +79,7 @@ const usageCommand = 'git add src/\npnpm commit'
 
 const hookItems = [
   {
-    code: 'npx --no-install commitprompt validate --input "$1"',
+    code: 'node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"',
     label: 'npm',
     language: 'shell',
     value: 'npm'
@@ -78,7 +91,7 @@ const hookItems = [
     value: 'pnpm'
   },
   {
-    code: 'yarn exec commitprompt validate --input "$1"',
+    code: 'yarn run commitprompt validate --input "$1"',
     label: 'Yarn',
     language: 'shell',
     value: 'yarn'
@@ -103,64 +116,79 @@ JSON
 printf '%s\\n' 'feat(cli): accept structured input' \\
   | commitprompt validate --json`
 
-const programmaticExample = `import {
+const programmaticExample = `import { stdin, stdout } from 'node:process'
+import { createInterface } from 'node:readline/promises'
+import {
   createCommitlintValidator,
   createGitClient,
   runCommitFlow
 } from '@santi020k/commitprompt'
 
 const validator = createCommitlintValidator(process.cwd())
+const scopes = await validator.getScopes()
+const types = await validator.getTypes()
+const prompt = createInterface({ input: stdin, output: stdout })
 
-await runCommitFlow({
-  error: console.error,
-  git: createGitClient(process.cwd()),
-  log: console.log,
-  prompt,
-  scopes: await validator.getScopes(),
-  types: await validator.getTypes(),
-  validator
-})`
+try {
+  process.exitCode = await runCommitFlow({
+    error: console.error,
+    git: createGitClient(process.cwd()),
+    log: console.log,
+    prompt,
+    scopes,
+    types,
+    validator
+  })
+} finally {
+  prompt.close()
+}`
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  description: 'Install, configure, and use Commitprompt in any Git repository.',
+  headline: 'Commitprompt documentation',
+  inLanguage: 'en',
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'Commitprompt',
+    url: 'https://commitprompt.santi020k.com/'
+  },
+  url: 'https://commitprompt.santi020k.com/docs/'
+}
 ---
 
 <Base
   title="Documentation — Commitprompt"
   description="Install, configure, and use Commitprompt in any Git repository."
+  structuredData={structuredData}
 >
   <div class="docs-shell shell">
     <aside class="docs-sidebar">
-      <Badge variant="outline">Documentation</Badge>
-      <nav aria-label="Documentation">
-        <p>Start here</p>
-        <a href="#installation">Installation</a>
-        <a href="#project-setup">Project setup</a>
-        <a href="#configuration">Configuration</a>
-        <a href="#usage">Usage</a>
-        <a href="#editor-ai">Editor AI</a>
-        <p>Reference</p>
-        <a href="#commit-format">Commit format</a>
-        <a href="#repository-rules">Repository rules</a>
-        <a href="#git-hooks">Git hooks</a>
-        <a href="#automation-ai">Automation and AI</a>
-        <a href="#programmatic-api">Programmatic API</a>
-        <a href="#requirements">Requirements</a>
-      </nav>
+      <p class="docs-nav-title">In this guide</p>
+      {/* Allow one pixel beyond the 7rem scroll inset for fractional layout positions. */}
+      <Anchor aria-label="Documentation" activationOffset={113} items={navigationItems} />
     </aside>
 
     <article class="docs-content">
       <Prose>
-        <header>
-          <Breadcrumb>
+        <header class="docs-header">
+          <Breadcrumb class="docs-breadcrumb">
             <a href="/">Commitprompt</a>
             <Icon name="chevron-right" />
             <span aria-current="page">Docs</span>
           </Breadcrumb>
-          <Eyebrow>Documentation</Eyebrow>
+          <p class="docs-eyebrow">The Commitprompt guide</p>
           <h1>Commit with your repository’s rules.</h1>
           <p class="lede">
             Commitprompt is a small interactive CLI. It reads the local Commitlint
             configuration, validates the finished message, and only commits after
             you confirm it.
           </p>
+          <div class="docs-meta">
+            <span>{navigationItems.length} sections, one focused workflow</span>
+            <span>npm · pnpm · Yarn</span>
+          </div>
         </header>
 
         <section id="installation">
@@ -171,6 +199,7 @@ await runCommitFlow({
           </p>
           <CodeTabs
             ariaLabel="Install Commitprompt"
+            codeLabel="Install Commitprompt command"
             items={installItems}
             storageKey="commitprompt-package-manager"
             wrap={false}
@@ -193,19 +222,21 @@ await runCommitFlow({
           </p>
           <Code
             code="commitprompt setup project"
+            codeLabel="Set up a repository"
             copy
             label="Terminal"
             language="shell"
             variant="block"
           />
           <p>
-            Setup detects npm, pnpm, or Yarn; adds Commitprompt and Husky as
-            development dependencies; sets the neutral <Code>commit</Code>
-            script; installs a <Code>commit-msg</Code> validation hook; and adds
+            Setup detects npm, pnpm, or Yarn; adds Commitprompt as a development
+            dependency; sets the neutral <Code>commit</Code> script; writes a
+            Husky <Code>commit-msg</Code> validation hook by default; and adds
             guarded guidance to <Code>AGENTS.md</Code> and GitHub Copilot
             instructions plus reusable agent skills. Run the detected package
-            manager’s install command afterward to update the lockfile and
-            activate Husky.
+            manager’s install command afterward to update the lockfile and install Husky.
+            Quality-managed repositories can explicitly select <Code>--only quality-hook</Code>
+            and run <Code>quality hooks install</Code>.
           </p>
           <Callout>
             <p>
@@ -293,6 +324,7 @@ await runCommitFlow({
             </ol>
             <Code
               code={usageCommand}
+              codeLabel="Stage files and start Commitprompt"
               copy
               label="Terminal"
               language="shell"
@@ -317,6 +349,7 @@ await runCommitFlow({
           </p>
           <Code
             code={'commitprompt setup zed\ncommitprompt setup vscode'}
+            codeLabel="Configure editor commit generation"
             copy
             label="Terminal"
             language="shell"
@@ -345,6 +378,7 @@ await runCommitFlow({
           <p>The generated message follows the Conventional Commits structure:</p>
           <Code
             code={commitFormat}
+            codeLabel="Conventional Commit message structure"
             copy
             label="Generated commit"
             language="text"
@@ -381,10 +415,9 @@ await runCommitFlow({
         <section id="git-hooks">
           <h2>Git hooks</h2>
           <p>
-            Project setup installs a Husky <Code>commit-msg</Code> hook that runs
-            <Code>commitprompt validate --input "$1"</Code>. It preserves
-            unrelated hook commands and replaces known package-manager-specific
-            Commitlint invocations.
+            Select <Code>--only quality-hook</Code> to add a <Code>commit-msg</Code> step to
+            <Code>quality.yml</Code> that runs Commitprompt through the detected
+            package manager, with npm using Node to load the local scoped API. It preserves unrelated Quality hook steps.
           </p>
           <p>
             The hook enforces the same repository rules for commits created
@@ -394,6 +427,7 @@ await runCommitFlow({
           </p>
           <CodeTabs
             ariaLabel="Explicit hook commands by package manager"
+            codeLabel="Commit message validation hook"
             copy
             items={hookItems}
             storageKey="commitprompt-hook-package-manager"
@@ -402,8 +436,8 @@ await runCommitFlow({
           <p>
             On failure, Commitprompt lists the violated rules, states that the
             commit was blocked, and directs the author to correct the message.
-            The generated neutral command works with npm, pnpm, and Yarn because
-            Husky adds local binaries to <Code>PATH</Code>.
+            The generated command works with npm, pnpm, and Yarn by resolving the
+            repository-local Commitprompt binary through the package manager.
           </p>
         </section>
 
@@ -419,6 +453,7 @@ await runCommitFlow({
           </p>
           <Code
             code={automationExample}
+            codeLabel="Generate and validate a commit with structured input"
             copy
             label="Agent workflow"
             language="shell"
@@ -460,6 +495,7 @@ await runCommitFlow({
           </Callout>
           <Code
             code={programmaticExample}
+            codeLabel="Complete custom commit flow script"
             copy
             label="custom-commit-flow.mjs"
             language="javascript"

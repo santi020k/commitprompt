@@ -1,0 +1,49 @@
+{
+  "cacheKey": "preset-v6",
+  "entries": {
+    "og/pages/index.webp": {
+      "baseDirectory": "public",
+      "digest": "9b6ee5464e2cec245a52666b10911463b5a130753864ac82f77b92458e914bde",
+      "fingerprint": "d440f3e4eaa76dea91f4f3612511a5d785038bb1adefe79fd7860fe120d7af65",
+      "output": "og/pages/index.webp"
+    },
+    "og/pages/index.png": {
+      "baseDirectory": "public",
+      "digest": "51b034680d383834f22a3c47320cb606609134c715bb140141ca43d0eae77f1a",
+      "fingerprint": "f47902a67e288d2b6d02e60c85dd219ffdfed2510913637801f6fcd724cc7ba7",
+      "output": "og/pages/index.png"
+    },
+    "og.png": {
+      "baseDirectory": "public",
+      "digest": "51b034680d383834f22a3c47320cb606609134c715bb140141ca43d0eae77f1a",
+      "fingerprint": "f47902a67e288d2b6d02e60c85dd219ffdfed2510913637801f6fcd724cc7ba7",
+      "output": "og.png"
+    },
+    "og/pages/index.svg": {
+      "baseDirectory": "public",
+      "digest": "551cda2076407d3b79c288078944c6c70738d7f491f18684e3b04b6a0bb3e922",
+      "fingerprint": "e2f76f99d7932875f7fac2c49fd192cfeb8567f25fae880d8be2b2e6a6b0420f",
+      "output": "og/pages/index.svg"
+    },
+    "og.svg": {
+      "baseDirectory": "public",
+      "digest": "551cda2076407d3b79c288078944c6c70738d7f491f18684e3b04b6a0bb3e922",
+      "fingerprint": "e2f76f99d7932875f7fac2c49fd192cfeb8567f25fae880d8be2b2e6a6b0420f",
+      "output": "og.svg"
+    },
+    "og/pages/docs.webp": {
+      "baseDirectory": "public",
+      "digest": "53fe518e3262c1944e5385406b9973d64dba5438c2ab413c2950226e0ca2267c",
+      "fingerprint": "9bf000d8dd5b7765b63127f6783ba6fed59c2a5b37cf36bfdd3a82b5ec1d6562",
+      "output": "og/pages/docs.webp"
+    },
+    "og/pages/404.webp": {
+      "baseDirectory": "public",
+      "digest": "894c3dbdfdf8c522caa6ba6079e354464c96971a5212d70521cd72cdfd7a2986",
+      "fingerprint": "caf6b1b17d1164bead51c8b3606f75e786c4689173337c0222262a89d3c749f8",
+      "output": "og/pages/404.webp"
+    }
+  },
+  "generatorVersion": "1.2.0",
+  "version": 3
+}

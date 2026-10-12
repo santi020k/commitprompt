@@ -1,4 +1,6 @@
 ---
+import { ClientRouter } from 'astro:transitions'
+
 import '@santi020k/lumen-astro/styles.css'
 import '../styles/global.css'
 
@@ -7,10 +9,13 @@ import {
   Icon,
   Link,
   NavigationMenu,
+  ScrollProgress,
   SkipLink,
-  ThemeToggle,
-  UIPrimitives
+  ThemeToggle
 } from '@santi020k/lumen-astro'
+import UIPrimitives from '@santi020k/lumen-astro/runtime'
+import MetadataHead from '@santi020k/og/astro/head'
+import { defineSite } from '@santi020k/og/site'
 
 import { getSocialImageUrl } from '../lib/social-image'
 
@@ -34,6 +39,20 @@ const {
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
 const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialImage)
+
+const site = defineSite({
+  locale: 'en_US',
+  siteName: 'Commitprompt',
+  siteUrl: Astro.site ?? canonicalUrl
+})
+
+const page = site.page({
+  description,
+  image: { alt: socialImageAlt, url: socialImageUrl },
+  pathname: Astro.url.pathname,
+  robots: { index: !noindex },
+  title
+})
 ---
 
 <!doctype html>
@@ -41,27 +60,12 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content={description} />
+    <ClientRouter fallback="swap" />
+    <MetadataHead {page} site={site.options} noindexPolicy="minimal" />
     <meta name="theme-color" content="#0b0b0d" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    {noindex && <meta name="robots" content="noindex" />}
-    {!noindex && <link rel="canonical" href={canonicalUrl} />}
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={socialImageUrl} />
-    <meta property="og:image:type" content="image/webp" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={socialImageAlt} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={socialImageUrl} />
-    <meta name="twitter:image:alt" content={socialImageAlt} />
     {structuredData && (
       <script
         is:inline
@@ -69,18 +73,32 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
         set:html={JSON.stringify(structuredData)}
       />
     )}
-    <title>{title}</title>
     <script is:inline>
       (() => {
+        const preferred = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        let theme = preferred
+
         try {
           const stored = localStorage.getItem('commitprompt-theme')
-          const preferred = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 
-          document.documentElement.dataset.theme = stored ?? preferred
+          if (stored === 'light' || stored === 'dark') theme = stored
         } catch {
-          document.documentElement.dataset.theme = 'dark'
+          // Use the system appearance when storage is unavailable.
         }
+
+        document.documentElement.dataset.theme = theme
       })()
+    </script>
+    <script>
+      import type { TransitionBeforeSwapEvent } from 'astro:transitions/client'
+
+      document.addEventListener('astro:before-swap', (event: TransitionBeforeSwapEvent) => {
+        const theme = document.documentElement.dataset.theme
+
+        if (theme === 'dark' || theme === 'light') {
+          event.newDocument.documentElement.dataset.theme = theme
+        }
+      })
     </script>
   </head>
   <body>
@@ -97,27 +115,47 @@ const socialImageUrl = getSocialImageUrl(Astro.url.pathname, Astro.site, socialI
           <img src="/icon.svg" alt="" width="30" height="30" />
           <span>commit<span>prompt</span></span>
         </Link>
-        <NavigationMenu aria-label="Primary navigation" variant="unstyled">
-          <Link href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Home</Link>
+        <NavigationMenu aria-label="Primary navigation" class="primary-nav" variant="unstyled">
+          <Link class="nav-home" href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Home</Link>
           <Link href="/docs/" aria-current={Astro.url.pathname.startsWith('/docs') ? 'page' : undefined}>Docs</Link>
-          <Link href="https://github.com/santi020k/commitprompt" newTab>GitHub</Link>
+          <Link aria-label="Commitprompt on GitHub" href="https://github.com/santi020k/commitprompt" newTab>
+            <span class="nav-github-label">GitHub</span>
+            <Icon name="arrow-up-right" class="nav-external-icon" />
+          </Link>
           <ThemeToggle storageKey="commitprompt-theme" />
         </NavigationMenu>
       </div>
     </header>
-    <main id="main-content">
+    <main id="main-content" tabindex="-1">
+      {Astro.url.pathname.startsWith('/docs') && <ScrollProgress />}
       <slot />
     </main>
-    <footer>
+    <footer class="site-footer">
       <div class="shell footer-content">
-        <p>Commit with intent.</p>
-        <p>
-          Made by <Link href="https://santi020k.com" newTab>santi020k</Link> · MIT licensed ·
-          Built with Lumen.
-        </p>
+        <div class="footer-main">
+          <div class="footer-identity">
+            <Link href="/" class="footer-wordmark" aria-label="Commitprompt home">
+              <Icon name="terminal" />
+              <span>commit<span class="wordmark-accent">prompt</span></span>
+            </Link>
+            <p>A small tool. A clearer history.</p>
+          </div>
+          <nav class="footer-navigation" aria-label="Footer">
+            <Link href="/docs/">Read the docs <Icon name="arrow-right" /></Link>
+            <Link href="https://github.com/santi020k/commitprompt" newTab>Explore on GitHub <Icon name="arrow-up-right" /></Link>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <p class="footer-signature"><Icon name="git-commit-horizontal" /> Commit with intent.</p>
+          <div class="footer-links">
+            <span>Made by <Link href="https://santi020k.com" newTab>santi020k</Link></span>
+            <Link href="https://github.com/santi020k/commitprompt/blob/main/LICENSE" newTab>MIT licensed</Link>
+            <Link href="https://lumen.santi020k.com" newTab>Built with Lumen</Link>
+          </div>
+        </div>
       </div>
     </footer>
-    <BackToTop aria-label="Back to top">
+    <BackToTop aria-label="Back to top" class="back-to-top">
       <Icon name="arrow-up" />
     </BackToTop>
   </body>

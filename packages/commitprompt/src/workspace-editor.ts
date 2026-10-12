@@ -49,6 +49,44 @@ const getSelectedEditors = (
   return new Set(editors.filter(isWorkspaceEditor))
 }
 
+interface WorkspaceEditorSetup {
+  editor: WorkspaceEditor
+  run: (check: boolean) => Promise<{ changed: boolean, settingsPath: string }>
+}
+
+const createEditorSetups = (
+  selectedEditors: ReadonlySet<WorkspaceEditor>,
+  cwd: string,
+  instructions: string
+): WorkspaceEditorSetup[] => {
+  const setups: WorkspaceEditorSetup[] = []
+
+  if (selectedEditors.has('vscode')) {
+    const settingsPath = join(cwd, '.vscode', 'settings.json')
+
+    setups.push({
+      editor: 'vscode',
+      run: check => setupVSCode({ check, instructions, settingsPath })
+    })
+  }
+
+  if (selectedEditors.has('zed')) {
+    const settingsPath = join(cwd, '.zed', 'settings.json')
+
+    const zedInstructions =
+      `${ZED_START_MARKER}\n${instructions}\n${ZED_END_MARKER}`
+
+    setups.push({
+      editor: 'zed',
+      run: check => setupZed({
+        check, instructions: zedInstructions, settingsPath
+      })
+    })
+  }
+
+  return setups
+}
+
 export const setupWorkspaceEditors = async ({
   check = false,
   cwd,
@@ -66,33 +104,20 @@ export const setupWorkspaceEditors = async ({
   const generated = getCommitMessageInstructions(types, scopes)
   const instructions = `${REPOSITORY_INSTRUCTION_PREFIX} ${generated}`
   const analyzeOnly = check || dryRun
-  const actions: WorkspaceEditorAction[] = []
+  const setups = createEditorSetups(selectedEditors, cwd, instructions)
 
-  if (selectedEditors.has('vscode')) {
-    const result = await setupVSCode({
-      check: analyzeOnly,
-      instructions,
-      settingsPath: join(cwd, '.vscode', 'settings.json')
-    })
-
-    actions.push({
-      changed: result.changed,
-      editor: 'vscode',
-      path: result.settingsPath
-    })
+  for (const setup of setups) {
+    await setup.run(true)
   }
 
-  if (selectedEditors.has('zed')) {
-    const result = await setupZed({
-      check: analyzeOnly,
-      instructions:
-        `${ZED_START_MARKER}\n${instructions}\n${ZED_END_MARKER}`,
-      settingsPath: join(cwd, '.zed', 'settings.json')
-    })
+  const actions: WorkspaceEditorAction[] = []
+
+  for (const setup of setups) {
+    const result = await setup.run(analyzeOnly)
 
     actions.push({
       changed: result.changed,
-      editor: 'zed',
+      editor: setup.editor,
       path: result.settingsPath
     })
   }

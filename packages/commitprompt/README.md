@@ -1,4 +1,43 @@
-# Commitprompt
+<p align="center">
+  <a href="../../README.md">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../docs/assets/readme/workspace-dark.svg">
+      <img src="../../docs/assets/readme/workspace-light.svg" alt="Commitprompt — Write the commit. Not the syntax." width="1200" height="220">
+    </picture>
+  </a>
+</p>
+
+<h1 align="center">CLI and API</h1>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@santi020k/commitprompt"><img src="https://img.shields.io/npm/v/@santi020k/commitprompt?style=flat-square&amp;color=877006" alt="Published npm version"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-13967e?style=flat-square" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/santi020k/commitprompt/blob/main/README.md">Project overview</a> ·
+  <a href="https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/package.json">Package manifest</a> ·
+  <a href="https://github.com/santi020k/commitprompt/blob/main/packages/commitprompt/CHANGELOG.md">Changelog</a> ·
+  <a href="#resources">Resources</a>
+</p>
+
+<details>
+<summary>On this page</summary>
+
+- [Install](#install)
+- [Usage](#usage)
+- [Editor AI](#editor-ai)
+- [Requirements](#requirements)
+- [Repository rules](#repository-rules)
+- [Migrating an existing prompt](#migrating-an-existing-prompt)
+- [Git hooks](#git-hooks)
+- [AI instruction assets](#ai-instruction-assets)
+- [Automation and AI tools](#automation-and-ai-tools)
+- [Programmatic API](#programmatic-api)
+- [License](#license)
+- [Resources](#resources)
+
+</details>
 
 A focused, package-manager-neutral prompt for Conventional Commits.
 
@@ -35,19 +74,35 @@ commitprompt setup project
 ```
 
 Project setup detects the repository's package manager, updates `package.json`,
-installs a package-manager-neutral Husky `commit-msg` hook, and adds guarded
+configures the existing Husky `commit-msg` hook by default, and adds guarded
 Commitprompt sections to `AGENTS.md` and `.github/copilot-instructions.md`. It
 reports obsolete Commitizen, Czg, and prompt configuration without deleting it.
 Run the detected package manager's install command afterward to update the
-lockfile and activate Husky.
+lockfile and install Husky. For Quality-managed repositories, select
+`--only dependency,commit-script,quality-hook,agents-instructions,copilot-instructions,agent-skill,claude-skill`
+instead, then run `quality hooks install` to install its managed launcher.
+The released `--only husky-hook` action remains supported.
+
+For pnpm workspaces with a default catalog, setup adds missing Commitprompt
+entries in block or flow syntax and preserves comments and named catalogs.
+Catalog-only repairs report `pnpm-workspace.yaml`. Invalid workspace YAML and
+repairs to anchored or aliased catalogs are rejected before any files change;
+define a separate default catalog to repair those entries. Existing entries
+shared through aliases remain unchanged.
 
 Use `--dry-run` to preview changes. Use `--check` as a non-writing CI drift gate;
 it exits with status 1 when setup is required. Both modes support `--json` and
 `--cwd <path>`. Select independent actions with `--only dependency`,
-`--only commit-script`, `--only husky-hook`, `--only agents-instructions`, or
+`--only commit-script`, `--only husky-hook`, `--only quality-hook`, `--only agents-instructions`, or
 `--only copilot-instructions`. Reusable agent skill files can be selected with
 `--only agent-skill` or `--only claude-skill`; pass a comma-separated list to
-combine actions.
+combine actions. Setup preserves the original `package.json` formatting when
+its dependency and commit script already match or those actions are not selected.
+When an update is needed, setup retains the manifest’s indentation, line endings,
+and trailing newline convention. An already-correct Quality hook is left
+byte-for-byte unchanged; updates preserve unrelated step options.
+Malformed manifest fields and incomplete, reversed, or duplicate instruction
+markers are rejected before setup writes files.
 
 The package also ships the generated templates under `templates/`, and project
 setup writes the skill to both `.agents/skills/commitprompt/SKILL.md` and
@@ -94,7 +149,9 @@ This reads `type-enum` and `scope-enum`, updates only the Commitprompt guidance
 in `.vscode/settings.json` and `.zed/settings.json`, and preserves custom
 instructions. Use `--editor vscode` or `--editor zed` to target one editor.
 `--dry-run`, `--check`, `--json`, and `--cwd <path>` provide the same preview
-and CI drift behavior as project setup.
+and CI drift behavior as project setup. All selected editor settings are checked
+before either file is written. Malformed supported settings values or managed
+instruction markers stop setup and preserve the existing files.
 
 ## Requirements
 
@@ -122,11 +179,20 @@ export default {
 
 Commitprompt passes repository parser presets, plugins, ignores, default
 ignores, and help URLs to Commitlint. Configured `type-enum` and `scope-enum`
-rules also change the choices shown by the prompt. Without `scope-enum`, the
+rules also change the choices shown by the prompt. Enter type or scope names
+without regard to case; Commitprompt preserves the configured spelling. Valid
+menu numbers take precedence over numeric names. Without `scope-enum`, the
 optional scope remains free-form. Repository rules and `extends` entries take
 precedence over the built-in fallback, and undeclared rules are not enforced.
 JavaScript, JSON, YAML, and erasable TypeScript configuration files are
 supported through Node.js without adding TypeScript to consumer dependencies.
+Package configurations support array targets and wildcard subpath exports.
+Export targets use file URL decoding, and active import conditions are checked
+in their declared order, including nested conditions and null exclusions.
+Use `import`, `node`, or `default` conditions instead of a `module`-only export
+condition; the legacy top-level `module` field remains supported for packages
+without an exports map. An unavailable subpath fails instead of silently
+loading the package root.
 When a resolved configuration has no `extends`, parser preset, or declared
 rules, Commitprompt retains its other settings and supplies the included
 Conventional Commits rules so validation never uses an empty rule set by
@@ -152,7 +218,9 @@ binary works through `pnpm commit`, `npm run commit`, and `yarn commit`.
 
 ## Git hooks
 
-`commitprompt setup project` installs the canonical Husky hook:
+`commitprompt setup project` preserves the default Husky hook. Select
+`commitprompt setup project --only quality-hook` to write a Quality hook step
+that performs the same validation:
 
 ```sh
 commitprompt validate --input "$1"
@@ -163,13 +231,15 @@ the commit when repository rules fail. Existing unrelated hook commands are
 preserved. A `pre-commit` hook runs before the message exists and is better
 suited to staged-file checks.
 
-The neutral command is preferred because Husky places `node_modules/.bin` on
-`PATH`. Equivalent explicit commands are:
+For npm, the generated step uses Node to import the locally installed scoped
+Commitprompt API. Missing dependencies fail locally without registry or cache
+fallback. pnpm and Yarn steps invoke their local package binaries.
+Equivalent explicit CLI commands after installation are:
 
 ```sh
-npx --no-install commitprompt validate --input "$1"
+node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
-yarn exec commitprompt validate --input "$1"
+yarn run commitprompt validate --input "$1"
 ```
 
 When validation fails, Commitprompt identifies the violated rules, states that
@@ -225,7 +295,8 @@ commitprompt commit --yes --json < commit.json
 ```
 
 The explicit `--yes` flag is required for non-interactive commits. Git hooks
-continue to run. Use `--input <path>` to read a file instead of stdin and
+continue to run. Git cleanup preferences do not strip comments, scissors
+sections, or other content from the validated message. Use `--input <path>` to read a file instead of stdin and
 `--cwd <path>` to load another repository's Commitlint configuration.
 
 The package includes a complete [AI agent guide](AI.md) with its input, output,
@@ -304,3 +375,7 @@ documented behavior and required inputs will not change incompatibly.
 
 MIT. Published artifacts bundle the Commitlint lint engine and include its
 generated third-party notices in `dist/THIRD_PARTY_LICENSES.txt`.
+
+## Resources
+
+[Project overview](https://github.com/santi020k/commitprompt/blob/main/README.md) · [Contributing](https://github.com/santi020k/commitprompt/blob/main/CONTRIBUTING.md) · [License](https://github.com/santi020k/commitprompt/blob/main/LICENSE)
