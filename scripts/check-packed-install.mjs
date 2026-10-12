@@ -26,6 +26,19 @@ const packageDirectory = join(repositoryRoot, 'packages/commitprompt')
 const { parse } = createRequire(join(packageDirectory, 'package.json'))('yaml')
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'commitprompt-pack-'))
 
+const gitLocalEnvironmentNames = new Set(
+  execFileSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' }).trim().split('\n')
+)
+
+const consumerEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !gitLocalEnvironmentNames.has(key))
+)
+
+const executeGitSync = (arguments_, options) => execFileSync('git', arguments_, {
+  ...options,
+  env: consumerEnvironment
+})
+
 const executeBinarySync = (binary, arguments_, options) => {
   const invocation = getBinaryInvocation(binary, arguments_)
 
@@ -33,6 +46,7 @@ const executeBinarySync = (binary, arguments_, options) => {
     invocation.command,
     invocation.arguments_,
     {
+      env: consumerEnvironment,
       ...options,
       windowsVerbatimArguments: invocation.windowsVerbatimArguments
     }
@@ -61,7 +75,7 @@ const resolveWindowsCommand = command => {
 }
 
 const cleanPackageManagerEnvironment = Object.fromEntries(
-  Object.entries(process.env).filter(
+  Object.entries(consumerEnvironment).filter(
     ([key]) => !/^npm_(?:config|package)_/iu.test(key)
   )
 )
@@ -82,7 +96,7 @@ const installPackage = packageManager => {
     cwd: packageManager.consumerDirectory,
     encoding: 'utf8',
     env: packageManager.name === 'pnpm' ?
-      process.env :
+      consumerEnvironment :
       cleanPackageManagerEnvironment,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments
   })
@@ -396,7 +410,7 @@ const verifyConsumer = (consumerDirectory, name) => {
     throw new Error(`${name} did not install a working binary.`)
   }
 
-  execFileSync(
+  executeBinarySync(
     process.execPath,
     [
       '--input-type=module',
@@ -463,19 +477,19 @@ if (!integrationConsumer || !integrationBinary) {
   throw new Error('The npm integration consumer was not created.')
 }
 
-execFileSync('git', ['init', '--quiet'], { cwd: integrationConsumer })
+executeGitSync(['init', '--quiet'], { cwd: integrationConsumer })
 
-execFileSync('git', ['config', 'user.name', 'Commitprompt Tests'], {
+executeGitSync(['config', 'user.name', 'Commitprompt Tests'], {
   cwd: integrationConsumer
 })
 
-execFileSync('git', ['config', 'user.email', 'tests@commitprompt.dev'], {
+executeGitSync(['config', 'user.email', 'tests@commitprompt.dev'], {
   cwd: integrationConsumer
 })
 
 writeFileSync(join(integrationConsumer, 'example.txt'), 'integration\n')
 
-execFileSync('git', ['add', 'example.txt'], { cwd: integrationConsumer })
+executeGitSync(['add', 'example.txt'], { cwd: integrationConsumer })
 
 const interactions = [
   { answer: '1\n', prompt: 'Type: ' },
@@ -498,6 +512,7 @@ await new Promise((resolve, reject) => {
 
   const child = spawn(invocation.command, invocation.arguments_, {
     cwd: integrationConsumer,
+    env: consumerEnvironment,
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsVerbatimArguments: invocation.windowsVerbatimArguments
   })
@@ -546,8 +561,7 @@ await new Promise((resolve, reject) => {
   })
 })
 
-const subject = execFileSync(
-  'git',
+const subject = executeGitSync(
   ['log', '-1', '--pretty=%s'],
   { cwd: integrationConsumer, encoding: 'utf8' }
 ).trim()
@@ -558,7 +572,7 @@ if (subject !== 'feat: verify installed cli') {
 
 writeFileSync(join(integrationConsumer, 'automation.txt'), 'automation\n')
 
-execFileSync('git', ['add', 'automation.txt'], { cwd: integrationConsumer })
+executeGitSync(['add', 'automation.txt'], { cwd: integrationConsumer })
 
 const automationInput = JSON.stringify({
   body: '',
@@ -588,8 +602,7 @@ if (
   throw new Error('Installed CLI returned an unexpected automation result.')
 }
 
-const automationSubject = execFileSync(
-  'git',
+const automationSubject = executeGitSync(
   ['log', '-1', '--pretty=%s'],
   { cwd: integrationConsumer, encoding: 'utf8' }
 ).trim()
@@ -641,7 +654,7 @@ writeFileSync(
   ].join('\n')
 )
 
-execFileSync(
+executeBinarySync(
   process.execPath,
   [
     '--input-type=module',
