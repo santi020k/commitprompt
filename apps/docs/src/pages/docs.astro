@@ -79,7 +79,7 @@ const usageCommand = 'git add src/\npnpm commit'
 
 const hookItems = [
   {
-    code: 'npx --no-install commitprompt validate --input "$1"',
+    code: 'node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"',
     label: 'npm',
     language: 'shell',
     value: 'npm'
@@ -413,7 +413,7 @@ const structuredData = {
           <p>
             Select <Code>--only quality-hook</Code> to add a <Code>commit-msg</Code> step to
             <Code>quality.yml</Code> that runs Commitprompt through the detected
-            package manager. It preserves unrelated quality hook steps.
+            package manager, with npm using Node to load the local scoped API. It preserves unrelated Quality hook steps.
           </p>
           <p>
             The hook enforces the same repository rules for commits created

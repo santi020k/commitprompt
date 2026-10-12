@@ -218,7 +218,9 @@ binary works through `pnpm commit`, `npm run commit`, and `yarn commit`.
 
 ## Git hooks
 
-`commitprompt setup project` writes the canonical quality hook step:
+`commitprompt setup project` preserves the default Husky hook. Select
+`commitprompt setup project --only quality-hook` to write a Quality hook step
+that performs the same validation:
 
 ```sh
 commitprompt validate --input "$1"
@@ -229,11 +231,13 @@ the commit when repository rules fail. Existing unrelated hook commands are
 preserved. A `pre-commit` hook runs before the message exists and is better
 suited to staged-file checks.
 
-The generated step invokes Commitprompt through the detected package manager.
-Equivalent explicit commands are:
+For npm, the generated step uses Node to import the locally installed scoped
+Commitprompt API. Missing dependencies fail locally without registry or cache
+fallback. pnpm and Yarn steps invoke their local package binaries.
+Equivalent explicit CLI commands after installation are:
 
 ```sh
-npx --no-install commitprompt validate --input "$1"
+node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
 yarn run commitprompt validate --input "$1"
 ```

@@ -164,7 +164,7 @@ commitprompt validate --input "$1"
 Equivalent explicit npm, pnpm, and Yarn commands are:
 
 ```sh
-npx --no-install commitprompt validate --input "$1"
+node node_modules/@santi020k/commitprompt/dist/bin/commitprompt.js validate --input "$1"
 pnpm exec commitprompt validate --input "$1"
 yarn run commitprompt validate --input "$1"
 ```

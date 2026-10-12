@@ -660,11 +660,21 @@ const normalizeHookStepName = (value: unknown): string | undefined => typeof val
 const findExistingStepIndex = (
   steps: YAMLSeq,
   name: string
-): number => steps.items.findIndex(item => {
-  if (!isMap(item)) return false
+): number => {
+  let existingIndex = -1
 
-  return normalizeHookStepName(item.get('name')) === name
-})
+  for (const [index, item] of steps.items.entries()) {
+    if (!isMap(item) || normalizeHookStepName(item.get('name')) !== name) continue
+
+    if (existingIndex !== -1) {
+      throw new Error('Cannot update duplicate managed Quality hook steps; keep one Commitprompt validation step.')
+    }
+
+    existingIndex = index
+  }
+
+  return existingIndex
+}
 
 const stepArgsMatch = (
   existingArgs: unknown,
@@ -769,11 +779,17 @@ const configureHookSteps = (
   return isMap(existingStep) && updateExistingStep(existingStep, desiredStep)
 }
 
+const NPM_HOOK_SCRIPT = [
+  'import { readFile } from \'node:fs/promises\'',
+  'import { runAutomation } from \'@santi020k/commitprompt\'',
+  'process.exitCode = await runAutomation({ command: \'validate\', cwd: process.cwd(), input: await readFile(process.argv[1], \'utf8\'), log: console.log, error: console.error })'
+].join('; ')
+
 const createDesiredHookStep = (packageManager: PackageManager): DesiredHookStep => ({
   args: packageManager === 'npm' ?
-    ['--no-install', 'commitprompt', 'validate', '--input'] :
+    ['--input-type=module', '--eval', NPM_HOOK_SCRIPT, '--'] :
     [packageManager === 'yarn' ? 'run' : 'exec', 'commitprompt', 'validate', '--input'],
-  command: packageManager === 'npm' ? 'npx' : packageManager,
+  command: packageManager === 'npm' ? 'node' : packageManager,
   name: HOOK_STEP_NAME,
   pass_hook_args: true
 })
@@ -789,6 +805,9 @@ const analyzeHook = async (
   const originalHook = await readOptionalFile(hookPath)
   const document = parseDocument(originalHook ?? 'version: 1\n')
   const steps = getHookSteps(document, hookPath)
+
+  if (document.contents === null) document.set('version', 1)
+
   const desiredStep = createDesiredHookStep(packageManager)
   const mutated = configureHookSteps(document, steps, desiredStep)
   const serializedHook = mutated ? document.toString() : originalHook ?? 'version: 1\n'

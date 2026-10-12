@@ -5,6 +5,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   stat,
   writeFile
@@ -56,6 +57,107 @@ afterEach(async () => {
 })
 
 describe('setupProject', () => {
+  test.each(['', '\n', '# Preserve this note\n'])('seeds version 1 for an empty Quality document: %j', async source => {
+    const directory = await createProject({ name: 'consumer' })
+    const hookPath = join(directory, 'quality.yml')
+
+    await writeFile(hookPath, source)
+    await setupProject({ actions: ['quality-hook'], cwd: directory })
+
+    const updated = await readFile(hookPath, 'utf8')
+    const document = parseDocument(updated)
+
+    expect(document.get('version')).toBe(1)
+    expect(document.getIn(['hooks', 'commit-msg', 'steps', 0, 'name']))
+      .toBe('Validate commit message with Commitprompt')
+    expect(updated.includes('# Preserve this note')).toBe(source.includes('#'))
+
+    await expect(setupProject({ actions: ['quality-hook'], check: true, cwd: directory }))
+      .resolves.toEqual(expect.objectContaining({ drift: false }))
+  })
+
+  test.each([
+    { check: false, dryRun: false },
+    { check: true, dryRun: false },
+    { check: false, dryRun: true }
+  ])('rejects duplicate managed Quality steps before writing: %j', async mode => {
+    const directory = await createProject({ name: 'consumer' })
+    const manifestPath = join(directory, 'package.json')
+    const originalManifest = await readFile(manifestPath, 'utf8')
+    const hookPath = join(directory, 'quality.yml')
+    const source = `version: 1
+hooks:
+  commit-msg:
+    steps:
+      - name: Validate commit message with Commitprompt
+        command: stale-validator
+      - name: " Validate commit message with Commitprompt "
+        command: node
+`
+
+    await writeFile(hookPath, source)
+
+    await expect(setupProject({ ...mode, actions: qualitySetupActions, cwd: directory }))
+      .rejects.toThrow('duplicate managed Quality hook steps')
+    await expect(readFile(manifestPath, 'utf8')).resolves.toBe(originalManifest)
+    await expect(readFile(hookPath, 'utf8')).resolves.toBe(source)
+    await expect(pathExists(join(directory, 'AGENTS.md'))).resolves.toBe(false)
+  })
+
+  test.each([false, true])('npm hooks use only the locally installed scoped API: installed=%j', async installed => {
+    const directory = await createProject({ name: 'consumer', packageManager: 'npm@11.4.2' })
+    const messagePath = join(directory, 'COMMIT MESSAGE')
+    const message = 'fix: preserve café input\n'
+
+    await writeFile(messagePath, message)
+
+    if (installed) {
+      const packageDirectory = join(directory, 'node_modules', '@santi020k', 'commitprompt')
+
+      await mkdir(packageDirectory, { recursive: true })
+      await writeFile(join(packageDirectory, 'package.json'), JSON.stringify({
+        exports: './index.mjs', name: '@santi020k/commitprompt', type: 'module'
+      }))
+      await writeFile(join(packageDirectory, 'index.mjs'), `import { realpath, writeFile } from 'node:fs/promises'
+export const runAutomation = async ({ command, cwd, input }) => {
+  await writeFile('received.json', JSON.stringify({ command, cwd: await realpath(cwd), input }))
+  return 0
+}
+`)
+    }
+
+    await setupProject({ actions: ['quality-hook'], cwd: directory })
+
+    const document = parseDocument(await readFile(join(directory, 'quality.yml'), 'utf8'))
+    const argumentsNode = document.getIn(['hooks', 'commit-msg', 'steps', 0, 'args'], true)
+
+    if (!isSeq(argumentsNode)) throw new TypeError('Expected hook arguments.')
+
+    const args = argumentsNode.items.map((item: unknown) => {
+      if (!isScalar(item) || typeof item.value !== 'string') throw new TypeError('Expected string arguments.')
+
+      return item.value
+    })
+
+    expect(document.getIn(['hooks', 'commit-msg', 'steps', 0, 'command'])).toBe('node')
+
+    const result = spawnSync(process.execPath, [...args, messagePath], { cwd: directory, encoding: 'utf8' })
+
+    expect(result.error).toBeUndefined()
+
+    expect(result.status).toBe(installed ? 0 : 1)
+    expect(result.stderr).toMatch(installed ? /^$/u : /Cannot find package '@santi020k\/commitprompt'/u)
+    await expect(pathExists(join(directory, 'node_modules'))).resolves.toBe(installed)
+
+    const received: unknown = installed ?
+      JSON.parse(await readFile(join(directory, 'received.json'), 'utf8')) :
+      undefined
+
+    expect(received).toEqual(installed ?
+      { command: 'validate', cwd: await realpath(directory), input: message } :
+      undefined)
+  })
+
   test('supports the released explicit Husky setup action', async () => {
     const directory = await createProject({
       devDependencies: {
@@ -437,7 +539,6 @@ hooks:
   })
 
   test.each([
-    { args: ['--no-install', 'commitprompt', 'validate', '--input'], command: 'npx', manager: 'npm' },
     { args: ['exec', 'commitprompt', 'validate', '--input'], command: 'pnpm', manager: 'pnpm' },
     { args: ['run', 'commitprompt', 'validate', '--input'], command: 'yarn', manager: 'yarn' }
   ])('uses the declared $manager executable for its quality hook', async ({ args, command, manager }) => {

@@ -60,6 +60,8 @@ const executePnpmSync = (arguments_, options) => {
 }
 
 const resolveWindowsCommand = command => {
+  if (command === 'node') return process.execPath
+
   if (process.platform !== 'win32') return command
 
   const resolvedCommands = (process.env.Path ?? process.env.PATH ?? '')
