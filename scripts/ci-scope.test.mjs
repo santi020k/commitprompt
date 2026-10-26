@@ -29,7 +29,7 @@ test('release, push, dispatch and uncertain history retain full validation', () 
 
 test('real Git history includes both rename sides, deletions and local files', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'commitprompt-ci-scope-'))
-  const env = gitEnvironment()
+  const env = { ...gitEnvironment(), GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'ci/fixture' }
   const git = (...args) => execFileSync('git', args, { cwd, env, stdio: 'pipe' })
 
   const write = (path, content) => {
