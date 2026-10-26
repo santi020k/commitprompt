@@ -19,7 +19,7 @@
     "lint:knip": "knip",
     "check:exports": "turbo run check:exports",
     "check:packed-install": "node --test scripts/binary-invocation.test.mjs scripts/verify-published-package.test.mjs && node scripts/check-packed-install.mjs",
-    "validate": "pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
+    "validate": "pnpm run test:ci && pnpm run build && pnpm run typecheck && pnpm run test:coverage && pnpm run lint && pnpm run lint:spell && pnpm run lint:knip && pnpm run check:exports && pnpm run check:packed-install",
     "ok": "pnpm install --frozen-lockfile && pnpm run validate",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
@@ -35,7 +35,8 @@
     "hooks:install": "quality hooks install",
     "pre-commit": "lint-staged",
     "pre-push": "pnpm run validate",
-    "commit": "commitprompt"
+    "commit": "commitprompt",
+    "test:ci": "node --test scripts/ci-scope.test.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",

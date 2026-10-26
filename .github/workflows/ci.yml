@@ -20,40 +20,22 @@ jobs:
     name: Detect affected areas
     runs-on: ubuntu-latest
     outputs:
+      mode: ${{ steps.paths.outputs.mode }}
       docs: ${{ steps.paths.outputs.docs }}
       package: ${{ steps.paths.outputs.package }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: paths
         name: Classify changed paths
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "docs=true" >> "$GITHUB_OUTPUT"
-            echo "package=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            BASE_SHA="$(git rev-parse HEAD^)"
-          fi
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          git diff --name-only "$BASE_SHA" HEAD > /tmp/changed-files
-          if grep -Eq '^(apps/docs/|packages/|\.github/workflows/ci\.yml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|turbo\.json$|tsconfig\.base\.json$|wrangler\.jsonc$)' /tmp/changed-files; then
-            echo "docs=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "docs=false" >> "$GITHUB_OUTPUT"
-          fi
-          if grep -Eq '^(packages/commitprompt/|scripts/|\.github/workflows/ci\.yml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|turbo\.json$|tsconfig\.base\.json$|eslint\.config\.)' /tmp/changed-files; then
-            echo "package=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "package=false" >> "$GITHUB_OUTPUT"
-          fi
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CI_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/ci-scope.mjs
 
   full:
-    name: Full validation (22.x)
+    name: Validation (22.x)
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -85,11 +67,21 @@ jobs:
         run: |
           pnpm changeset status --since=origin/main --output=/tmp/changeset-status.json
           jq -e '.releases | length > 0' /tmp/changeset-status.json >/dev/null
+      - name: Verify CI selection
+        run: pnpm run test:ci
       - name: Run package and documentation checks
-        run: pnpm exec turbo run build typecheck lint test:coverage check:exports
+        env:
+          CI_SCOPE: ${{ needs.changes.outputs.mode }}
+        run: |
+          scope=()
+          if [[ "$CI_SCOPE" == "affected" ]]; then
+            scope+=(--filter=commitprompt-docs...)
+          fi
+          pnpm exec turbo run build typecheck lint test:coverage check:exports "${scope[@]}"
       - name: Run repository checks
         run: pnpm exec turbo run //#lint:repo //#lint:spell //#lint:knip
       - name: Check packed installation
+        if: needs.changes.outputs.package == 'true'
         run: pnpm run check:packed-install
 
   compatibility:
