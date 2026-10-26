@@ -32,6 +32,26 @@ The managed hooks run staged-file checks, Commitprompt message validation, and
 the full pre-push gate defined in `quality.yml`. Re-run `pnpm run hooks:install`
 after changing that configuration. Do not bypass a failing hook.
 
+## Affected pull request checks
+
+Ordinary PRs limited to documentation source, public assets, browser tests, or `docs/` use
+Turbo's `commitprompt-docs...` filter for build, typecheck, lint, coverage, and export checks.
+Documentation browser tests, repository lint, spelling, Knip, and the dependency audit still run.
+CLI changes, shared configuration, manifests, unknown paths, missing history, pushes, manual runs,
+and release branches keep the full task set, packed consumers, Node 24, and Windows validation.
+The full `pnpm run validate` command and pre-push hook remain unchanged in scope.
+
+Run `pnpm run test:ci` for the selector regression tests. To inspect a local plan, set
+`CI_BASE_SHA` to the intended base and run `node scripts/ci-scope.mjs`; `--full` forces the full plan.
+The comparison uses the merge base, includes deleted paths and both sides of renames, and combines
+committed, staged, unstaged, and untracked paths unless `CI_HEAD_SHA` selects an explicit commit.
+Git environment overrides cannot redirect that comparison. Uncertain history means full validation.
+
+The rollout updates vulnerable Storybook, Zod, Undici, and URI parser dependencies within their
+existing major versions. Remove the scoped overrides when upstream ranges resolve patched versions.
+Rollback is a corrective PR restoring full checks; never bypass release validation or replace
+published version tags.
+
 ## Documentation design
 
 The documentation uses Lumen v4 and preserves Commitprompt’s yellow/gold and
@@ -73,3 +93,15 @@ HTTP. Failed smoke checks fail the deployment job and required checks; inspect
 the deployment and restore service through a corrective pull request and CI run.
 The smoke checks confirm availability and expected content, not the deployed
 commit identity.
+
+### Rollout benchmark
+
+A local macOS/Node 22.23.1 run compared the Node 22 CI commands for the same docs
+page edit, including audit, selector tests, browser tests, Turbo checks, repository
+checks, and the packed consumer when required. With separate empty task caches,
+full validation took 25.55 s and affected validation took 23.46 s (8.2% less).
+Two alternating warm-cache runs had medians of 9.41 s and 2.03 s
+(78.5% less), largely by avoiding the unchanged CLI consumer check.
+Installation, browser downloads, and the Node 24/Windows jobs are excluded; compiler
+caches were prewarmed equally and remote caching was disabled. These measurements
+establish local task savings, not a prediction of total hosted CI duration.
