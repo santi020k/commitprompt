@@ -93,3 +93,15 @@ HTTP. Failed smoke checks fail the deployment job and required checks; inspect
 the deployment and restore service through a corrective pull request and CI run.
 The smoke checks confirm availability and expected content, not the deployed
 commit identity.
+
+### Rollout benchmark
+
+A local macOS/Node 22.23.1 run compared the Node 22 CI commands for the same docs
+page edit, including audit, selector tests, browser tests, Turbo checks, repository
+checks, and the packed consumer when required. With separate empty task caches,
+full validation took 25.55 s and affected validation took 23.46 s (8.2% less).
+Two alternating warm-cache runs had medians of 9.41 s and 2.03 s
+(78.5% less), largely by avoiding the unchanged CLI consumer check.
+Installation, browser downloads, and the Node 24/Windows jobs are excluded; compiler
+caches were prewarmed equally and remote caching was disabled. These measurements
+establish local task savings, not a prediction of total hosted CI duration.
