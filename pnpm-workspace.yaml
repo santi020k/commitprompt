@@ -33,7 +33,7 @@ catalog:
   "@santi020k/og": 1.2.0
   "@types/node": ^26.6.4
   "@vitest/coverage-v8": ^5.0.3
-  astro: ^7.3.7
+  astro: ^7.4.7
   cosmiconfig: ^10.0.1
   cspell: ^10.3.6
   esbuild: ^0.28.2
