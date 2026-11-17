@@ -4,7 +4,7 @@ Thank you for improving Commitprompt.
 
 ## Setup
 
-Use Node.js 22.19 or newer and the pnpm version declared in `package.json`
+Use Node.js 22.23.4 or newer and the pnpm version declared in `package.json`
 for repository development. The published CLI supports Node.js 22.18 or newer:
 
 ```sh
@@ -123,3 +123,25 @@ rerunning all jobs creates a new attempt-specific artifact. Expired artifacts re
 a complete rerun. Production runs serialize while superseded PR checks cancel.
 The aggregate rejects missing selectors and skipped selected jobs. Roll back through
 a corrective PR restoring build-and-deploy, retaining all required checks.
+
+### Shared cache inputs and security qualification
+
+Turbo hashes the shared compiler, ESLint and spelling configuration explicitly.
+The resolved CI runtime identity also invalidates task hashes across Node/pnpm changes.
+The docs build hashes `PUBLIC_SITE_URL`, including downstream browser consumers.
+Actual Turbo regression fixtures verify configuration/environment invalidation
+and preserve cache hits for unrelated root README changes.
+
+Release tooling uses Astro 7.4.12, scoped glob 14.0.6/minimatch 11.0.9 fixes and
+import-x 4.18.1 compatibility. Root/docs development needs Node 22.23.4; the
+published CLI engine contract is unchanged. Actual Markdown-toolchain glob and
+shared ESLint boundary tests qualify these overrides. A scoped package extension
+provides astro2tsx 0.1.2 with runtime 1.11.3 to match its core dependency; this
+prevents an incompatible bundler runtime satisfying the missing peer. Remove
+the overrides/extension when upstream dependencies declare compatible fixes.
+
+See [glob migration notes](https://github.com/isaacs/node-glob/blob/main/changelog.md),
+[minimatch migration notes](https://github.com/isaacs/minimatch/blob/main/changelog.md)
+and [import-x releases](https://github.com/un-ts/eslint-plugin-import-x/blob/master/CHANGELOG.md).
+The [high picomatch advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+has no published fix at this qualification. It remains an audit blocker; no suppression or exception is added.

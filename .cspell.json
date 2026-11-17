@@ -40,6 +40,9 @@
     "vitest",
     "webp",
     "workerd",
-    "wordmark"
+    "wordmark",
+    "emnapi",
+    "minimatch",
+    "picomatch"
   ]
 }
