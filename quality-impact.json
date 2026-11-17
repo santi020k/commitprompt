@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "global_inputs": [
+    "quality-impact.json",
+    ".quality-version",
+    "quality.yml",
+    ".github/",
+    "scripts/",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "turbo.json",
+    "eslint.config.mjs"
+  ],
+  "ignored_inputs": [],
+  "nodes": {
+    "package": {
+      "inputs": [
+        "packages/commitprompt/"
+      ],
+      "command": "pnpm",
+      "args": [
+        "exec",
+        "turbo",
+        "run",
+        "build",
+        "typecheck",
+        "test:coverage",
+        "check:exports",
+        "--filter=@santi020k/commitprompt"
+      ]
+    },
+    "docs": {
+      "inputs": [
+        "apps/docs/",
+        "docs/"
+      ],
+      "command": "pnpm",
+      "args": [
+        "run",
+        "docs:build"
+      ]
+    },
+    "docs-browser": {
+      "inputs": [],
+      "depends_on": [
+        "docs"
+      ],
+      "command": "pnpm",
+      "args": [
+        "--filter",
+        "commitprompt-docs",
+        "run",
+        "test"
+      ]
+    },
+    "security": {
+      "inputs": [],
+      "always": true,
+      "command": "pnpm",
+      "args": [
+        "audit",
+        "--audit-level",
+        "moderate"
+      ]
+    }
+  }
+}

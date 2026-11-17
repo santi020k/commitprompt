@@ -10,3 +10,4 @@ test-results
 .astro
 .env
 .env.local
+apps/docs/build-evidence.json
