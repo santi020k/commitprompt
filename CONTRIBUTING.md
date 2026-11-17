@@ -105,3 +105,21 @@ Two alternating warm-cache runs had medians of 9.41 s and 2.03 s
 Installation, browser downloads, and the Node 24/Windows jobs are excluded; compiler
 caches were prewarmed equally and remote caching was disabled. These measurements
 establish local task savings, not a prediction of total hosted CI duration.
+
+### Quality v2 and deployment reuse
+
+Use Quality 2.0.0 (`.quality-version`). Shared setup references are pinned to its
+immutable release revision. The independent CI impact job records a committed-source
+shadow plan and exercises the real CLI against representative changes. It does not
+replace existing affected checks or full release qualification. Unknown paths,
+shared configuration and missing history select every policy node; security remains
+fresh. Run `QUALITY_BINARY=/path/to/quality pnpm run test:ci` to exercise the policy.
+
+Documentation now builds once in validation. An immutable same-run artifact carries
+its Git revision, workflow run ID and content digest. Deployment downloads its exact
+artifact ID and compares the digest against the successful build job before fetching
+production credentials. Rerun failed deployment jobs to reuse the verified build;
+rerunning all jobs creates a new attempt-specific artifact. Expired artifacts require
+a complete rerun. Production runs serialize while superseded PR checks cancel.
+The aggregate rejects missing selectors and skipped selected jobs. Roll back through
+a corrective PR restoring build-and-deploy, retaining all required checks.

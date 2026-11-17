@@ -1,3 +1,4 @@
+# cspell:words tlsv
 name: CI
 
 on:
@@ -13,9 +14,34 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  impact:
+    name: Quality v2 shadow plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Install Quality 2
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/santi020k/quality/ff490e9efbd5fdfbdb1e6c404f1741d04c57f585/install.sh -o "$RUNNER_TEMP/install-quality.sh"
+          sh "$RUNNER_TEMP/install-quality.sh" santi020k/quality "v$(cat .quality-version)"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Record committed-source plan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          args=(--full)
+          if [[ "$GITHUB_EVENT_NAME" == pull_request && -n "$BASE" && "$BRANCH" != release/* && "$BRANCH" != changeset-release/* ]]; then
+            args=(--base "$BASE" --head HEAD --comparison merge-base)
+          fi
+          quality impact plan "${args[@]}" --format json > "$RUNNER_TEMP/quality-impact-plan.json"
+          cat "$RUNNER_TEMP/quality-impact-plan.json" >> "$GITHUB_STEP_SUMMARY"
+          node --test scripts/quality-impact.test.mjs
+
   changes:
     name: Detect affected areas
     runs-on: ubuntu-latest
@@ -36,6 +62,9 @@ jobs:
 
   full:
     name: Validation (22.x)
+    outputs:
+      artifact-id: ${{ steps.docs-upload.outputs.artifact-id }}
+      digest: ${{ steps.docs-evidence.outputs.digest }}
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -47,7 +76,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up pnpm workspace
-        uses: santi020k/quality/actions/setup-pnpm@ffa37774f75b2b8e761fe3d71e7046cdb6694a69 # v1
+        uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 22.x
       - name: Audit dependencies
@@ -84,6 +113,23 @@ jobs:
         if: needs.changes.outputs.package == 'true'
         run: pnpm run check:packed-install
 
+      - name: Bind docs build identity
+        if: needs.changes.outputs.docs == 'true'
+        id: docs-evidence
+        run: node scripts/docs-artifact.mjs create
+      - name: Save validated documentation
+        if: needs.changes.outputs.docs == 'true'
+        id: docs-upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: docs-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            apps/docs/dist/
+            apps/docs/build-evidence.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
   compatibility:
     name: Package compatibility (24.x)
     needs: changes
@@ -93,7 +139,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
       - name: Set up pnpm workspace
-        uses: santi020k/quality/actions/setup-pnpm@ffa37774f75b2b8e761fe3d71e7046cdb6694a69 # v1
+        uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 24.x
       - name: Build, typecheck, and test the package
@@ -110,7 +156,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
       - name: Set up pnpm workspace
-        uses: santi020k/quality/actions/setup-pnpm@ffa37774f75b2b8e761fe3d71e7046cdb6694a69 # v1
+        uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 22.x
       - name: Build, typecheck, and test the package
@@ -120,15 +166,17 @@ jobs:
 
   deploy-docs:
     name: Deploy documentation
-    needs: [changes, full, compatibility, windows]
+    needs: [changes, impact, full, compatibility, windows]
     if: >-
       always() &&
       (github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) &&
       needs.changes.outputs.docs == 'true' &&
+      needs.impact.result == 'success' &&
       needs.full.result == 'success' &&
-      (needs.compatibility.result == 'success' || needs.compatibility.result == 'skipped') &&
-      (needs.windows.result == 'success' || needs.windows.result == 'skipped')
+      (needs.changes.outputs.mode == 'full' || needs.changes.outputs.package == 'true') &&
+      needs.compatibility.result == 'success' &&
+      needs.windows.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -140,9 +188,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
       - name: Set up pnpm workspace
-        uses: santi020k/quality/actions/setup-pnpm@ffa37774f75b2b8e761fe3d71e7046cdb6694a69 # v1
+        uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 22.x
+      - name: Restore validated documentation
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.full.outputs.artifact-id }}
+          path: apps/docs
+          merge-multiple: true
+      - name: Verify documentation identity
+        run: node scripts/docs-artifact.mjs verify
+        env:
+          DOCS_BUILD_DIGEST: ${{ needs.full.outputs.digest }}
       - name: Fetch production secrets
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
@@ -152,13 +210,12 @@ jobs:
           env-slug: prod
           secret-path: /
           recursive: true
-      - name: Build and deploy documentation
+      - name: Deploy validated documentation
         env:
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'commitprompt' }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          pnpm run docs:build
           pnpm exec wrangler pages deploy apps/docs/dist \
             --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" \
             --branch="$GITHUB_REF_NAME" \
@@ -187,22 +244,37 @@ jobs:
   gate:
     name: Required checks
     if: always()
-    needs: [changes, full, compatibility, windows, deploy-docs]
+    needs: [changes, impact, full, compatibility, windows, deploy-docs]
     runs-on: ubuntu-latest
     steps:
       - name: Verify relevant jobs
         env:
+          IMPACT: ${{ needs.impact.result }}
+          MODE: ${{ needs.changes.outputs.mode }}
+          PACKAGE: ${{ needs.changes.outputs.package }}
+          DOCS: ${{ needs.changes.outputs.docs }}
           CHANGES: ${{ needs.changes.result }}
           FULL: ${{ needs.full.result }}
           COMPATIBILITY: ${{ needs.compatibility.result }}
           WINDOWS: ${{ needs.windows.result }}
           DEPLOY: ${{ needs.deploy-docs.result }}
         run: |
-          for result in "$CHANGES" "$FULL" "$COMPATIBILITY" "$WINDOWS" "$DEPLOY"; do
+          for result in "$IMPACT" "$CHANGES" "$FULL" "$COMPATIBILITY" "$WINDOWS" "$DEPLOY"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               exit 1
             fi
           done
+
+          [[ "$IMPACT" == success && "$CHANGES" == success && "$FULL" == success ]] || exit 1
+          [[ "$MODE" == full || "$MODE" == affected ]] || exit 1
+          [[ "$PACKAGE" == true || "$PACKAGE" == false ]] || exit 1
+          [[ "$DOCS" == true || "$DOCS" == false ]] || exit 1
+          if [[ "$MODE" == full || "$PACKAGE" == true ]]; then
+            [[ "$COMPATIBILITY" == success && "$WINDOWS" == success ]] || exit 1
+          fi
+          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" != pull_request && "$DOCS" == true ]]; then
+            [[ "$DEPLOY" == success ]] || exit 1
+          fi
 
   report-dispatched-validation:
     name: Report dispatched validation
