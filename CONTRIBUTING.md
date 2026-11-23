@@ -36,7 +36,7 @@ after changing that configuration. Do not bypass a failing hook.
 
 Ordinary PRs limited to documentation source, public assets, browser tests, or `docs/` use
 Turbo's `commitprompt-docs...` filter for build, typecheck, lint, coverage, and export checks.
-Documentation browser tests, repository lint, spelling, Knip, and the dependency audit still run.
+Documentation browser tests, repository lint, spelling, and Knip still run.
 CLI changes, shared configuration, manifests, unknown paths, missing history, pushes, manual runs,
 and release branches keep the full task set, packed consumers, Node 24, and Windows validation.
 The full `pnpm run validate` command and pre-push hook remain unchanged in scope.
@@ -45,6 +45,11 @@ Pull request title and changeset checks live in the `Pull request metadata` work
 Title edits and label changes rerun only that workflow, never repository validation.
 Branch protection must require its `Pull request metadata` check alongside
 `Required checks` for those rules to keep blocking merges.
+
+The live dependency audit blocks release pull requests, pushes to `main`, and manual runs.
+On ordinary pull requests the `Dependency audit` workflow reports it as a separate,
+non-required check so an unrelated advisory cannot fail validation; the same workflow
+runs daily to surface new advisories.
 
 Run `pnpm run test:ci` for the selector regression tests. To inspect a local plan, set
 `CI_BASE_SHA` to the intended base and run `node scripts/ci-scope.mjs`; `--full` forces the full plan.
@@ -149,4 +154,4 @@ See [glob migration notes](https://github.com/isaacs/node-glob/blob/main/changel
 [minimatch migration notes](https://github.com/isaacs/minimatch/blob/main/changelog.md)
 and [import-x releases](https://github.com/un-ts/eslint-plugin-import-x/blob/master/CHANGELOG.md).
 The [high picomatch advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
-has no published fix at this qualification. It remains an audit blocker; no suppression or exception is added.
+has no published fix at this qualification. It remains an audit blocker for releases; no suppression or exception is added.
