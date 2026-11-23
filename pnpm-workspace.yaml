@@ -10,42 +10,42 @@ allowBuilds:
   yarn: true
 
 catalog:
-  "@astrojs/check": ^0.9.10
-  "@astrojs/sitemap": ^3.7.4
-  "@axe-core/playwright": ^4.13.0
+  "@astrojs/check": ^0.9.12
+  "@astrojs/sitemap": ^3.7.6
+  "@axe-core/playwright": ^4.14.0
   "@changesets/changelog-github": ^1.0.1
   "@changesets/cli": ^3.0.3
-  "@commitlint/cli": ^21.2.3
-  "@commitlint/config-conventional": ^21.2.3
+  "@commitlint/cli": ^21.2.4
+  "@commitlint/config-conventional": ^21.2.4
   "@commitlint/config-validator": ^21.2.3
   "@commitlint/execute-rule": ^21.0.1
-  "@commitlint/lint": ^21.2.3
+  "@commitlint/lint": ^21.2.4
   "@commitlint/types": ^21.2.3
-  "@playwright/test": ^1.64.0
-  "@santi020k/eslint-config-astro": ^3.1.5
-  "@santi020k/eslint-config-basic": ^3.6.0
-  "@santi020k/eslint-config-extensions": ^3.1.4
-  "@santi020k/eslint-config-formats": ^3.1.4
-  "@santi020k/eslint-config-libraries": ^3.1.4
-  "@santi020k/eslint-config-testing": ^3.1.4
-  "@santi020k/eslint-config-tools": ^3.1.4
-  "@santi020k/lumen-astro": 4.1.0
-  "@santi020k/og": 1.2.0
-  "@types/node": ^26.6.4
-  "@vitest/coverage-v8": ^5.0.3
-  astro: ^7.4.12
+  "@playwright/test": ^1.65.1
+  "@santi020k/eslint-config-astro": ^3.1.7
+  "@santi020k/eslint-config-basic": ^3.7.0
+  "@santi020k/eslint-config-extensions": ^3.1.6
+  "@santi020k/eslint-config-formats": ^3.1.6
+  "@santi020k/eslint-config-libraries": ^3.1.7
+  "@santi020k/eslint-config-testing": ^3.1.7
+  "@santi020k/eslint-config-tools": ^3.1.6
+  "@santi020k/lumen-astro": 5.2.0
+  "@santi020k/og": 1.2.1
+  "@types/node": ^26.6.6
+  "@vitest/coverage-v8": ^5.1.1
+  astro: ^7.4.13
   cosmiconfig: ^10.0.1
-  cspell: ^10.3.6
+  cspell: ^10.5.2
   esbuild: ^0.28.2
-  eslint: ^10.12.0
+  eslint: ^10.15.0
   jsonc-parser: ^3.3.1
-  knip: ^6.40.0
-  lint-staged: ^16.4.0
+  knip: ^6.47.0
+  lint-staged: ^17.6.1
   publint: ^0.3.25
-  turbo: ^2.11.7
-  typescript: ^6.0.3
-  vitest: ^5.0.3
-  wrangler: ^4.148.0
+  turbo: ^2.11.13
+  typescript: ^7.0.2
+  vitest: ^5.1.1
+  wrangler: ^4.166.0
   yaml: ^2.9.1
   yarn: ^1.22.22
 
