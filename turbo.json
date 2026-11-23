@@ -1,6 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["QUALITY_TASK_RUNTIME"],
+  "globalDependencies": ["tsconfig.base.json", "tsconfig.eslint.json", "eslint.config.js", ".cspell.json"],
   "tasks": {
+    "commitprompt-docs#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "env": ["PUBLIC_SITE_URL"],
+      "outputLogs": "errors-only"
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],

@@ -4,7 +4,7 @@ Thank you for improving Commitprompt.
 
 ## Setup
 
-Use Node.js 22.19 or newer and the pnpm version declared in `package.json`
+Use Node.js 22.23.4 or newer and the pnpm version declared in `package.json`
 for repository development. The published CLI supports Node.js 22.18 or newer:
 
 ```sh
@@ -36,10 +36,22 @@ after changing that configuration. Do not bypass a failing hook.
 
 Ordinary PRs limited to documentation source, public assets, browser tests, or `docs/` use
 Turbo's `commitprompt-docs...` filter for build, typecheck, lint, coverage, and export checks.
-Documentation browser tests, repository lint, spelling, Knip, and the dependency audit still run.
+Documentation browser tests, repository lint, spelling, and Knip still run.
 CLI changes, shared configuration, manifests, unknown paths, missing history, pushes, manual runs,
 and release branches keep the full task set, packed consumers, Node 24, and Windows validation.
 The full `pnpm run validate` command and pre-push hook remain unchanged in scope.
+
+Pull request title and changeset checks run in CI before expensive validation and
+remain part of the existing `Required checks` aggregate. Title and label events
+rerun CI so changes cannot bypass those rules without changing branch protection.
+Prepared `release/v<version>` and Changesets release branches validate consumed
+fragments, matching package versions and changelog entries instead of requiring
+an additional Changeset. Ordinary pull requests retain the `skip-changelog` label
+exception. Failed, cancelled or skipped metadata jobs block the aggregate.
+
+The live dependency audit blocks ordinary and release pull requests, pushes to
+`main`, and manual CI runs. The separate `Dependency audit` workflow runs daily
+and on manual dispatch to surface new advisories between source changes.
 
 Run `pnpm run test:ci` for the selector regression tests. To inspect a local plan, set
 `CI_BASE_SHA` to the intended base and run `node scripts/ci-scope.mjs`; `--full` forces the full plan.
@@ -105,3 +117,46 @@ Two alternating warm-cache runs had medians of 9.41 s and 2.03 s
 Installation, browser downloads, and the Node 24/Windows jobs are excluded; compiler
 caches were prewarmed equally and remote caching was disabled. These measurements
 establish local task savings, not a prediction of total hosted CI duration.
+
+### Quality v2 and deployment reuse
+
+Use Quality 2.0.0 (`.quality-version`). Shared setup references are pinned to its
+immutable release revision. The independent CI impact job records a committed-source
+shadow plan and exercises the real CLI against representative changes. It does not
+replace existing affected checks or full release qualification. Unknown paths,
+shared configuration and missing history select every policy node; security remains
+fresh. Run `QUALITY_BINARY=/path/to/quality pnpm run test:ci` to exercise the policy.
+
+Documentation now builds once in validation. An immutable same-run artifact carries
+its Git revision, workflow run ID and content digest. Deployment downloads its exact
+artifact ID and compares the digest against the successful build job before fetching
+production credentials. Rerun failed deployment jobs to reuse the verified build;
+rerunning all jobs creates a new attempt-specific artifact. Expired artifacts require
+a complete rerun. Production runs serialize while superseded PR checks cancel.
+Deployment no longer waits for the Windows package smoke, which the aggregate still requires.
+The aggregate rejects missing selectors and skipped selected jobs. Roll back through
+a corrective PR restoring build-and-deploy, retaining all required checks.
+
+### Shared cache inputs and security qualification
+
+Turbo hashes the shared compiler, ESLint and spelling configuration explicitly.
+The resolved CI runtime identity also invalidates task hashes across Node/pnpm changes.
+The docs build hashes `PUBLIC_SITE_URL`, including downstream browser consumers.
+Actual Turbo regression fixtures verify configuration/environment invalidation
+and preserve cache hits for unrelated root README changes.
+
+Release tooling uses Astro 7.4.12, scoped glob 14.0.6/minimatch 11.0.9 fixes and
+import-x 4.18.1 compatibility. Root/docs development needs Node 22.23.4; the
+published CLI engine contract is unchanged. Actual Markdown-toolchain glob and
+shared ESLint boundary tests qualify these overrides. A scoped package extension
+provides astro2tsx 0.1.2 with runtime 1.11.3 to match its core dependency; this
+prevents an incompatible bundler runtime satisfying the missing peer. Remove
+the overrides/extension when upstream dependencies declare compatible fixes.
+
+See [glob migration notes](https://github.com/isaacs/node-glob/blob/main/changelog.md),
+[minimatch migration notes](https://github.com/isaacs/minimatch/blob/main/changelog.md)
+and [import-x releases](https://github.com/un-ts/eslint-plugin-import-x/blob/master/CHANGELOG.md).
+The live dependency audit reported zero vulnerabilities on 2026-11-23. This is a
+time-specific registry result, not evidence that the previously reported picomatch
+advisory received a fix. Release audits remain fresh and blocking; no suppression
+or exception is added.
