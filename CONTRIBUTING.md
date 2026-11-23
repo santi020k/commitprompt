@@ -41,6 +41,11 @@ CLI changes, shared configuration, manifests, unknown paths, missing history, pu
 and release branches keep the full task set, packed consumers, Node 24, and Windows validation.
 The full `pnpm run validate` command and pre-push hook remain unchanged in scope.
 
+Pull request title and changeset checks live in the `Pull request metadata` workflow.
+Title edits and label changes rerun only that workflow, never repository validation.
+Branch protection must require its `Pull request metadata` check alongside
+`Required checks` for those rules to keep blocking merges.
+
 Run `pnpm run test:ci` for the selector regression tests. To inspect a local plan, set
 `CI_BASE_SHA` to the intended base and run `node scripts/ci-scope.mjs`; `--full` forces the full plan.
 The comparison uses the merge base, includes deleted paths and both sides of renames, and combines
