@@ -98,6 +98,18 @@ test("deployment verifies the producer artifact without rebuilding", async () =>
   assert.match(workflow, /name: docs-\$\{\{ github.sha \}\}-\$\{\{ github.run_attempt \}\}/u);
 });
 
+test("deployment does not wait for the Windows smoke that required checks still enforce", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const job = workflow.split("  deploy-docs:\n")[1].split("  gate:\n")[0];
+  const gate = workflow.split("  gate:\n")[1].split("  report-dispatched-validation:")[0];
+
+  assert.match(job, /needs: \[changes, impact, full, compatibility\]/u);
+
+  assert.doesNotMatch(job, /needs\.windows/u);
+
+  assert.match(gate, /needs: \[changes, impact, full, compatibility, windows, deploy-docs\]/u);
+});
+
 test("required checks reject selected skips and malformed outputs", async () => {
   const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   const gate = workflow.split("  gate:\n")[1].split("  report-dispatched-validation:")[0];

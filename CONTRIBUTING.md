@@ -131,6 +131,7 @@ artifact ID and compares the digest against the successful build job before fetc
 production credentials. Rerun failed deployment jobs to reuse the verified build;
 rerunning all jobs creates a new attempt-specific artifact. Expired artifacts require
 a complete rerun. Production runs serialize while superseded PR checks cancel.
+Deployment no longer waits for the Windows package smoke, which the aggregate still requires.
 The aggregate rejects missing selectors and skipped selected jobs. Roll back through
 a corrective PR restoring build-and-deploy, retaining all required checks.
 

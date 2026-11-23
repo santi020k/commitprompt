@@ -178,7 +178,8 @@ jobs:
 
   deploy-docs:
     name: Deploy documentation
-    needs: [changes, impact, full, compatibility, windows]
+    # The site does not depend on the Windows package smoke; the aggregate still requires it.
+    needs: [changes, impact, full, compatibility]
     if: >-
       always() &&
       (github.event_name == 'push' ||
@@ -187,8 +188,7 @@ jobs:
       needs.impact.result == 'success' &&
       needs.full.result == 'success' &&
       (needs.changes.outputs.mode == 'full' || needs.changes.outputs.package == 'true') &&
-      needs.compatibility.result == 'success' &&
-      needs.windows.result == 'success'
+      needs.compatibility.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
