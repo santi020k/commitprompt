@@ -107,7 +107,7 @@ test("deployment does not wait for the Windows smoke that required checks still 
 
   assert.doesNotMatch(job, /needs\.windows/u);
 
-  assert.match(gate, /needs: \[changes, impact, full, compatibility, windows, deploy-docs\]/u);
+  assert.match(gate, /needs: \[changes, metadata, impact, full, compatibility, windows, deploy-docs\]/u);
 });
 
 test("required checks reject selected skips and malformed outputs", async () => {
@@ -116,7 +116,7 @@ test("required checks reject selected skips and malformed outputs", async () => 
   const script = gate.split("        run: |\n")[1];
 
   const success = {
-    IMPACT: "success", CHANGES: "success", FULL: "success", COMPATIBILITY: "success",
+    METADATA: "success", IMPACT: "success", CHANGES: "success", FULL: "success", COMPATIBILITY: "success",
     WINDOWS: "success", DEPLOY: "success", MODE: "full", PACKAGE: "true", DOCS: "true",
     GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main",
   };
@@ -127,7 +127,7 @@ test("required checks reject selected skips and malformed outputs", async () => 
 
   assert.equal(run({}), 0);
 
-  for (const job of ["IMPACT", "CHANGES", "FULL", "COMPATIBILITY", "WINDOWS", "DEPLOY"]) {
+  for (const job of ["METADATA", "IMPACT", "CHANGES", "FULL", "COMPATIBILITY", "WINDOWS", "DEPLOY"]) {
     for (const result of ["skipped", "cancelled", "failure"]) assert.equal(run({ [job]: result }), 1);
   }
 

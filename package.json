@@ -36,7 +36,7 @@
     "pre-commit": "lint-staged",
     "pre-push": "pnpm run validate",
     "commit": "commitprompt",
-    "test:ci": "node --test scripts/ci-scope.test.mjs scripts/docs-artifact.test.mjs scripts/quality-impact.test.mjs scripts/task-cache.node-test.mjs scripts/toolchain-security.node-test.mjs"
+    "test:ci": "node --test scripts/ci-scope.test.mjs scripts/docs-artifact.test.mjs scripts/quality-impact.test.mjs scripts/task-cache.node-test.mjs scripts/toolchain-security.node-test.mjs scripts/release-metadata.node-test.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",

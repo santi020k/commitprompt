@@ -6,8 +6,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # Title and label events are handled by pr-metadata.yml so they never rerun validation.
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   workflow_dispatch: {}
 
 permissions:
@@ -18,6 +17,38 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  metadata:
+    name: Pull request metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - name: Set up pnpm workspace
+        if: github.event_name == 'pull_request'
+        uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
+        with:
+          node-version: 22.x
+      - name: Validate pull request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
+      - name: Validate release metadata or changeset
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_BRANCH: ${{ github.head_ref }}
+          SKIP_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+        run: |
+          if [[ "$RELEASE_BRANCH" == release/* || "$RELEASE_BRANCH" == changeset-release/* ]]; then
+            node scripts/release-metadata.mjs "$RELEASE_BRANCH"
+          elif [[ "$SKIP_CHANGELOG" != true ]]; then
+            pnpm changeset status --since=origin/main --output="$RUNNER_TEMP/changeset-status.json"
+            jq -e '.releases | length > 0' "$RUNNER_TEMP/changeset-status.json" >/dev/null
+          fi
+
   impact:
     name: Quality v2 shadow plan
     runs-on: ubuntu-latest
@@ -66,7 +97,7 @@ jobs:
     outputs:
       artifact-id: ${{ steps.docs-upload.outputs.artifact-id }}
       digest: ${{ steps.docs-evidence.outputs.digest }}
-    needs: changes
+    needs: [changes, metadata]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -80,13 +111,11 @@ jobs:
         uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 22.x
-      # Ordinary pull requests report the live audit through audit.yml without blocking.
-      # Release pull requests, pushes, and manual runs keep it as a blocking gate.
+      - name: Bind task cache to the resolved runtime
+        shell: bash
+        run: |
+          echo "QUALITY_TASK_RUNTIME=$(node --version)-$(pnpm --version)-$(node -p 'process.platform + "/" + process.arch')" >> "$GITHUB_ENV"
       - name: Audit dependencies
-        if: >-
-          github.event_name != 'pull_request' ||
-          startsWith(github.head_ref, 'release/') ||
-          startsWith(github.head_ref, 'changeset-release/')
         run: pnpm audit --audit-level moderate
       - name: Resolve the Playwright version
         id: playwright
@@ -144,7 +173,7 @@ jobs:
 
   compatibility:
     name: Package compatibility (24.x)
-    needs: changes
+    needs: [changes, metadata]
     if: needs.changes.outputs.package == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -154,6 +183,10 @@ jobs:
         uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 24.x
+      - name: Bind task cache to the resolved runtime
+        shell: bash
+        run: |
+          echo "QUALITY_TASK_RUNTIME=$(node --version)-$(pnpm --version)-$(node -p 'process.platform + "/" + process.arch')" >> "$GITHUB_ENV"
       - name: Build, typecheck, and test the package
         run: pnpm exec turbo run build typecheck test --filter=@santi020k/commitprompt
       - name: Check packed installation
@@ -161,7 +194,7 @@ jobs:
 
   windows:
     name: Windows package smoke
-    needs: changes
+    needs: [changes, metadata]
     if: needs.changes.outputs.package == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
@@ -171,6 +204,10 @@ jobs:
         uses: santi020k/quality/actions/setup-pnpm@ff490e9efbd5fdfbdb1e6c404f1741d04c57f585 # v2.0.0
         with:
           node-version: 22.x
+      - name: Bind task cache to the resolved runtime
+        shell: bash
+        run: |
+          echo "QUALITY_TASK_RUNTIME=$(node --version)-$(pnpm --version)-$(node -p 'process.platform + "/" + process.arch')" >> "$GITHUB_ENV"
       - name: Build, typecheck, and test the package
         run: pnpm exec turbo run build typecheck test --filter=@santi020k/commitprompt --concurrency=1
       - name: Check packed installation
@@ -256,11 +293,12 @@ jobs:
   gate:
     name: Required checks
     if: always()
-    needs: [changes, impact, full, compatibility, windows, deploy-docs]
+    needs: [changes, metadata, impact, full, compatibility, windows, deploy-docs]
     runs-on: ubuntu-latest
     steps:
       - name: Verify relevant jobs
         env:
+          METADATA: ${{ needs.metadata.result }}
           IMPACT: ${{ needs.impact.result }}
           MODE: ${{ needs.changes.outputs.mode }}
           PACKAGE: ${{ needs.changes.outputs.package }}
@@ -271,13 +309,13 @@ jobs:
           WINDOWS: ${{ needs.windows.result }}
           DEPLOY: ${{ needs.deploy-docs.result }}
         run: |
-          for result in "$IMPACT" "$CHANGES" "$FULL" "$COMPATIBILITY" "$WINDOWS" "$DEPLOY"; do
+          for result in "$METADATA" "$IMPACT" "$CHANGES" "$FULL" "$COMPATIBILITY" "$WINDOWS" "$DEPLOY"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               exit 1
             fi
           done
 
-          [[ "$IMPACT" == success && "$CHANGES" == success && "$FULL" == success ]] || exit 1
+          [[ "$METADATA" == success && "$IMPACT" == success && "$CHANGES" == success && "$FULL" == success ]] || exit 1
           [[ "$MODE" == full || "$MODE" == affected ]] || exit 1
           [[ "$PACKAGE" == true || "$PACKAGE" == false ]] || exit 1
           [[ "$DOCS" == true || "$DOCS" == false ]] || exit 1

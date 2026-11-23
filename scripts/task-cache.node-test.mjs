@@ -22,7 +22,7 @@ test('shared compiler and lint inputs invalidate actual Turbo task hashes', cont
   const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, env: environment, encoding: 'utf8' }).split('\0').filter(Boolean)
 
   for (const file of tracked) {
-    if (!lstatSync(join(root, file)).isFile()) continue
+    if (!lstatSync(join(root, file), { throwIfNoEntry: false })?.isFile()) continue
 
     mkdirSync(dirname(join(directory, file)), { recursive: true })
 
@@ -92,4 +92,32 @@ test('shared compiler and lint inputs invalidate actual Turbo task hashes', cont
   writeFileSync(readme, `${readFileSync(readme, 'utf8')}\nUnrelated documentation fixture.\n`)
 
   assert.deepEqual(hashes(), before)
+})
+
+
+test('CI cached jobs export the resolved runtime before running tasks', context => {
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  const directory = mkdtempSync(join(tmpdir(), 'commitprompt-runtime-export-'))
+
+  context.after(() => rmSync(directory, { recursive: true, force: true }))
+
+  for (const name of ['full', 'compatibility', 'windows']) {
+    const job = workflow.split(`  ${name}:\n`)[1].split(/\n {2}[a-z][a-z-]*:\n/u)[0]
+    const binding = job.split('      - name: Bind task cache to the resolved runtime\n')[1]
+
+    assert.ok(binding, `${name} must export runtime identity`)
+
+    const command = binding.split('        run: |\n')[1].split('      - name:')[0].replace(/^ {10}/gmu, '')
+    const target = join(directory, name)
+
+    execFileSync('bash', ['-e', '-c', command], { env: { ...process.env, GITHUB_ENV: target } })
+
+    const pnpmVersion = execFileSync('pnpm', ['--version'], { encoding: 'utf8' }).trim()
+
+    assert.equal(readFileSync(target, 'utf8').trim(), `QUALITY_TASK_RUNTIME=${process.version}-${pnpmVersion}-${process.platform}/${process.arch}`)
+
+    assert.ok(job.indexOf('Bind task cache') > job.indexOf('Set up pnpm workspace'))
+
+    assert.ok(job.indexOf('Bind task cache') < job.indexOf('run: pnpm'))
+  }
 })

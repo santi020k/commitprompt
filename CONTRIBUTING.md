@@ -41,15 +41,17 @@ CLI changes, shared configuration, manifests, unknown paths, missing history, pu
 and release branches keep the full task set, packed consumers, Node 24, and Windows validation.
 The full `pnpm run validate` command and pre-push hook remain unchanged in scope.
 
-Pull request title and changeset checks live in the `Pull request metadata` workflow.
-Title edits and label changes rerun only that workflow, never repository validation.
-Branch protection must require its `Pull request metadata` check alongside
-`Required checks` for those rules to keep blocking merges.
+Pull request title and changeset checks run in CI before expensive validation and
+remain part of the existing `Required checks` aggregate. Title and label events
+rerun CI so changes cannot bypass those rules without changing branch protection.
+Prepared `release/v<version>` and Changesets release branches validate consumed
+fragments, matching package versions and changelog entries instead of requiring
+an additional Changeset. Ordinary pull requests retain the `skip-changelog` label
+exception. Failed, cancelled or skipped metadata jobs block the aggregate.
 
-The live dependency audit blocks release pull requests, pushes to `main`, and manual runs.
-On ordinary pull requests the `Dependency audit` workflow reports it as a separate,
-non-required check so an unrelated advisory cannot fail validation; the same workflow
-runs daily to surface new advisories.
+The live dependency audit blocks ordinary and release pull requests, pushes to
+`main`, and manual CI runs. The separate `Dependency audit` workflow runs daily
+and on manual dispatch to surface new advisories between source changes.
 
 Run `pnpm run test:ci` for the selector regression tests. To inspect a local plan, set
 `CI_BASE_SHA` to the intended base and run `node scripts/ci-scope.mjs`; `--full` forces the full plan.
@@ -154,5 +156,7 @@ the overrides/extension when upstream dependencies declare compatible fixes.
 See [glob migration notes](https://github.com/isaacs/node-glob/blob/main/changelog.md),
 [minimatch migration notes](https://github.com/isaacs/minimatch/blob/main/changelog.md)
 and [import-x releases](https://github.com/un-ts/eslint-plugin-import-x/blob/master/CHANGELOG.md).
-The [high picomatch advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
-has no published fix at this qualification. It remains an audit blocker for releases; no suppression or exception is added.
+The live dependency audit reported zero vulnerabilities on 2026-11-23. This is a
+time-specific registry result, not evidence that the previously reported picomatch
+advisory received a fix. Release audits remain fresh and blocking; no suppression
+or exception is added.
